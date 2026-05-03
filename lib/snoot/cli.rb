@@ -6,12 +6,20 @@ module Snoot
   # [run, events] convention used by AnalyseRun. The spec also demands
   # AnalyserOrchestration; that composition is deferred to a later slice.
   module CLI
-    Event = Data.define(:name, :operator, :paths)
+    Event = Data.define(:name, :operator, :paths, :run, :finding, :sections)
 
     CLI = Data.define(:operator) do
-      def run_invoked(paths)
-        event = Event.new(name: :run_invoked, operator: operator, paths: paths)
-        [self, [event]]
+      def run_invoked(paths, orchestration:)
+        events = [Event.new(name: :run_invoked, operator: operator, paths: paths,
+                            run: nil, finding: nil, sections: nil)]
+        run, analyse_events = AnalyseRun.invoke(paths, orchestration: orchestration)
+        events.concat(analyse_events)
+        if run.outcome == :finding_rendered
+          report = RenderReport.invoke(run)
+          events << Event.new(name: :report_emitted, operator: operator, paths: paths,
+                              run: run, finding: report.finding, sections: report.sections)
+        end
+        [run, events]
       end
     end
 
