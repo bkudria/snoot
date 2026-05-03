@@ -31,19 +31,16 @@ RSpec.describe "Run entity" do
 
   describe "transition-edge.Run.outcome" do
     it "pending -> finding_rendered is reachable via AnalyseRun" do
-      skip "bridge: AnalyseRun not implemented"
       run = drive_to(:finding_rendered)
       expect(run.outcome).to eq(:finding_rendered)
     end
 
     it "pending -> nothing_to_report is reachable via AnalyseRun" do
-      skip "bridge: AnalyseRun not implemented"
       run = drive_to(:nothing_to_report)
       expect(run.outcome).to eq(:nothing_to_report)
     end
 
     it "pending -> analysis_failed is reachable via AnalyseRun" do
-      skip "bridge: AnalyseRun not implemented"
       run = drive_to(:analysis_failed)
       expect(run.outcome).to eq(:analysis_failed)
     end
@@ -70,7 +67,4 @@ RSpec.describe "Run entity" do
       end
     end
   end
-
-  # Bridge helpers -- replace once the implementation exists.
-  def drive_to(_target); raise "TODO: invoke AnalyseRun to drive Run to #{_target}"; end
 end
