@@ -1,4 +1,5 @@
 require "bigdecimal"
+require "set"
 
 module Snoot
   module Spec
@@ -25,6 +26,25 @@ module Snoot
 
       def build_duplication_cluster(signature: "abc123", locations: Set[build_location])
         Snoot::DuplicationCluster.new(signature: signature, locations: locations)
+      end
+
+      def build_run(paths: Set[], outcome: :pending, selected_finding: nil)
+        Snoot::Run.new(paths: paths, outcome: outcome, selected_finding: selected_finding)
+      end
+
+      def build_run_at(outcome)
+        case outcome
+        when :pending, :nothing_to_report, :analysis_failed
+          build_run(outcome: outcome)
+        when :finding_rendered
+          build_run(outcome: :finding_rendered, selected_finding: build_smell)
+        else
+          raise ArgumentError, "unknown outcome: #{outcome.inspect}"
+        end
+      end
+
+      def transition!(run, to:)
+        run.transition_to(to)
       end
     end
   end

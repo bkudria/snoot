@@ -6,7 +6,6 @@ require "set"
 RSpec.describe "Run entity" do
   describe "entity-fields.Run" do
     it "declares paths and outcome" do
-      skip "bridge: Snoot::Run not implemented"
       run = Snoot::Run.new(paths: Set[], outcome: :pending)
       expect(run.paths).to be_a(Set)
       expect(run.outcome).to eq(:pending)
@@ -15,19 +14,17 @@ RSpec.describe "Run entity" do
 
   describe "when-presence.Run.selected_finding" do
     it "is present when outcome = :finding_rendered" do
-      skip "bridge: Snoot::Run not implemented"
       run = build_run_at(:finding_rendered)
       expect(run.selected_finding).not_to be_nil
     end
 
     it "is absent (nil or guarded) when outcome != :finding_rendered" do
-      skip "bridge: Snoot::Run not implemented"
       [:pending, :nothing_to_report, :analysis_failed].each do |state|
         run = build_run_at(state)
-        # Implementation choice: nil-or-raise. Whichever pattern is chosen,
-        # access must surface the absence.
+        # Design choice (slice 2): access raises rather than returns nil,
+        # mirroring the Allium `when` guard semantics. Message must mention
+        # `finding_rendered` so the cause is obvious.
         expect { run.selected_finding }.to raise_error(/finding_rendered/i)
-          .or satisfy { |_| run.selected_finding.nil? }
       end
     end
   end
@@ -54,22 +51,20 @@ RSpec.describe "Run entity" do
 
   describe "transition-rejected.Run.outcome" do
     it "rejects undeclared transitions (e.g. finding_rendered -> pending)" do
-      skip "bridge: Snoot::Run state machine not implemented"
       run = build_run_at(:finding_rendered)
-      expect { transition!(run, to: :pending) }.to raise_error(StandardError)
+      expect { transition!(run, to: :pending) }.to raise_error(Snoot::StateError)
     end
   end
 
   describe "transition-terminal.Run.outcome" do
     it "terminal states have no outbound transitions" do
-      skip "bridge: Snoot::Run state machine not implemented"
       terminals = [:finding_rendered, :nothing_to_report, :analysis_failed]
       all_states = [:pending] + terminals
       terminals.each do |from|
         all_states.each do |to|
           next if to == from
           expect { transition!(build_run_at(from), to: to) }
-            .to raise_error(StandardError),
+            .to raise_error(Snoot::StateError),
                 "expected #{from} -> #{to} to be rejected"
         end
       end
@@ -77,7 +72,5 @@ RSpec.describe "Run entity" do
   end
 
   # Bridge helpers -- replace once the implementation exists.
-  def build_run_at(_outcome); raise "TODO: factory for Snoot::Run at given outcome"; end
-  def drive_to(_target);      raise "TODO: invoke AnalyseRun to drive Run to #{_target}"; end
-  def transition!(_run, to:); raise "TODO: invoke whatever moves Run.outcome to #{to}"; end
+  def drive_to(_target); raise "TODO: invoke AnalyseRun to drive Run to #{_target}"; end
 end
