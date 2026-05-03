@@ -3,7 +3,6 @@ require "spec_helper"
 # Spec source: snoot.allium -- value Location { path: Path, line_start: Integer, line_end: Integer }
 RSpec.describe "Location value" do
   it "value-equality.Location: structural equality on (path, line_start, line_end)" do
-    skip "bridge: Snoot::Location not implemented"
     path = Snoot::Path.new(raw: "lib/foo.rb")
     a = Snoot::Location.new(path: path, line_start: 10, line_end: 20)
     b = Snoot::Location.new(path: path, line_start: 10, line_end: 20)
@@ -12,7 +11,6 @@ RSpec.describe "Location value" do
   end
 
   it "entity-fields.Location: declares path, line_start, line_end" do
-    skip "bridge: Snoot::Location not implemented"
     path = Snoot::Path.new(raw: "lib/foo.rb")
     loc = Snoot::Location.new(path: path, line_start: 10, line_end: 20)
     expect(loc.path).to eq(path)
