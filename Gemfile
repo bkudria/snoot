@@ -1,5 +1,6 @@
 source "https://rubygems.org"
 
+gem "bigdecimal", "~> 3.1"
 gem "rspec", "~> 3.13"
 
 group :development do
