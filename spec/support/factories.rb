@@ -75,6 +75,26 @@ module Snoot
         events
       end
 
+      def build_run_with_finding(finding)
+        Snoot::Run.new(
+          paths: Set[build_path],
+          outcome: :finding_rendered,
+          selected_finding: finding
+        )
+      end
+
+      def build_smell_with_doc
+        build_smell(smell_type: build_smell_type(name: "Documented"))
+      end
+
+      def trigger_render_report(run)
+        Snoot::RenderReport.invoke(run)
+      end
+
+      def capture_report
+        yield
+      end
+
       def drive_to(target) # rubocop:disable Metrics/MethodLength
         case target
         when :finding_rendered
