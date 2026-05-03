@@ -95,8 +95,8 @@ module Snoot
         build_smell(smell_type: build_smell_type(name: "Documented"))
       end
 
-      def trigger_render_report(run)
-        Snoot::RenderReport.invoke(run)
+      def trigger_render_report(run, orchestration: fake_orchestration)
+        Snoot::RenderReport.invoke(run, orchestration: orchestration)
       end
 
       def capture_report

@@ -1,10 +1,10 @@
 module Snoot
   # CLI is the surface from snoot.allium that exposes the gem to an
-  # Operator. .for narrows on actor type (only Operator is admitted) and
-  # returns a CLI value carrying the operator. Invoking run_invoked(paths)
-  # emits a RunInvoked event in the [self, events] shape, matching the
-  # [run, events] convention used by AnalyseRun. The spec also demands
-  # AnalyserOrchestration; that composition is deferred to a later slice.
+  # Operator. .for narrows on actor type (only Operator is admitted)
+  # and returns a CLI value carrying the operator. run_invoked drives
+  # the pipeline: it emits RunInvoked, calls AnalyseRun to produce a
+  # terminal Run, and -- when the outcome is :finding_rendered --
+  # calls RenderReport and emits ReportEmitted. Returns [run, events].
   module CLI
     Event = Data.define(:name, :operator, :paths, :run, :finding, :sections)
 
@@ -15,7 +15,7 @@ module Snoot
         run, analyse_events = AnalyseRun.invoke(paths, orchestration: orchestration)
         events.concat(analyse_events)
         if run.outcome == :finding_rendered
-          report = RenderReport.invoke(run)
+          report = RenderReport.invoke(run, orchestration: orchestration)
           events << Event.new(name: :report_emitted, operator: operator, paths: paths,
                               run: run, finding: report.finding, sections: report.sections)
         end

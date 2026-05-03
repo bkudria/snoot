@@ -36,10 +36,10 @@ RSpec.describe "CLI surface" do
       events = capture_emitted_events do
         Snoot::CLI.for(operator).run_invoked(paths, orchestration: orch)
       end
-      expect(events).to include(
-        have_attributes(name: :report_emitted, finding: smell,
-                        sections: %i[header finding_context doc framing])
-      )
+      report_event = events.find { |e| e.name == :report_emitted }
+      expect(report_event).not_to be_nil
+      expect(report_event.finding).to eq(smell)
+      expect(report_event.sections.keys).to eq(%i[header finding_context doc framing])
     end
   end
 
