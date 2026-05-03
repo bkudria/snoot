@@ -47,6 +47,10 @@ module Snoot
         Snoot::ReportConsumer.new
       end
 
+      def build_operator
+        Snoot::Operator.new
+      end
+
       def transition!(run, to:)
         run.transition_to(to)
       end
