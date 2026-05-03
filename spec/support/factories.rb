@@ -32,15 +32,19 @@ module Snoot
         Snoot::Run.new(paths: paths, outcome: outcome, selected_finding: selected_finding)
       end
 
-      def build_run_at(outcome)
+      def build_run_at(outcome, with_finding: nil)
         case outcome
         when :pending, :nothing_to_report, :analysis_failed
           build_run(outcome: outcome)
         when :finding_rendered
-          build_run(outcome: :finding_rendered, selected_finding: build_smell)
+          build_run(outcome: :finding_rendered, selected_finding: with_finding || build_smell)
         else
           raise ArgumentError, "unknown outcome: #{outcome.inspect}"
         end
+      end
+
+      def build_report_consumer
+        Snoot::ReportConsumer.new
       end
 
       def transition!(run, to:)
