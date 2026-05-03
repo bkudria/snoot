@@ -30,4 +30,17 @@ RSpec.describe "AnalyseRun rule" do
       expect(events).to include(have_attributes(name: :skipped_doc_less_smell_warned))
     end
   end
+
+  describe "rule-failure.AnalyseRun -- analyser raises" do
+    it "emits an :analysis_failed event carrying the rescued error" do
+      err = StandardError.new("boom")
+      _run, events = Snoot::AnalyseRun.invoke(
+        Set[build_path],
+        orchestration: fake_orchestration(reek_raises: err)
+      )
+      failure = events.find { |e| e.name == :analysis_failed }
+      expect(failure).not_to be_nil
+      expect(failure.error).to eq(err)
+    end
+  end
 end

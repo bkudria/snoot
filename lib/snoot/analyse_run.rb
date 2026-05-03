@@ -3,7 +3,7 @@ module Snoot
   # terminal outcome by orchestrating the three analysers and selecting one
   # finding (or none, or signalling failure). Returns [run, events].
   module AnalyseRun
-    Event = Data.define(:name, :run, :smell_type)
+    Event = Data.define(:name, :run, :smell_type, :error)
 
     module_function
 
@@ -19,8 +19,10 @@ module Snoot
           [orchestration.reek_analyse(paths),
            orchestration.flog_analyse(paths),
            orchestration.flay_analyse(paths)]
-        rescue StandardError
-          return [run.transition_to(:analysis_failed), events]
+        rescue StandardError => e
+          failed = run.transition_to(:analysis_failed)
+          events << Event.new(name: :analysis_failed, run: failed, smell_type: nil, error: e)
+          return [failed, events]
         end
 
       documented = smells.reject { |s| orchestration.vendored_doc(s.smell_type).nil? }
@@ -30,7 +32,7 @@ module Snoot
       top_overall = select_top_finding(all)
       if top_overall.is_a?(Smell) && orchestration.vendored_doc(top_overall.smell_type).nil?
         events << Event.new(name: :skipped_doc_less_smell_warned,
-                            run: run, smell_type: top_overall.smell_type)
+                            run: run, smell_type: top_overall.smell_type, error: nil)
       end
 
       return [run.transition_to(:nothing_to_report), events] if candidates.empty?

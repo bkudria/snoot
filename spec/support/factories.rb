@@ -1,9 +1,14 @@
 require "bigdecimal"
 require "set"
+require "stringio"
 
 module Snoot
   module Spec
     module Factories
+      def null_io
+        StringIO.new
+      end
+
       def build_path(raw: "lib/foo.rb")
         Snoot::Path.new(raw: raw)
       end
