@@ -5,20 +5,29 @@ require "fileutils"
 require "tmpdir"
 
 # Spec source: slice 11 -- Snoot::CLI::Argv (exe argv handler)
-RSpec.describe "Snoot::CLI::Argv" do
+RSpec.describe Snoot::CLI::Argv do
   let(:stdout) { null_io }
   let(:stderr) { null_io }
+  let(:smelly_ruby) do
+    <<~RUBY
+      class Dirty
+        def smelly(x)
+          x.a + x.b + x.c + x.d
+        end
+      end
+    RUBY
+  end
 
   describe ".run" do
     it "writes the version to stdout and returns 0 for --version" do
-      code = Snoot::CLI::Argv.run(["--version"], stdout: stdout, stderr: stderr)
+      code = described_class.run(["--version"], stdout: stdout, stderr: stderr)
       expect(code).to eq(0)
       expect(stdout.string).to eq("snoot #{Snoot::VERSION}\n")
       expect(stderr.string).to be_empty
     end
 
     it "writes usage to stdout and returns 0 for --help" do
-      code = Snoot::CLI::Argv.run(["--help"], stdout: stdout, stderr: stderr)
+      code = described_class.run(["--help"], stdout: stdout, stderr: stderr)
       expect(code).to eq(0)
       expect(stdout.string).to include("Usage: snoot")
       expect(stdout.string).to include("[paths...]")
@@ -26,7 +35,7 @@ RSpec.describe "Snoot::CLI::Argv" do
     end
 
     it "writes usage to stderr and returns 1 for an unknown flag" do
-      code = Snoot::CLI::Argv.run(["--unknown-flag"], stdout: stdout, stderr: stderr)
+      code = described_class.run(["--unknown-flag"], stdout: stdout, stderr: stderr)
       expect(code).to eq(1)
       expect(stderr.string).to include("Usage: snoot")
       expect(stdout.string).to be_empty
@@ -39,7 +48,7 @@ RSpec.describe "Snoot::CLI::Argv" do
         end
       RUBY
       with_ruby_tempfile(smell_free) do |path|
-        code = Snoot::CLI::Argv.run([path], stdout: stdout, stderr: stderr)
+        code = described_class.run([path], stdout: stdout, stderr: stderr)
         expect(code).to eq(0)
         expect(stdout.string).to eq(Snoot::CLI::NOTHING_TO_REPORT)
         expect(stderr.string).to be_empty
@@ -47,15 +56,8 @@ RSpec.describe "Snoot::CLI::Argv" do
     end
 
     it "exits 1 with a doc + Instances report on stdout when a Smell finding is rendered" do
-      smelly = <<~RUBY
-        class Dirty
-          def smelly(x)
-            x.a + x.b + x.c + x.d
-          end
-        end
-      RUBY
-      with_ruby_tempfile(smelly) do |path|
-        code = Snoot::CLI::Argv.run([path], stdout: stdout, stderr: stderr)
+      with_ruby_tempfile(smelly_ruby) do |path|
+        code = described_class.run([path], stdout: stdout, stderr: stderr)
         expect(code).to eq(1)
         expect(stdout.string).not_to be_empty
         expect(stdout.string).not_to eq(Snoot::CLI::NOTHING_TO_REPORT)
@@ -65,18 +67,11 @@ RSpec.describe "Snoot::CLI::Argv" do
     end
 
     it "defaults empty argv to Dir['lib/**/*.rb'] in cwd" do
-      smelly = <<~RUBY
-        class Dirty
-          def smelly(x)
-            x.a + x.b + x.c + x.d
-          end
-        end
-      RUBY
       Dir.mktmpdir do |dir|
         Dir.chdir(dir) do
           FileUtils.mkdir_p("lib")
-          File.write("lib/dirty.rb", smelly)
-          code = Snoot::CLI::Argv.run([], stdout: stdout, stderr: stderr)
+          File.write("lib/dirty.rb", smelly_ruby)
+          code = described_class.run([], stdout: stdout, stderr: stderr)
           expect(code).to eq(1)
           expect(stdout.string).not_to be_empty
           expect(stdout.string).not_to eq(Snoot::CLI::NOTHING_TO_REPORT)
@@ -86,7 +81,7 @@ RSpec.describe "Snoot::CLI::Argv" do
 
     it "exits 1 with stderr message when analysis fails" do
       orchestration = fake_orchestration(reek_raises: StandardError.new("boom"))
-      code = Snoot::CLI::Argv.run(
+      code = described_class.run(
         ["lib/foo.rb"],
         stdout: stdout, stderr: stderr, orchestration: orchestration
       )

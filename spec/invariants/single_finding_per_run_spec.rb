@@ -5,7 +5,7 @@ require "spec_helper"
 # Spec source: snoot.allium -- invariant SingleFindingPerRun
 #   for r in Runs:
 #     r.outcome = finding_rendered implies r.selected_finding != null
-RSpec.describe "Invariant: SingleFindingPerRun" do
+RSpec.describe "Invariant: SingleFindingPerRun" do # rubocop:disable RSpec/DescribeClass
   describe "invariant.SingleFindingPerRun" do
     it "every persisted Run with outcome=finding_rendered has a non-nil selected_finding" do
       skip "bridge: Run audit / persistence not implemented"

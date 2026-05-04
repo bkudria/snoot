@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Top-level namespace for the snoot gem. See `snoot.allium` for the
+# behavioural specification this implementation realises.
 module Snoot
 end
 

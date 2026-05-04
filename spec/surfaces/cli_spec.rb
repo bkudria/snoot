@@ -6,16 +6,16 @@ require "stringio"
 # Spec source: snoot.allium -- surface CLI
 #   facing operator: Operator
 #   provides: RunInvoked(operator, paths)
-RSpec.describe "CLI surface" do
+RSpec.describe Snoot::CLI do
   describe "surface-actor.CLI" do
     it "is accessible to an Operator" do
       operator = build_operator
-      expect(Snoot::CLI.for(operator)).not_to be_nil
+      expect(described_class.for(operator)).not_to be_nil
     end
 
     it "is not accessible to a non-Operator (e.g. ReportConsumer)" do
       consumer = build_report_consumer
-      expect { Snoot::CLI.for(consumer) }.to raise_error(StandardError)
+      expect { described_class.for(consumer) }.to raise_error(StandardError)
     end
   end
 
@@ -24,7 +24,7 @@ RSpec.describe "CLI surface" do
       operator = build_operator
       paths = Set[Snoot::Path.new(raw: "lib/foo.rb")]
       events = capture_emitted_events do
-        Snoot::CLI.for(operator).run_invoked(
+        described_class.for(operator).run_invoked(
           paths, orchestration: fake_orchestration, stdout: null_io, stderr: null_io
         )
       end
@@ -38,7 +38,7 @@ RSpec.describe "CLI surface" do
       orch = fake_orchestration(smells: Set[smell],
                                 vendored_docs: { "Documented" => "## doc" })
       events = capture_emitted_events do
-        Snoot::CLI.for(operator).run_invoked(
+        described_class.for(operator).run_invoked(
           paths, orchestration: orch, stdout: null_io, stderr: null_io
         )
       end
@@ -66,7 +66,7 @@ RSpec.describe "CLI surface" do
     end
 
     it "writes the doc + Instances report to stdout on finding_rendered (Smell)" do
-      Snoot::CLI.for(build_operator).run_invoked(
+      described_class.for(build_operator).run_invoked(
         Set[build_path],
         orchestration: rendered_smell_orch,
         stdout: stdout,
@@ -80,7 +80,7 @@ RSpec.describe "CLI surface" do
     end
 
     it "writes 'nothing to report' to stdout on nothing_to_report" do
-      Snoot::CLI.for(build_operator).run_invoked(
+      described_class.for(build_operator).run_invoked(
         Set[build_path],
         orchestration: fake_orchestration,
         stdout: stdout,
@@ -92,7 +92,7 @@ RSpec.describe "CLI surface" do
 
     it "writes 'analysis failed: <msg>' to stderr and leaves stdout empty on analysis_failed" do
       orch = fake_orchestration(reek_raises: StandardError.new("boom"))
-      Snoot::CLI.for(build_operator).run_invoked(
+      described_class.for(build_operator).run_invoked(
         Set[build_path],
         orchestration: orch,
         stdout: stdout,
@@ -109,14 +109,14 @@ RSpec.describe "CLI surface" do
       smell = build_smell(smell_type: build_smell_type(name: "Documented"))
       orch = fake_orchestration(smells: Set[smell],
                                 vendored_docs: { "Documented" => "## doc" })
-      run, _events = Snoot::CLI.for(operator).run_invoked(
+      run, _events = described_class.for(operator).run_invoked(
         Set[build_path], orchestration: orch, stdout: null_io, stderr: null_io
       )
       expect(run.outcome).to eq(:finding_rendered)
     end
 
     it "drives the run to :nothing_to_report when no findings are produced" do
-      run, _events = Snoot::CLI.for(build_operator).run_invoked(
+      run, _events = described_class.for(build_operator).run_invoked(
         Set[build_path],
         orchestration: fake_orchestration,
         stdout: null_io,
@@ -127,7 +127,7 @@ RSpec.describe "CLI surface" do
 
     it "drives the run to :analysis_failed when an analyser raises" do
       orch = fake_orchestration(reek_raises: StandardError.new("boom"))
-      run, _events = Snoot::CLI.for(build_operator).run_invoked(
+      run, _events = described_class.for(build_operator).run_invoked(
         Set[build_path], orchestration: orch, stdout: null_io, stderr: null_io
       )
       expect(run.outcome).to eq(:analysis_failed)

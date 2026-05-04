@@ -3,8 +3,9 @@
 require "spec_helper"
 require "open3"
 
-# Spec source: slice 11 -- exe/snoot subprocess smoke test
-RSpec.describe "exe/snoot" do
+# Spec source: slice 11 -- exe/snoot subprocess smoke test.
+# Subject is the executable script, not a single class.
+RSpec.describe "exe/snoot" do # rubocop:disable RSpec/DescribeClass
   let(:exe) { File.expand_path("../exe/snoot", __dir__) }
 
   it "prints the version and exits 0 for --version" do

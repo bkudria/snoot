@@ -3,16 +3,16 @@
 require "spec_helper"
 
 # Spec source: snoot.allium -- value SmellType { name: String }
-RSpec.describe "SmellType value" do
+RSpec.describe Snoot::SmellType do
   it "value-equality.SmellType: structural equality on name" do
-    a = Snoot::SmellType.new(name: "FeatureEnvy")
-    b = Snoot::SmellType.new(name: "FeatureEnvy")
+    a = described_class.new(name: "FeatureEnvy")
+    b = described_class.new(name: "FeatureEnvy")
     expect(a).to eq(b)
     expect(a.hash).to eq(b.hash)
   end
 
   it "entity-fields.SmellType: declares name as String" do
-    s = Snoot::SmellType.new(name: "FeatureEnvy")
+    s = described_class.new(name: "FeatureEnvy")
     expect(s.name).to eq("FeatureEnvy")
     expect(s.name).to be_a(String)
   end

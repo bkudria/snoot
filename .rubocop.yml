@@ -1,6 +1,6 @@
 # RuboCop is snoot's linter and formatter. See CLAUDE.md for commands.
 
-require:
+plugins:
   - rubocop-rspec
 
 AllCops:
@@ -25,3 +25,9 @@ RSpec/MultipleExpectations:
 
 RSpec/ExampleLength:
   Max: 15
+
+# `spec/` deliberately mirrors the Allium element kinds in `snoot.allium`
+# (`spec/values/`, `spec/rules/`, `spec/surfaces/`, `spec/invariants/`,
+# `spec/<entity>_spec.rb`) rather than mirroring `lib/`. See CLAUDE.md.
+RSpec/SpecFilePathFormat:
+  Enabled: false

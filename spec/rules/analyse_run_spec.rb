@@ -7,7 +7,7 @@ require "spec_helper"
 #   ensures: Run.created with outcome in {finding_rendered, nothing_to_report,
 #            analysis_failed}; emits SkippedDocLessSmellWarned when the
 #            top-overall finding is a Smell whose vendored doc is missing.
-RSpec.describe "AnalyseRun rule" do
+RSpec.describe Snoot::AnalyseRun do
   describe "rule-success.AnalyseRun" do
     it "creates a Run terminating in one of the three declared outcomes" do
       paths = Set[Snoot::Path.new(raw: "lib/foo.rb")]
@@ -58,7 +58,7 @@ RSpec.describe "AnalyseRun rule" do
   describe "rule-failure.AnalyseRun -- analyser raises" do
     it "emits an :analysis_failed event carrying the rescued error" do
       err = StandardError.new("boom")
-      _run, events = Snoot::AnalyseRun.invoke(
+      _run, events = described_class.invoke(
         Set[build_path],
         orchestration: fake_orchestration(reek_raises: err)
       )

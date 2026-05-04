@@ -3,7 +3,7 @@
 require "spec_helper"
 
 # Spec source: snoot.allium -- entity Finding + variants Smell | ComplexityHit | DuplicationCluster
-RSpec.describe "Finding (sum type)" do
+RSpec.describe Snoot::Finding do
   describe "entity-fields.Finding" do
     it "every variant exposes the kind discriminator" do
       expect(build_smell.kind).to eq(:Smell)

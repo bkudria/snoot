@@ -7,7 +7,7 @@ require "spec_helper"
 #     for s in Smells:
 #       (r.outcome = finding_rendered and r.selected_finding = s)
 #         implies vendored_doc(s.smell_type) != null
-RSpec.describe "Invariant: SelectedFindingsAreRenderable" do
+RSpec.describe "Invariant: SelectedFindingsAreRenderable" do # rubocop:disable RSpec/DescribeClass
   describe "invariant.SelectedFindingsAreRenderable" do
     it "every rendered Smell selection has a vendored doc available" do
       skip "bridge: Run audit + vendored_doc lookup not implemented"
