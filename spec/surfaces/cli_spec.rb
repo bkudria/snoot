@@ -44,7 +44,7 @@ RSpec.describe "CLI surface" do
       report_event = events.find { |e| e.name == :report_emitted }
       expect(report_event).not_to be_nil
       expect(report_event.finding).to eq(smell)
-      expect(report_event.sections.keys).to eq(%i[header finding_context doc framing])
+      expect(report_event.sections.keys).to eq(%i[doc instances])
     end
   end
 
@@ -64,15 +64,16 @@ RSpec.describe "CLI surface" do
                          vendored_docs: { "Documented" => "## doc" })
     end
 
-    it "writes the four-section report to stdout on finding_rendered" do
+    it "writes the doc + Instances report to stdout on finding_rendered (Smell)" do
       Snoot::CLI.for(build_operator).run_invoked(
         Set[build_path],
         orchestration: rendered_smell_orch,
         stdout: stdout,
         stderr: stderr
       )
-      expect(stdout.string).to start_with("Documented at lib/x.rb:10-20")
-      expect(stdout.string).to include("\n\n## doc\n\n")
+      expect(stdout.string).to start_with("## doc\n\n")
+      expect(stdout.string).to include("## Instances\n\n")
+      expect(stdout.string).to include("lib/x.rb\n  Line 10: envies")
       expect(stdout.string).to end_with("\n")
       expect(stderr.string).to eq("")
     end

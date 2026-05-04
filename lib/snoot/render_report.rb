@@ -1,13 +1,13 @@
 module Snoot
   # RenderReport is the rule from snoot.allium that, given a Run whose
-  # outcome is :finding_rendered, produces a Report containing four
-  # ordered sections (header, finding_context, doc, framing). Section
-  # content varies by Finding variant. The orchestration supplies
-  # describe_location and vendored_doc; non-Smell variants take their
-  # doc from in-module prose constants.
+  # outcome is :finding_rendered, produces a Report. For Smell findings
+  # the Report has two sections (doc, instances) -- the doc comes from
+  # the orchestration's vendored_doc and instances enumerates every
+  # Smell of the selected type grouped by file, ordered by descending
+  # count then alphabetical path. For ComplexityHit and DuplicationCluster
+  # findings the four-section shape (header, finding_context, doc,
+  # framing) is preserved.
   module RenderReport
-    SECTION_ORDER = %i[header finding_context doc framing].freeze
-
     FRAMING_PLACEHOLDER = "[framing prose: see snoot.allium open question]".freeze
 
     COMPLEXITY_DOC =
@@ -28,13 +28,45 @@ module Snoot
       finding = run.selected_finding
       raise StateError, "selected_finding is required for RenderReport (got nil)" if finding.nil?
 
-      sections = {
+      sections = build_sections(run, finding, orchestration)
+      Report.new(run: run, finding: finding, sections: sections)
+    end
+
+    def build_sections(run, finding, orchestration)
+      return smell_sections(run, finding, orchestration) if finding.is_a?(Smell)
+
+      non_smell_sections(finding, orchestration)
+    end
+
+    def smell_sections(run, smell, orchestration)
+      {
+        doc: orchestration.vendored_doc(smell.smell_type),
+        instances: render_instances(run, smell)
+      }
+    end
+
+    def non_smell_sections(finding, orchestration)
+      {
         header: render_header(finding, orchestration),
         finding_context: render_finding_context(finding, orchestration),
         doc: render_doc(finding, orchestration),
         framing: FRAMING_PLACEHOLDER
       }
-      Report.new(run: run, finding: finding, sections: sections)
+    end
+
+    def render_instances(run, selected)
+      groups = matching_smell_groups(run, selected)
+      "## Instances\n\n#{groups.map { |path, smells| render_instance_group(path, smells) }.join("\n\n")}"
+    end
+
+    def matching_smell_groups(run, selected)
+      matching = run.smells.select { |s| s.smell_type == selected.smell_type }
+      matching.group_by { |s| s.location.path.raw }.sort_by { |path, smells| [-smells.size, path] }
+    end
+
+    def render_instance_group(path, smells)
+      lines = smells.map { |s| "  Line #{s.location.line_start}: #{s.message}" }
+      "#{path}\n#{lines.join("\n")}"
     end
 
     def render_header(finding, orch)

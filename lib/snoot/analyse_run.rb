@@ -25,6 +25,7 @@ module Snoot
           return [failed, events]
         end
 
+      run = run.with(smells: smells.to_set)
       documented = smells.reject { |s| orchestration.vendored_doc(s.smell_type).nil? }
       candidates = documented.to_a + complexities.to_a + duplications.to_a
       all = smells.to_a + complexities.to_a + duplications.to_a

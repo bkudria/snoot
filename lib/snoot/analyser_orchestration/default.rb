@@ -62,7 +62,7 @@ module Snoot
             line_start: warning.lines.first,
             line_end: warning.lines.last
           ),
-          message: warning.message
+          message: "#{warning.context} #{warning.message}"
         )
       end
 

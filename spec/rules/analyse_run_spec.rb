@@ -31,6 +31,29 @@ RSpec.describe "AnalyseRun rule" do
     end
   end
 
+  describe "smells field propagation" do
+    it "carries the orchestration's smells onto run.smells when finding_rendered" do
+      smell = build_smell(smell_type: build_smell_type(name: "Documented"))
+      sibling = build_smell(
+        smell_type: build_smell_type(name: "Documented"),
+        location: build_location(path: build_path(raw: "lib/y.rb"), line_start: 5, line_end: 5)
+      )
+      orch = fake_orchestration(
+        smells: Set[smell, sibling],
+        vendored_docs: { "Documented" => "## doc" }
+      )
+      run = invoke_analyse_run(Set[build_path], orchestration: orch)
+      expect(run.outcome).to eq(:finding_rendered)
+      expect(run.smells).to eq(Set[smell, sibling])
+    end
+
+    it "carries the orchestration's smells onto run.smells when nothing_to_report" do
+      run = invoke_analyse_run(Set[build_path], orchestration: fake_orchestration)
+      expect(run.outcome).to eq(:nothing_to_report)
+      expect(run.smells).to eq(Set[])
+    end
+  end
+
   describe "rule-failure.AnalyseRun -- analyser raises" do
     it "emits an :analysis_failed event carrying the rescued error" do
       err = StandardError.new("boom")

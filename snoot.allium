@@ -149,6 +149,11 @@ entity Run {
 
     selected_finding: Finding when outcome = finding_rendered
 
+    -- The full reek-smell set produced by AnalyseRun. Carried so RenderReport
+    -- can enumerate every instance of the selected smell type without re-
+    -- invoking the analyser. Empty for outcome = pending or analysis_failed.
+    smells: Set<Smell>
+
     transitions outcome {
         pending -> finding_rendered
         pending -> nothing_to_report
@@ -219,25 +224,43 @@ rule RenderReport {
     when: run: Run.outcome becomes finding_rendered
     requires: run.selected_finding != null
 
-    -- The report is composed of four sections, in this order. The doc
-    -- section's content depends on the variant of the selected finding:
-    --   - Smell:              vendored_doc(smell_type) (always non-null here,
-    --                         per the SelectedFindingsAreRenderable invariant)
+    -- Section composition is variant-conditional:
+    --
+    -- For Smell findings the report is two sections:
+    --   - doc:       vendored_doc(smell_type) (always non-null here, per the
+    --                SelectedFindingsAreRenderable invariant)
+    --   - instances: every Smell in run.smells whose smell_type matches the
+    --                selected_finding's smell_type, grouped by file, with
+    --                files ordered by descending instance count and
+    --                alphabetical tie-break. The header / finding_context /
+    --                framing sections are absent because the doc + instances
+    --                pair is sufficient context for an agent acting on a
+    --                multi-instance smell type.
+    --
+    -- For ComplexityHit and DuplicationCluster findings the report is the
+    -- four-section structure (header, finding_context, doc, framing):
     --   - ComplexityHit:      hand-written generic prose for high complexity
     --   - DuplicationCluster: hand-written generic prose for high duplication
-    --
-    -- The framing prose anchors the agent's interpretation of the finding.
-    -- Its exact wording is an open question (see below).
-    ensures: ReportEmitted(
-        run: run,
-        finding: run.selected_finding,
-        sections: { header, finding_context, doc, framing }
-    )
+    -- The framing prose anchors the agent's interpretation; its exact
+    -- wording is an open question (see below).
+    ensures:
+        if run.selected_finding.kind = Smell:
+            ReportEmitted(
+                run: run,
+                finding: run.selected_finding,
+                sections: { doc, instances }
+            )
+        else:
+            ReportEmitted(
+                run: run,
+                finding: run.selected_finding,
+                sections: { header, finding_context, doc, framing }
+            )
 
     @guidance
-        -- The four-section ordering is structural. Implementations should
-        -- emit them in this order so an agent / parser can rely on
-        -- predictable landmarks.
+        -- Section ordering within each variant shape is structural.
+        -- Implementations should emit sections in the declared order so an
+        -- agent / parser can rely on predictable landmarks.
 }
 
 ------------------------------------------------------------
@@ -305,28 +328,41 @@ surface ReportReader {
         run.selected_finding
         run.selected_finding.kind
 
-    @guarantee FourSectionStructuralContract
-        -- A rendered report contains, in order:
-        --   1. Header        -- one-line summary (analyser-implicit, finding
-        --                       name, location)
+    @guarantee SmellReportShape
+        -- For Smell findings, a rendered report contains, in order:
+        --   1. Doc       -- the vendored markdown for the selected smell type
+        --   2. Instances -- '## Instances' heading followed by per-file
+        --                  groupings of every Smell in run.smells matching
+        --                  the selected smell_type. Each file group is the
+        --                  raw path on its own line, then 2-space-indented
+        --                  'Line N: <message>' lines. File groups are
+        --                  ordered by descending instance count, with
+        --                  alphabetical path as the tie-break.
+
+    @guarantee NonSmellFourSectionShape
+        -- For ComplexityHit and DuplicationCluster findings, a rendered
+        -- report contains, in order:
+        --   1. Header         -- one-line summary (analyser-implicit, finding
+        --                        name, location)
         --   2. FindingContext -- file path(s), line range(s), the analyser's
-        --                       message; for DuplicationCluster, all cluster
-        --                       locations are enumerated
-        --   3. Doc           -- exactly one inlined doc:
-        --                       - Smell              -> vendored markdown
-        --                       - ComplexityHit      -> hand-written prose
-        --                       - DuplicationCluster -> hand-written prose
-        --   4. Framing       -- closing prose directing the agent's reading
+        --                        message; for DuplicationCluster, all cluster
+        --                        locations are enumerated
+        --   3. Doc            -- one inlined hand-written prose constant
+        --   4. Framing        -- closing prose directing the agent's reading
 
     @guarantee AnalyserProvenanceImplicit
         -- The report does not label the originating analyser. The shape of
-        -- the finding (smell name vs complexity language vs duplication
-        -- enumeration) is sufficient for the agent to infer provenance.
+        -- the report (doc + instances vs four-section structure) and the
+        -- finding's wording (smell name vs complexity language vs
+        -- duplication enumeration) are sufficient for the agent to infer
+        -- provenance.
 
     @guidance
-        -- The agent should treat the single inlined doc as primary context
-        -- for acting on the finding, and the framing prose as instructions
-        -- on how to read the doc relative to the finding.
+        -- The agent should treat the inlined doc as primary context for
+        -- acting on the finding. For Smell findings, the Instances list
+        -- enumerates every site the agent must consider. For non-Smell
+        -- findings, the framing prose instructs the agent on how to read
+        -- the doc relative to the single finding.
 }
 
 ------------------------------------------------------------

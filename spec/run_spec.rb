@@ -10,6 +10,24 @@ RSpec.describe "Run entity" do
       expect(run.paths).to be_a(Set)
       expect(run.outcome).to eq(:pending)
     end
+
+    it "carries an empty smells set by default" do
+      run = Snoot::Run.new(paths: Set[], outcome: :pending)
+      expect(run.smells).to eq(Set[])
+    end
+
+    it "accepts and exposes a smells set" do
+      smell = build_smell
+      run = Snoot::Run.new(paths: Set[], outcome: :pending, smells: Set[smell])
+      expect(run.smells).to eq(Set[smell])
+    end
+
+    it "preserves smells across transition_to" do
+      smell = build_smell
+      run = Snoot::Run.new(paths: Set[], outcome: :pending, smells: Set[smell])
+      moved = run.transition_to(:nothing_to_report)
+      expect(moved.smells).to eq(Set[smell])
+    end
   end
 
   describe "when-presence.Run.selected_finding" do

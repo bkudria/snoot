@@ -97,11 +97,12 @@ module Snoot
         events
       end
 
-      def build_run_with_finding(finding)
+      def build_run_with_finding(finding, smells: nil)
         Snoot::Run.new(
           paths: Set[build_path],
           outcome: :finding_rendered,
-          selected_finding: finding
+          selected_finding: finding,
+          smells: smells || (finding.is_a?(Snoot::Smell) ? Set[finding] : Set[])
         )
       end
 

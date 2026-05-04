@@ -58,6 +58,20 @@ RSpec.describe "AnalyserOrchestration::Default" do
         expect(result).to eq(Set[])
       end
     end
+
+    it "prefixes the smell message with reek's context (e.g. class name)" do
+      src = <<~RUBY
+        class Undocumented
+        end
+      RUBY
+      with_ruby_tempfile(src) do |path|
+        smells = adapter.reek_analyse(Set[Snoot::Path.new(raw: path)])
+        irresponsible = smells.find { |s| s.smell_type.name == "IrresponsibleModule" }
+        expect(irresponsible).not_to be_nil
+        expect(irresponsible.message).to start_with("Undocumented ")
+        expect(irresponsible.message).to include("has no descriptive comment")
+      end
+    end
   end
 
   describe "flog_analyse" do

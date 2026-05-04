@@ -44,7 +44,7 @@ RSpec.describe "Snoot::CLI::Argv" do
       end
     end
 
-    it "exits 1 with a four-section report on stdout when a finding is rendered" do
+    it "exits 1 with a doc + Instances report on stdout when a Smell finding is rendered" do
       smelly = <<~RUBY
         class Dirty
           def smelly(x)
@@ -57,6 +57,8 @@ RSpec.describe "Snoot::CLI::Argv" do
         expect(code).to eq(1)
         expect(stdout.string).not_to be_empty
         expect(stdout.string).not_to eq(Snoot::CLI::NOTHING_TO_REPORT)
+        expect(stdout.string).to include("## Instances\n\n")
+        expect(stdout.string).to include(path)
       end
     end
 

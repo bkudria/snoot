@@ -1,5 +1,5 @@
 module Snoot
-  Run = Data.define(:paths, :outcome, :selected_finding) do
+  Run = Data.define(:paths, :outcome, :selected_finding, :smells) do
     # rubocop:disable Lint/ConstantDefinitionInBlock
     # The Data.define block IS the class body; this constant is attached to Run.
     TRANSITIONS = {
@@ -9,7 +9,7 @@ module Snoot
 
     alias_method :_raw_selected_finding, :selected_finding
 
-    def initialize(paths:, outcome:, selected_finding: nil)
+    def initialize(paths:, outcome:, selected_finding: nil, smells: Set[])
       super
     end
 

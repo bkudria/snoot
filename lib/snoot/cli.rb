@@ -41,7 +41,7 @@ module Snoot
       end
 
       def format_report(sections)
-        "#{RenderReport::SECTION_ORDER.map { |k| sections.fetch(k) }.join("\n\n")}\n"
+        "#{sections.values.join("\n\n")}\n"
       end
     end
 
