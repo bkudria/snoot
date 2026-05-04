@@ -13,21 +13,3 @@ AllCops:
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes
-
-# Specs are bridge stubs at this stage; relax a couple of cops that fight
-# the spec-first style. Revisit once `lib/` lands.
-Metrics/BlockLength:
-  Exclude:
-    - "spec/**/*"
-
-RSpec/MultipleExpectations:
-  Max: 5
-
-RSpec/ExampleLength:
-  Max: 15
-
-# `spec/` deliberately mirrors the Allium element kinds in `snoot.allium`
-# (`spec/values/`, `spec/rules/`, `spec/surfaces/`, `spec/invariants/`,
-# `spec/<entity>_spec.rb`) rather than mirroring `lib/`. See CLAUDE.md.
-RSpec/SpecFilePathFormat:
-  Enabled: false
