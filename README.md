@@ -6,8 +6,24 @@ The report is centred on an LLM coding agent as the reader: each run produces a 
 
 ## Status
 
-Early-stage. The behavioural specification lives in [`snoot.allium`](snoot.allium); the implementation is not yet in place.
+Pre-1.0. Reek integration is wired (slice 10A); Flog and Flay arrive in slice 10B. The pipeline-driving CLI (`snoot <paths>`) is not yet implemented; today the executable supports `--version` and `--help` only. The behavioural specification lives in [`snoot.allium`](snoot.allium).
 
-## Usage
+## Install
 
-CLI usage is not yet implemented. See `snoot.allium` for the intended surface and run outcomes.
+From a local checkout:
+
+    bundle install
+    rake build
+    gem install pkg/snoot-0.1.0.gem
+
+After install, `snoot --version` and `snoot --help` are available on PATH.
+
+## Library usage
+
+    require "snoot"
+
+    adapter = Snoot::AnalyserOrchestration::Default.new
+    paths   = Set[Snoot::Path.new(raw: "lib/foo.rb")]
+    Snoot::CLI.for(Snoot::Operator.new).run_invoked(
+      paths, orchestration: adapter
+    )

@@ -1,8 +1,5 @@
 source "https://rubygems.org"
-
-gem "bigdecimal", "~> 3.1"
-gem "reek", "~> 6.5"
-gem "rspec", "~> 3.13"
+gemspec
 
 group :development do
   gem "rake", "~> 13.2", require: false
@@ -11,5 +8,6 @@ group :development do
 end
 
 group :test do
+  gem "rspec", "~> 3.13"
   gem "simplecov", "~> 0.22", require: false
 end

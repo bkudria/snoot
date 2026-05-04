@@ -1,6 +1,7 @@
 module Snoot
 end
 
+require "snoot/version"
 require "snoot/state_error"
 require "snoot/path"
 require "snoot/location"
@@ -18,3 +19,4 @@ require "snoot/operator"
 require "snoot/analyser_orchestration"
 require "snoot/analyser_orchestration/default"
 require "snoot/cli"
+require "snoot/cli/argv"
