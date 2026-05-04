@@ -60,16 +60,109 @@ RSpec.describe "AnalyserOrchestration::Default" do
     end
   end
 
-  describe "stubbed analysers (slice 10B)" do
-    # These stubs let the adapter run end-to-end through AnalyseRun while
-    # only Reek is implemented. Slice 10B replaces the empty-Set return
-    # with real Flog/Flay output and updates these tests accordingly.
-    it "returns an empty Set from flog_analyse until slice 10B" do
-      expect(adapter.flog_analyse(Set[])).to eq(Set[])
+  describe "flog_analyse" do
+    let(:complex_src) do
+      <<~RUBY
+        class Tangled
+          def gnarly(a, b, c)
+            if a && b
+              a.x + a.y + a.z
+            elsif b || c
+              b.p * c.q - a.r
+            else
+              [a, b, c].each { |v| v.zap.zip(v.zog) }
+            end
+          end
+        end
+      RUBY
     end
 
-    it "returns an empty Set from flay_analyse until slice 10B" do
-      expect(adapter.flay_analyse(Set[])).to eq(Set[])
+    it "returns Snoot::ComplexityHit instances for a method with measurable score" do
+      with_ruby_tempfile(complex_src) do |path|
+        hits = adapter.flog_analyse(Set[Snoot::Path.new(raw: path)])
+        expect(hits).not_to be_empty
+        first = hits.first
+        expect(first).to be_a(Snoot::ComplexityHit)
+      end
+    end
+
+    it "populates location, method_name (Class#method), and BigDecimal score" do
+      with_ruby_tempfile(complex_src) do |path|
+        hit = adapter.flog_analyse(Set[Snoot::Path.new(raw: path)])
+                     .find { |h| h.method_name == "Tangled#gnarly" }
+        expect(hit).not_to be_nil
+        expect(hit.location.path.raw).to eq(path)
+        expect(hit.location.line_start).to eq(hit.location.line_end)
+        expect(hit.score).to be_a(BigDecimal)
+        expect(hit.score).to be > 0
+      end
+    end
+
+    it "returns an empty Set for a file with no methods" do
+      src = <<~RUBY
+        # No methods here -- flog has nothing to score.
+        class Empty
+        end
+      RUBY
+      with_ruby_tempfile(src) do |path|
+        result = adapter.flog_analyse(Set[Snoot::Path.new(raw: path)])
+        expect(result).to eq(Set[])
+      end
+    end
+  end
+
+  describe "flay_analyse" do
+    let(:duplicated_method) do
+      <<~RUBY
+        class %<klass>s
+          def heavy(a, b, c, d, e)
+            x = a + b + c
+            y = d * e - a
+            z = (x * y) / (a + 1)
+            [x, y, z].each { |v| puts v.inspect }
+            { x: x, y: y, z: z, sum: x + y + z }
+          end
+        end
+      RUBY
+    end
+
+    it "returns Snoot::DuplicationCluster instances when two files share a method body" do
+      with_ruby_tempfile(format(duplicated_method, klass: "Alpha")) do |p1|
+        with_ruby_tempfile(format(duplicated_method, klass: "Beta")) do |p2|
+          clusters = adapter.flay_analyse(
+            Set[Snoot::Path.new(raw: p1), Snoot::Path.new(raw: p2)]
+          )
+          expect(clusters).not_to be_empty
+          expect(clusters.first).to be_a(Snoot::DuplicationCluster)
+        end
+      end
+    end
+
+    it "populates signature (non-empty String) and locations across both inputs" do
+      with_ruby_tempfile(format(duplicated_method, klass: "Alpha")) do |p1|
+        with_ruby_tempfile(format(duplicated_method, klass: "Beta")) do |p2|
+          cluster = adapter.flay_analyse(
+            Set[Snoot::Path.new(raw: p1), Snoot::Path.new(raw: p2)]
+          ).first
+          expect(cluster.signature).to be_a(String)
+          expect(cluster.signature).not_to be_empty
+          expect(cluster.locations.size).to be >= 2
+          expect(cluster.locations.map { |l| l.path.raw }).to all(satisfy { |p| [p1, p2].include?(p) })
+        end
+      end
+    end
+
+    it "returns an empty Set when no duplication exceeds Flay's mass threshold" do
+      src_a = "class Solo; def only; 1; end; end\n"
+      src_b = "class Lone; def alone; 2; end; end\n"
+      with_ruby_tempfile(src_a) do |p1|
+        with_ruby_tempfile(src_b) do |p2|
+          result = adapter.flay_analyse(
+            Set[Snoot::Path.new(raw: p1), Snoot::Path.new(raw: p2)]
+          )
+          expect(result).to eq(Set[])
+        end
+      end
     end
   end
 end

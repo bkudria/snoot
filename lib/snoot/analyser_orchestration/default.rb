@@ -1,3 +1,5 @@
+require "flay"
+require "flog"
 require "reek"
 
 module Snoot
@@ -6,9 +8,10 @@ module Snoot
     # invokes the real Reek/Flog/Flay APIs in-process (no shellouts) and
     # resolves vendored_doc against the reek docs vendored at
     # data/reek_docs/<PascalCase-Hyphen>.md (synced via `rake docs:sync`,
-    # pinned to the bundled reek version). Slice 10A implements
-    # reek_analyse, vendored_doc, describe_location; flog_analyse and
-    # flay_analyse arrive in slice 10B.
+    # pinned to the bundled reek version). Flog scoring uses Flog's
+    # default options (every scored method emits a ComplexityHit; selection
+    # happens in AnalyseRun). Flay duplication uses Flay's default mass
+    # threshold (16).
     class Default
       DOCS_ROOT = File.expand_path("../../../data/reek_docs", __dir__).freeze
 
@@ -23,13 +26,21 @@ module Snoot
         end
       end
 
-      # TODO(slice 10B): replace empty-Set stubs with real Flog/Flay output.
-      def flog_analyse(_paths)
-        Set[]
+      def flog_analyse(paths)
+        flog = Flog.new
+        flog.flog(*paths.map(&:raw))
+        flog.totals.each_with_object(Set[]) do |(class_method, score), hits|
+          hit = build_complexity_hit(class_method, score, flog.method_locations[class_method])
+          hits << hit unless hit.nil?
+        end
       end
 
-      def flay_analyse(_paths)
-        Set[]
+      def flay_analyse(paths)
+        flay = Flay.new
+        flay.process(*paths.map(&:raw))
+        flay.analyze.each_with_object(Set[]) do |item, clusters|
+          clusters << build_duplication_cluster(item)
+        end
       end
 
       def describe_location(location)
@@ -57,6 +68,47 @@ module Snoot
 
       def hyphenate(name)
         name.gsub(/([a-z])([A-Z])/, '\1-\2')
+      end
+
+      def build_complexity_hit(class_method, score, raw_location)
+        loc = parse_flog_location(raw_location)
+        return nil if loc.nil?
+
+        ComplexityHit.new(
+          location: loc,
+          method_name: class_method,
+          score: BigDecimal(score.to_s)
+        )
+      end
+
+      def build_duplication_cluster(item)
+        DuplicationCluster.new(
+          signature: item.structural_hash.to_s,
+          locations: item.locations.each_with_object(Set[]) do |loc, set|
+            set << Location.new(
+              path: Path.new(raw: loc.file),
+              line_start: loc.line,
+              line_end: loc.line
+            )
+          end
+        )
+      end
+
+      # Flog stores method locations as "file:line" or "file:line-line_max".
+      # Returns nil when the entry is missing (e.g. main#none) so callers
+      # can skip top-level expressions that lack a method-level location.
+      def parse_flog_location(raw)
+        return nil if raw.nil? || raw.empty?
+
+        file, range = raw.split(":", 2)
+        return nil if file.nil? || range.nil?
+
+        line_start, _line_end = range.split("-", 2).map(&:to_i)
+        Location.new(
+          path: Path.new(raw: file),
+          line_start: line_start,
+          line_end: line_start
+        )
       end
     end
   end

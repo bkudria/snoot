@@ -6,7 +6,7 @@ The report is centred on an LLM coding agent as the reader: each run produces a 
 
 ## Status
 
-Pre-1.0. Reek integration is wired (slice 10A); Flog and Flay arrive in slice 10B. The pipeline-driving CLI (`snoot <paths>`) is not yet implemented; today the executable supports `--version` and `--help` only. The behavioural specification lives in [`snoot.allium`](snoot.allium).
+Pre-1.0. All three analysers are wired into `AnalyserOrchestration::Default` (Reek + Flog + Flay). The pipeline-driving CLI (`snoot <paths>`) is not yet implemented; today the executable supports `--version` and `--help` only. The behavioural specification lives in [`snoot.allium`](snoot.allium).
 
 ## Install
 

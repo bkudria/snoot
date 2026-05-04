@@ -32,5 +32,7 @@ Gem::Specification.new do |spec|
   spec.metadata["rubygems_mfa_required"] = "true"
 
   spec.add_dependency "bigdecimal", "~> 3.1"
+  spec.add_dependency "flay", "~> 2.14"
+  spec.add_dependency "flog", "~> 4.9"
   spec.add_dependency "reek", "~> 6.5"
 end
