@@ -1,12 +1,21 @@
 require "bigdecimal"
 require "set"
 require "stringio"
+require "tempfile"
 
 module Snoot
   module Spec
-    module Factories
+    module Factories # rubocop:disable Metrics/ModuleLength
       def null_io
         StringIO.new
+      end
+
+      def with_ruby_tempfile(source)
+        Tempfile.create(["snoot_fixture", ".rb"]) do |f|
+          f.write(source)
+          f.flush
+          yield f.path
+        end
       end
 
       def build_path(raw: "lib/foo.rb")

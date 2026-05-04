@@ -13,8 +13,9 @@ module Snoot
   #
   # The contract is duck-typed: any object responding to the four methods
   # qualifies. There is no abstract base class to inherit from. The test
-  # double is Snoot::Spec::FakeOrchestration; the production adapter
-  # (AnalyserOrchestration::Default) is a later slice.
+  # double is Snoot::Spec::FakeOrchestration; the production adapter is
+  # Snoot::AnalyserOrchestration::Default (slice 10A: Reek path + vendored
+  # docs + describe_location; slice 10B: Flog + Flay).
   module AnalyserOrchestration
   end
 end
