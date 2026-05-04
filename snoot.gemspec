@@ -19,6 +19,7 @@ Gem::Specification.new do |spec|
   spec.files = Dir[
     "lib/**/*.rb",
     "data/reek_docs/*.md",
+    "data/reek_docs/LICENSE",
     "exe/snoot",
     "snoot.allium",
     "LICENSE",

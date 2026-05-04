@@ -27,3 +27,9 @@ After install, `snoot --version` and `snoot --help` are available on PATH.
     Snoot::CLI.for(Snoot::Operator.new).run_invoked(
       paths, orchestration: adapter
     )
+
+## License
+
+snoot is MIT-licensed; see [`LICENSE`](LICENSE).
+
+The reek smell-documentation files vendored under [`data/reek_docs/`](data/reek_docs/) are reproduced from [troessner/reek](https://github.com/troessner/reek) (Copyright © 2008, 2009 Kevin Rutherford) under the MIT license; see [`data/reek_docs/LICENSE`](data/reek_docs/LICENSE). Re-syncing those files with `rake docs:sync` also refreshes the bundled license notice.

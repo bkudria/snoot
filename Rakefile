@@ -1,6 +1,7 @@
 require "bundler/gem_tasks"
 require "fileutils"
 require "shellwords"
+require "tmpdir"
 
 DOCS_TARGET = File.expand_path("data/reek_docs", __dir__).freeze
 
@@ -11,18 +12,19 @@ end
 
 def fetch_reek_docs(version, target)
   url = "https://github.com/troessner/reek/archive/refs/tags/v#{version}.tar.gz"
-  cmd = "curl -fsSL #{url.shellescape} | " \
-        "tar -xz --strip-components=2 -C #{target.shellescape} reek-#{version}/docs"
-  return false unless system(cmd)
+  Dir.mktmpdir do |tmp|
+    return false unless system("curl -fsSL #{url.shellescape} | tar -xz -C #{tmp.shellescape}")
 
-  Dir.glob(File.join(target, "*")).each do |entry|
-    FileUtils.rm_rf(entry) unless File.file?(entry) && entry.end_with?(".md")
+    src = File.join(tmp, "reek-#{version}")
+    Dir.glob(File.join(src, "docs", "*.md")).each { |md| FileUtils.cp(md, target) }
+    license = File.join(src, "License.txt")
+    FileUtils.cp(license, File.join(target, "LICENSE")) if File.exist?(license)
   end
   true
 end
 
 namespace :docs do
-  desc "Sync reek's vendored markdown docs into data/reek_docs/ (pinned to bundled reek version)"
+  desc "Sync reek's vendored markdown docs and license into data/reek_docs/ (pinned to bundled reek version)"
   task :sync do
     version = bundled_reek_version
     FileUtils.rm_rf(DOCS_TARGET)
@@ -31,6 +33,7 @@ namespace :docs do
     raise "docs:sync failed" unless fetch_reek_docs(version, DOCS_TARGET)
 
     count = Dir.glob(File.join(DOCS_TARGET, "*.md")).size
-    puts "Synced #{count} markdown files into #{DOCS_TARGET}"
+    license = File.exist?(File.join(DOCS_TARGET, "LICENSE")) ? "+LICENSE" : "(no LICENSE!)"
+    puts "Synced #{count} markdown files #{license} into #{DOCS_TARGET}"
   end
 end
