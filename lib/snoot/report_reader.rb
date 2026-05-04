@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Snoot
   # ReportReader is the surface from snoot.allium that exposes a
   # finding-rendered Run's selected_finding (and its kind) to a

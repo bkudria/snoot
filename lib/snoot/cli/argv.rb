@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Snoot
   module CLI
     # Argv parses the *invocation form* of `exe/snoot` -- the argv shape
@@ -6,7 +8,7 @@ module Snoot
     # `run` returns an integer exit code; IO and the orchestration adapter
     # are injected for testability.
     module Argv
-      USAGE = <<~HELP.freeze
+      USAGE = <<~HELP
         Usage: snoot [paths...]
                snoot --version
                snoot --help

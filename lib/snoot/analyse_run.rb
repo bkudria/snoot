@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Snoot
   # AnalyseRun is the rule from snoot.allium that turns a pending Run into a
   # terminal outcome by orchestrating the three analysers and selecting one

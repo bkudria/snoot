@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 # Spec source: snoot.allium -- entity Finding + variants Smell | ComplexityHit | DuplicationCluster
@@ -25,8 +27,8 @@ RSpec.describe "Finding (sum type)" do
       hit = build_complexity_hit
       expect(hit).to be_a(Snoot::ComplexityHit)
       expect(hit.location).to be_a(Snoot::Location)
-      expect(hit.method_name).to satisfy { |v| v.nil? || v.is_a?(String) }
-      expect(hit.score).to satisfy { |v| v.is_a?(Numeric) }
+      expect(hit.method_name).to(satisfy { |v| v.nil? || v.is_a?(String) })
+      expect(hit.score).to(satisfy { |v| v.is_a?(Numeric) })
     end
   end
 
@@ -39,5 +41,4 @@ RSpec.describe "Finding (sum type)" do
       expect(dup.locations.size).to be >= 1
     end
   end
-
 end

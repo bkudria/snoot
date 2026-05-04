@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Snoot
   # RenderReport is the rule from snoot.allium that, given a Run whose
   # outcome is :finding_rendered, produces a Report. For Smell findings
@@ -8,17 +10,17 @@ module Snoot
   # findings the four-section shape (header, finding_context, doc,
   # framing) is preserved.
   module RenderReport
-    FRAMING_PLACEHOLDER = "[framing prose: see snoot.allium open question]".freeze
+    FRAMING_PLACEHOLDER = "[framing prose: see snoot.allium open question]"
 
     COMPLEXITY_DOC =
       "High complexity hits indicate a method or class doing too much. " \
       "Consider extracting helpers, simplifying conditionals, or " \
-      "splitting the responsibility across smaller units.".freeze
+      "splitting the responsibility across smaller units."
 
     DUPLICATION_DOC =
       "Structural duplication suggests an extracted abstraction is missing. " \
       "Consider whether the duplicated shape belongs to a single helper, " \
-      "module, or value type.".freeze
+      "module, or value type."
 
     Report = Data.define(:run, :finding, :sections)
 

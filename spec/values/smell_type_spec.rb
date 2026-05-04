@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 # Spec source: snoot.allium -- value SmellType { name: String }

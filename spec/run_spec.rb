@@ -1,5 +1,6 @@
+# frozen_string_literal: true
+
 require "spec_helper"
-require "set"
 
 # Spec source: snoot.allium -- entity Run with transitions on outcome and
 # state-dependent field selected_finding (when outcome = finding_rendered).
@@ -37,7 +38,7 @@ RSpec.describe "Run entity" do
     end
 
     it "is absent (nil or guarded) when outcome != :finding_rendered" do
-      [:pending, :nothing_to_report, :analysis_failed].each do |state|
+      %i[pending nothing_to_report analysis_failed].each do |state|
         run = build_run_at(state)
         # Design choice (slice 2): access raises rather than returns nil,
         # mirroring the Allium `when` guard semantics. Message must mention
@@ -73,11 +74,12 @@ RSpec.describe "Run entity" do
 
   describe "transition-terminal.Run.outcome" do
     it "terminal states have no outbound transitions" do
-      terminals = [:finding_rendered, :nothing_to_report, :analysis_failed]
+      terminals = %i[finding_rendered nothing_to_report analysis_failed]
       all_states = [:pending] + terminals
       terminals.each do |from|
         all_states.each do |to|
           next if to == from
+
           expect { transition!(build_run_at(from), to: to) }
             .to raise_error(Snoot::StateError),
                 "expected #{from} -> #{to} to be rejected"

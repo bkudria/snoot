@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 # Spec source: snoot.allium -- value Location { path: Path, line_start: Integer, line_end: Integer }

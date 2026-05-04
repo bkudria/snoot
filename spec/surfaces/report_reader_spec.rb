@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 # Spec source: snoot.allium -- surface ReportReader
@@ -14,7 +16,7 @@ RSpec.describe "ReportReader surface" do
 
     it "is absent (no instance) when run.outcome != finding_rendered" do
       reader_actor = build_report_consumer
-      [:pending, :nothing_to_report, :analysis_failed].each do |state|
+      %i[pending nothing_to_report analysis_failed].each do |state|
         run = build_run_at(state)
         expect(Snoot::ReportReader.for(reader_actor, run: run)).to be_nil
       end

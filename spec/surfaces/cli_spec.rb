@@ -1,5 +1,6 @@
+# frozen_string_literal: true
+
 require "spec_helper"
-require "set"
 require "stringio"
 
 # Spec source: snoot.allium -- surface CLI

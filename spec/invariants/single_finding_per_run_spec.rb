@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 # Spec source: snoot.allium -- invariant SingleFindingPerRun
@@ -9,6 +11,7 @@ RSpec.describe "Invariant: SingleFindingPerRun" do
       skip "bridge: Run audit / persistence not implemented"
       Snoot::Run.all.each do |run|
         next unless run.outcome == :finding_rendered
+
         expect(run.selected_finding).not_to be_nil
       end
     end

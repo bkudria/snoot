@@ -11,6 +11,9 @@ AllCops:
     - "tmp/**/*"
     - "coverage/**/*"
 
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
 # Specs are bridge stubs at this stage; relax a couple of cops that fight
 # the spec-first style. Revisit once `lib/` lands.
 Metrics/BlockLength:

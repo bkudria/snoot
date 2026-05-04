@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Snoot
   Smell = Data.define(:smell_type, :location, :message) do
     include Finding

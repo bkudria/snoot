@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Snoot
   # ReportConsumer is the external entity from snoot.allium that reads a
   # rendered report. The spec declares no fields and no narrowing

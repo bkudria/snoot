@@ -1,6 +1,7 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 require "bigdecimal"
-require "set"
 
 # Spec source: snoot.allium -- rule RenderReport
 #   when:    run: Run.outcome becomes finding_rendered
@@ -42,7 +43,9 @@ RSpec.describe "RenderReport rule" do
     let(:s_b2) { Snoot::Smell.new(smell_type: smell_type, location: loc_b2, message: "Baz has no descriptive comment") }
     let(:s_c1) { Snoot::Smell.new(smell_type: smell_type, location: loc_c1, message: "Qux has no descriptive comment") }
     let(:s_other) { Snoot::Smell.new(smell_type: other_type, location: loc_d3, message: "irrelevant") }
-    let(:doc_orch) { fake_orchestration(vendored_docs: { "IrresponsibleModule" => "# Irresponsible Module\n\ndoc body" }) }
+    let(:doc_orch) do
+      fake_orchestration(vendored_docs: { "IrresponsibleModule" => "# Irresponsible Module\n\ndoc body" })
+    end
     let(:run) do
       Snoot::Run.new(
         paths: Set[build_path],

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # SimpleCov configuration loaded by spec_helper.rb.
 #
 # minimum_coverage is intentionally 0 during the spec-first phase: the bar

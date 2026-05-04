@@ -1,5 +1,6 @@
+# frozen_string_literal: true
+
 require "spec_helper"
-require "set"
 
 # Spec source: snoot.allium -- rule AnalyseRun
 #   when:    RunInvoked(paths)

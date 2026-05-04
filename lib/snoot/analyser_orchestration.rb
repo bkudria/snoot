@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Snoot
   # AnalyserOrchestration is the contract from snoot.allium that the CLI
   # surface demands. An implementation must supply four methods:

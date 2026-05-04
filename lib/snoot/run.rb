@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Snoot
   Run = Data.define(:paths, :outcome, :selected_finding, :smells) do
     # rubocop:disable Lint/ConstantDefinitionInBlock

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Snoot
   # CLI is the surface from snoot.allium that exposes the gem to an
   # Operator. .for narrows on actor type (only Operator is admitted)
@@ -10,7 +12,7 @@ module Snoot
   # Returns [run, events].
   module CLI
     Event = Data.define(:name, :operator, :paths, :run, :finding, :sections)
-    NOTHING_TO_REPORT = "nothing to report\n".freeze
+    NOTHING_TO_REPORT = "nothing to report\n"
 
     CLI = Data.define(:operator) do
       def run_invoked(paths, orchestration:, stdout: $stdout, stderr: $stderr)

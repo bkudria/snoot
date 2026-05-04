@@ -1,4 +1,4 @@
-require "set"
+# frozen_string_literal: true
 
 module Snoot
   module Spec
