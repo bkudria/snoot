@@ -6,7 +6,7 @@ require "spec_helper"
 # state-dependent field selected_finding (when outcome = finding_rendered).
 RSpec.describe Snoot::Run do
   describe "entity-fields.Run" do
-    it "declares paths and outcome" do
+    it "declares paths and outcome", :aggregate_failures do
       run = described_class.new(paths: Set[], outcome: :pending)
       expect(run.paths).to be_a(Set)
       expect(run.outcome).to eq(:pending)
@@ -73,17 +73,18 @@ RSpec.describe Snoot::Run do
   end
 
   describe "transition-terminal.Run.outcome" do
-    it "terminal states have no outbound transitions" do
+    def each_terminal_invalid_transition
       terminals = %i[finding_rendered nothing_to_report analysis_failed]
       all_states = [:pending] + terminals
       terminals.each do |from|
-        all_states.each do |to|
-          next if to == from
+        all_states.each { |to| yield(from, to) unless from == to }
+      end
+    end
 
-          expect { transition!(build_run_at(from), to: to) }
-            .to raise_error(Snoot::StateError),
-                "expected #{from} -> #{to} to be rejected"
-        end
+    it "terminal states have no outbound transitions" do
+      each_terminal_invalid_transition do |from, to|
+        expect { transition!(build_run_at(from), to: to) }
+          .to raise_error(Snoot::StateError), "#{from} -> #{to} should be rejected"
       end
     end
   end

@@ -5,7 +5,7 @@ require "spec_helper"
 # Spec source: snoot.allium -- entity Finding + variants Smell | ComplexityHit | DuplicationCluster
 RSpec.describe Snoot::Finding do
   describe "entity-fields.Finding" do
-    it "every variant exposes the kind discriminator" do
+    it "every variant exposes the kind discriminator", :aggregate_failures do
       expect(build_smell.kind).to eq(:Smell)
       expect(build_complexity_hit.kind).to eq(:ComplexityHit)
       expect(build_duplication_cluster.kind).to eq(:DuplicationCluster)
@@ -13,7 +13,7 @@ RSpec.describe Snoot::Finding do
   end
 
   describe "sum-type-variant.Smell" do
-    it "exposes smell_type, location, message under a Smell guard" do
+    it "exposes smell_type, location, message under a Smell guard", :aggregate_failures do
       smell = build_smell
       expect(smell).to be_a(Snoot::Smell)
       expect(smell.smell_type).to be_a(Snoot::SmellType)
@@ -23,7 +23,7 @@ RSpec.describe Snoot::Finding do
   end
 
   describe "sum-type-variant.ComplexityHit" do
-    it "exposes location, optional method_name, and Decimal score" do
+    it "exposes location, optional method_name, and Decimal score", :aggregate_failures do
       hit = build_complexity_hit
       expect(hit).to be_a(Snoot::ComplexityHit)
       expect(hit.location).to be_a(Snoot::Location)
@@ -33,7 +33,7 @@ RSpec.describe Snoot::Finding do
   end
 
   describe "sum-type-variant.DuplicationCluster" do
-    it "exposes signature and a Set of locations" do
+    it "exposes signature and a Set of locations", :aggregate_failures do
       dup = build_duplication_cluster
       expect(dup).to be_a(Snoot::DuplicationCluster)
       expect(dup.signature).to be_a(String)

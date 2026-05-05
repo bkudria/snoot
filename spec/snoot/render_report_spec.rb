@@ -11,13 +11,14 @@ RSpec.describe Snoot::RenderReport do
   let(:orch) { fake_orchestration(vendored_docs: { "FeatureEnvy" => "## doc" }) }
 
   describe "rule-success.RenderReport" do
-    it "emits ReportEmitted for a Smell as { doc, instances }" do
-      smell = build_smell(smell_type: build_smell_type(name: "FeatureEnvy"))
-      run = build_run_with_finding(smell)
-      report = capture_report { trigger_render_report(run, orchestration: orch) }
-      expect(report.run).to eq(run)
-      expect(report.finding).to eq(run.selected_finding)
-      expect(report.sections.keys).to eq(%i[doc instances])
+    let(:fe_smell) { build_smell(smell_type: build_smell_type(name: "FeatureEnvy")) }
+    let(:fe_run) { build_run_with_finding(fe_smell) }
+    let(:fe_report) { capture_report { trigger_render_report(fe_run, orchestration: orch) } }
+
+    it "emits ReportEmitted for a Smell as { doc, instances }", :aggregate_failures do
+      expect(fe_report.run).to eq(fe_run)
+      expect(fe_report.finding).to eq(fe_run.selected_finding)
+      expect(fe_report.sections.keys).to eq(%i[doc instances])
     end
   end
 
@@ -58,17 +59,17 @@ RSpec.describe Snoot::RenderReport do
       )
     end
     let(:report) { described_class.invoke(run, orchestration: doc_orch) }
+    let(:instances) { report.sections[:instances] }
 
     it "renders doc from vendored_doc(smell_type)" do
       expect(report.sections[:doc]).to eq("# Irresponsible Module\n\ndoc body")
     end
 
     it "renders an Instances section starting with the heading" do
-      expect(report.sections[:instances]).to start_with("## Instances\n\n")
+      expect(instances).to start_with("## Instances\n\n")
     end
 
-    it "groups instances by file with 2-space-indented Line N: <message> entries" do
-      instances = report.sections[:instances]
+    it "groups instances by file with 2-space-indented Line N: <message> entries", :aggregate_failures do
       expect(instances).to include(
         "lib/a.rb\n  Line 6: Foo has no descriptive comment\n  Line 12: Bar has no descriptive comment"
       )
@@ -76,8 +77,7 @@ RSpec.describe Snoot::RenderReport do
       expect(instances).to include("lib/c.rb\n  Line 1: Qux has no descriptive comment")
     end
 
-    it "orders files by descending instance count, alphabetical tie-break" do
-      instances = report.sections[:instances]
+    it "orders files by descending instance count, alphabetical tie-break", :aggregate_failures do
       a_idx = instances.index("lib/a.rb")
       b_idx = instances.index("lib/b.rb")
       c_idx = instances.index("lib/c.rb")
@@ -85,12 +85,12 @@ RSpec.describe Snoot::RenderReport do
       expect(b_idx).to be < c_idx
     end
 
-    it "excludes smells of other types" do
-      expect(report.sections[:instances]).not_to include("lib/d.rb")
-      expect(report.sections[:instances]).not_to include("irrelevant")
+    it "excludes smells of other types", :aggregate_failures do
+      expect(instances).not_to include("lib/d.rb")
+      expect(instances).not_to include("irrelevant")
     end
 
-    it "omits header, finding_context, and framing for Smell findings" do
+    it "omits header, finding_context, and framing for Smell findings", :aggregate_failures do
       expect(report.sections).not_to have_key(:header)
       expect(report.sections).not_to have_key(:finding_context)
       expect(report.sections).not_to have_key(:framing)
@@ -136,7 +136,7 @@ RSpec.describe Snoot::RenderReport do
       expect(report.sections[:header]).to eq("Structural duplication: 2 locations (signature: abc123)")
     end
 
-    it "renders finding_context as enumerated locations" do
+    it "renders finding_context as enumerated locations", :aggregate_failures do
       expect(report.sections[:finding_context]).to start_with("Locations:\n")
       expect(report.sections[:finding_context]).to include("lib/a.rb:1-8")
       expect(report.sections[:finding_context]).to include("lib/b.rb:4-11")

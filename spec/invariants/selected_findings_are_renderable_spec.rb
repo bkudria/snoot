@@ -12,12 +12,9 @@ RSpec.describe "Invariant: SelectedFindingsAreRenderable" do # rubocop:disable R
     it "every rendered Smell selection has a vendored doc available" do
       skip "bridge: Run audit + vendored_doc lookup not implemented"
       Snoot::Run.all.each do |run|
-        next unless run.outcome == :finding_rendered
+        next unless run.outcome == :finding_rendered && run.selected_finding.is_a?(Snoot::Smell)
 
-        finding = run.selected_finding
-        next unless finding.is_a?(Snoot::Smell)
-
-        expect(Snoot.vendored_doc(finding.smell_type)).not_to be_nil
+        expect(Snoot.vendored_doc(run.selected_finding.smell_type)).not_to be_nil
       end
     end
 

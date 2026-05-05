@@ -9,17 +9,24 @@ amended.
 
 ## Test layout
 
-`spec/` mirrors the Allium element kinds in `snoot.allium`:
+`spec/` follows a hybrid convention: namespace-mirroring for class specs,
+Allium-concept directories for everything else.
 
-- `spec/values/` — value-type specs (`Path`, `Location`, `SmellType`)
-- `spec/rules/` — rule specs (`AnalyseRun`, `RenderReport`)
-- `spec/surfaces/` — surface specs (`CLI`, `ReportReader`)
-- `spec/invariants/` — invariant specs (`SingleFindingPerRun`,
-  `SelectedFindingsAreRenderable`)
-- `spec/*_spec.rb` — entity specs at the top level (`Finding`, `Run`)
+- `spec/snoot/` — specs that describe a Ruby class. Path mirrors the
+  namespace (`Snoot::Finding` → `spec/snoot/finding_spec.rb`,
+  `Snoot::CLI::Argv` → `spec/snoot/cli/argv_spec.rb`). This satisfies
+  `RSpec/SpecFilePathFormat`.
+- `spec/contracts/` — Allium contract specs (`RSpec.describe` a contract
+  string, e.g. `"AnalyserOrchestration::Default"`).
+- `spec/invariants/` — Allium invariant specs (`RSpec.describe` an invariant
+  string, e.g. `"Invariant: SingleFindingPerRun"`).
+- `spec/support/` — shared helpers (factories, fakes, tempfile/IO scaffolding).
+- `spec/*_spec.rb` — top-level specs that aren't a class (e.g.
+  `exe_snoot_spec.rb`, `version_spec.rb`).
 
-When adding a new spec, place it under the directory matching its Allium
-element kind. New entities go at the top level.
+When adding a spec for a Ruby class, place it under `spec/snoot/` mirroring
+its namespace. Allium contract/invariant specs (which `RSpec.describe` a
+descriptive string) live under `spec/contracts/` or `spec/invariants/`.
 
 ## Commands
 

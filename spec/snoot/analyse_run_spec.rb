@@ -9,7 +9,7 @@ require "spec_helper"
 #            top-overall finding is a Smell whose vendored doc is missing.
 RSpec.describe Snoot::AnalyseRun do
   describe "rule-success.AnalyseRun" do
-    it "creates a Run terminating in one of the three declared outcomes" do
+    it "creates a Run terminating in one of the three declared outcomes", :aggregate_failures do
       paths = Set[Snoot::Path.new(raw: "lib/foo.rb")]
       run = invoke_analyse_run(paths)
       expect(run).to be_a(Snoot::Run)
@@ -33,22 +33,27 @@ RSpec.describe Snoot::AnalyseRun do
   end
 
   describe "smells field propagation" do
-    it "carries the orchestration's smells onto run.smells when finding_rendered" do
-      smell = build_smell(smell_type: build_smell_type(name: "Documented"))
-      sibling = build_smell(
+    let(:documented_smell) { build_smell(smell_type: build_smell_type(name: "Documented")) }
+    let(:sibling_smell) do
+      build_smell(
         smell_type: build_smell_type(name: "Documented"),
         location: build_location(path: build_path(raw: "lib/y.rb"), line_start: 5, line_end: 5)
       )
-      orch = fake_orchestration(
-        smells: Set[smell, sibling],
+    end
+    let(:doc_orch) do
+      fake_orchestration(
+        smells: Set[documented_smell, sibling_smell],
         vendored_docs: { "Documented" => "## doc" }
       )
-      run = invoke_analyse_run(Set[build_path], orchestration: orch)
-      expect(run.outcome).to eq(:finding_rendered)
-      expect(run.smells).to eq(Set[smell, sibling])
     end
 
-    it "carries the orchestration's smells onto run.smells when nothing_to_report" do
+    it "carries the orchestration's smells onto run.smells when finding_rendered", :aggregate_failures do
+      run = invoke_analyse_run(Set[build_path], orchestration: doc_orch)
+      expect(run.outcome).to eq(:finding_rendered)
+      expect(run.smells).to eq(Set[documented_smell, sibling_smell])
+    end
+
+    it "carries the orchestration's smells onto run.smells when nothing_to_report", :aggregate_failures do
       run = invoke_analyse_run(Set[build_path], orchestration: fake_orchestration)
       expect(run.outcome).to eq(:nothing_to_report)
       expect(run.smells).to eq(Set[])
@@ -56,12 +61,9 @@ RSpec.describe Snoot::AnalyseRun do
   end
 
   describe "rule-failure.AnalyseRun -- analyser raises" do
-    it "emits an :analysis_failed event carrying the rescued error" do
+    it "emits an :analysis_failed event carrying the rescued error", :aggregate_failures do
       err = StandardError.new("boom")
-      _run, events = described_class.invoke(
-        Set[build_path],
-        orchestration: fake_orchestration(reek_raises: err)
-      )
+      _run, events = described_class.invoke(Set[build_path], orchestration: fake_orchestration(reek_raises: err))
       failure = events.find { |e| e.name == :analysis_failed }
       expect(failure).not_to be_nil
       expect(failure.error).to eq(err)

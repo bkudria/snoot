@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "bigdecimal"
+require "fileutils"
 require "stringio"
 require "tempfile"
+require "tmpdir"
 
 module Snoot
   module Spec
@@ -16,6 +18,48 @@ module Snoot
           f.write(source)
           f.flush
           yield f.path
+        end
+      end
+
+      def analyse_reek(source, adapter: Snoot::AnalyserOrchestration::Default.new)
+        result = nil
+        captured_path = nil
+        with_ruby_tempfile(source) do |path|
+          captured_path = path
+          result = adapter.reek_analyse(Set[Snoot::Path.new(raw: path)])
+        end
+        [result, captured_path]
+      end
+
+      def analyse_flog(source, adapter: Snoot::AnalyserOrchestration::Default.new)
+        result = nil
+        captured_path = nil
+        with_ruby_tempfile(source) do |path|
+          captured_path = path
+          result = adapter.flog_analyse(Set[Snoot::Path.new(raw: path)])
+        end
+        [result, captured_path]
+      end
+
+      def analyse_flay(src1, src2, adapter: Snoot::AnalyserOrchestration::Default.new)
+        result = nil
+        paths = []
+        with_ruby_tempfile(src1) do |p1|
+          with_ruby_tempfile(src2) do |p2|
+            paths = [p1, p2]
+            result = adapter.flay_analyse(Set[Snoot::Path.new(raw: p1), Snoot::Path.new(raw: p2)])
+          end
+        end
+        [result, *paths]
+      end
+
+      def with_seeded_lib(filename, source)
+        Dir.mktmpdir do |dir|
+          Dir.chdir(dir) do
+            FileUtils.mkdir_p("lib")
+            File.write("lib/#{filename}", source)
+            yield
+          end
         end
       end
 

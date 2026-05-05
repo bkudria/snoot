@@ -24,7 +24,7 @@ RSpec.describe Snoot::ReportReader do
   end
 
   describe "surface-exposure.ReportReader" do
-    it "exposes run.selected_finding and run.selected_finding.kind" do
+    it "exposes run.selected_finding and run.selected_finding.kind", :aggregate_failures do
       reader_actor = build_report_consumer
       run = build_run_at(:finding_rendered, with_finding: build_smell_with_doc)
       reader = described_class.for(reader_actor, run: run)
