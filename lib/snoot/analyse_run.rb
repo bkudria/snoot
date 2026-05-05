@@ -29,13 +29,18 @@ module Snoot
 
       run = run.with(smells: smells.to_set)
       documented = smells.reject { |s| orchestration.vendored_doc(s.smell_type).nil? }
-      candidates = documented.to_a + complexities.to_a + duplications.to_a
-      all = smells.to_a + complexities.to_a + duplications.to_a
+      complexities_a = complexities.to_a
+      duplications_a = duplications.to_a
+      candidates = documented.to_a + complexities_a + duplications_a
+      all = smells.to_a + complexities_a + duplications_a
 
       top_overall = select_top_finding(all)
-      if top_overall.is_a?(Smell) && orchestration.vendored_doc(top_overall.smell_type).nil?
-        events << Event.new(name: :skipped_doc_less_smell_warned,
-                            run: run, smell_type: top_overall.smell_type, error: nil)
+      if top_overall.is_a?(Smell)
+        top_smell_type = top_overall.smell_type
+        if orchestration.vendored_doc(top_smell_type).nil?
+          events << Event.new(name: :skipped_doc_less_smell_warned,
+                              run: run, smell_type: top_smell_type, error: nil)
+        end
       end
 
       return [run.transition_to(:nothing_to_report), events] if candidates.empty?
@@ -67,8 +72,7 @@ module Snoot
     end
 
     def top_duplication(clusters)
-      max_size = clusters.map { |c| c.locations.size }.max
-      clusters.find { |c| c.locations.size == max_size }
+      clusters.max_by { |c| c.locations.size }
     end
 
     def top_complexity(complexities)

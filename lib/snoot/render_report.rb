@@ -72,25 +72,24 @@ module Snoot
     end
 
     def render_header(finding, orch)
+      loc = orch.describe_location(finding.location) unless finding.is_a?(DuplicationCluster)
       case finding
       when Smell
-        "#{finding.smell_type.name} at #{orch.describe_location(finding.location)}"
+        "#{finding.smell_type.name} at #{loc}"
       when ComplexityHit
-        "High complexity in #{finding.method_name} at " \
-        "#{orch.describe_location(finding.location)} (score: #{finding.score.to_s('F')})"
+        "High complexity in #{finding.method_name} at #{loc} (score: #{finding.score.to_s('F')})"
       when DuplicationCluster
-        "Structural duplication: #{finding.locations.size} locations " \
-        "(signature: #{finding.signature})"
+        "Structural duplication: #{finding.locations.size} locations (signature: #{finding.signature})"
       end
     end
 
     def render_finding_context(finding, orch)
+      loc = orch.describe_location(finding.location) unless finding.is_a?(DuplicationCluster)
       case finding
       when Smell
-        "#{orch.describe_location(finding.location)}\n\n#{finding.message}"
+        "#{loc}\n\n#{finding.message}"
       when ComplexityHit
-        "#{orch.describe_location(finding.location)}\n\n" \
-        "Method: #{finding.method_name}\nScore: #{finding.score.to_s('F')}"
+        "#{loc}\n\nMethod: #{finding.method_name}\nScore: #{finding.score.to_s('F')}"
       when DuplicationCluster
         "Locations:\n#{finding.locations.map { |l| orch.describe_location(l) }.join("\n")}"
       end

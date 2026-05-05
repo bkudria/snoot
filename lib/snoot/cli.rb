@@ -32,9 +32,10 @@ module Snoot
 
       def emit_report(run, orchestration, paths, events, stdout)
         report = RenderReport.invoke(run, orchestration: orchestration)
-        stdout.write(format_report(report.sections))
+        sections = report.sections
+        stdout.write(format_report(sections))
         events << Event.new(name: :report_emitted, operator: operator, paths: paths,
-                            run: run, finding: report.finding, sections: report.sections)
+                            run: run, finding: report.finding, sections: sections)
       end
 
       def emit_failure(analyse_events, stderr)

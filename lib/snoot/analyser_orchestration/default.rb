@@ -21,7 +21,8 @@ module Snoot
         paths.each_with_object(Set[]) do |path, smells|
           examiner = Reek::Examiner.new(Pathname.new(path.raw))
           examiner.smells.each do |w|
-            next if w.lines.nil? || w.lines.empty?
+            lines = w.lines
+            next if lines.nil? || lines.empty?
 
             smells << build_smell(w)
           end
@@ -57,12 +58,13 @@ module Snoot
       private
 
       def build_smell(warning)
+        lines = warning.lines
         Smell.new(
           smell_type: SmellType.new(name: warning.smell_type),
           location: Location.new(
             path: Path.new(raw: warning.source),
-            line_start: warning.lines.first,
-            line_end: warning.lines.last
+            line_start: lines.first,
+            line_end: lines.last
           ),
           message: "#{warning.context} #{warning.message}"
         )
@@ -87,11 +89,8 @@ module Snoot
         DuplicationCluster.new(
           signature: item.structural_hash.to_s,
           locations: item.locations.each_with_object(Set[]) do |loc, set|
-            set << Location.new(
-              path: Path.new(raw: loc.file),
-              line_start: loc.line,
-              line_end: loc.line
-            )
+            line = loc.line
+            set << Location.new(path: Path.new(raw: loc.file), line_start: line, line_end: line)
           end
         )
       end
