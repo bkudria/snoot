@@ -145,4 +145,78 @@ RSpec.describe "AnalyserOrchestration::Default" do
       expect(analyse_flay(src_a, src_b).first).to eq(Set[])
     end
   end
+
+  describe "significant_smells" do
+    let(:envy) { build_smell(smell_type: build_smell_type(name: "FeatureEnvy")) }
+    let(:tmm_pair) do
+      Set[
+        build_smell(smell_type: build_smell_type(name: "TooManyMethods"), location: build_location(line_start: 2)),
+        build_smell(smell_type: build_smell_type(name: "TooManyMethods"), location: build_location(line_start: 3))
+      ]
+    end
+
+    it "drops smell types whose instance count is below the floor" do
+      result = adapter.significant_smells(Set[envy] | tmm_pair)
+      expect(result.map { |smell| smell.smell_type.name }).to contain_exactly("TooManyMethods", "TooManyMethods")
+    end
+
+    it "returns an empty Set when every smell type is a singleton" do
+      tmm = build_smell(smell_type: build_smell_type(name: "TooManyMethods"))
+      expect(adapter.significant_smells(Set[envy, tmm])).to eq(Set[])
+    end
+
+    it "returns an empty Set for empty input" do
+      expect(adapter.significant_smells(Set[])).to eq(Set[])
+    end
+  end
+
+  describe "significant_complexities" do
+    let(:hit_low)  { build_complexity_hit(score: BigDecimal("24.0"), method_name: "Foo#low") }
+    let(:hit_at)   { build_complexity_hit(score: BigDecimal("25.0"), method_name: "Foo#at") }
+    let(:hit_high) { build_complexity_hit(score: BigDecimal("50.0"), method_name: "Foo#high") }
+
+    it "drops ComplexityHit instances scoring below the floor" do
+      result = adapter.significant_complexities(Set[hit_low, hit_at, hit_high])
+      expect(result.map(&:method_name)).to contain_exactly("Foo#at", "Foo#high")
+    end
+
+    it "returns an empty Set for empty input" do
+      expect(adapter.significant_complexities(Set[])).to eq(Set[])
+    end
+  end
+
+  describe "significant_duplications" do
+    it "passes duplication clusters through unchanged" do
+      cluster_a = build_duplication_cluster(signature: "a")
+      cluster_b = build_duplication_cluster(signature: "b")
+      input = Set[cluster_a, cluster_b]
+      expect(adapter.significant_duplications(input)).to eq(input)
+    end
+
+    it "returns an empty Set for empty input" do
+      expect(adapter.significant_duplications(Set[])).to eq(Set[])
+    end
+  end
+
+  # FakeOrchestration is the test double for the AnalyserOrchestration contract.
+  # Its significance methods are identity-by-default so that existing CLI tests
+  # exercising outcome routing aren't reshaped by floor policy.
+  describe "FakeOrchestration significance identity-by-default" do
+    let(:fake) { fake_orchestration }
+
+    it "passes smells through unchanged" do
+      smells = Set[build_smell, build_smell(smell_type: build_smell_type(name: "Other"))]
+      expect(fake.significant_smells(smells)).to eq(smells)
+    end
+
+    it "passes complexities through unchanged" do
+      hits = Set[build_complexity_hit(score: BigDecimal("1.0"))]
+      expect(fake.significant_complexities(hits)).to eq(hits)
+    end
+
+    it "passes duplications through unchanged" do
+      clusters = Set[build_duplication_cluster]
+      expect(fake.significant_duplications(clusters)).to eq(clusters)
+    end
+  end
 end

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "bigdecimal"
 require "flay"
 require "flog"
 require "reek"
@@ -18,6 +19,9 @@ module Snoot
     module Default
       DOCS_ROOT = File.expand_path("../../../data/reek_docs", __dir__).freeze
       DOC_FILENAME_PATTERN = /([a-z])([A-Z])/
+
+      SMELL_TYPE_INSTANCE_FLOOR = 2
+      COMPLEXITY_SCORE_FLOOR = BigDecimal("25")
 
       module_function
 
@@ -57,6 +61,17 @@ module Snoot
         path = File.join(DOCS_ROOT, "#{smell_type.name.gsub(DOC_FILENAME_PATTERN, '\1-\2')}.md")
         File.exist?(path) ? File.read(path) : nil
       end
+
+      def significant_smells(smells)
+        counts = smells.group_by(&:smell_type).transform_values(&:size)
+        smells.select { |smell| counts[smell.smell_type] >= SMELL_TYPE_INSTANCE_FLOOR }.to_set
+      end
+
+      def significant_complexities(complexities)
+        complexities.select { |hit| hit.score >= COMPLEXITY_SCORE_FLOOR }.to_set
+      end
+
+      def significant_duplications(duplications) = duplications
     end
   end
 end

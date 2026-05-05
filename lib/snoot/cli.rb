@@ -16,7 +16,7 @@ module Snoot
     # AnalyseRun events. Returned alongside the Run so callers can
     # assert on the sequence.
     Event = Data.define(:name, :operator, :paths, :run, :finding, :sections)
-    NOTHING_TO_REPORT = "nothing to report\n"
+    NOTHING_TO_REPORT = "nothing to report — no findings above snoot's significance floor\n"
 
     # Streams bundles the stdout/stderr pair injected at the CLI
     # surface; nested inside Pipeline so the IO sinks travel together

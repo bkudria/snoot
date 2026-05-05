@@ -69,4 +69,94 @@ RSpec.describe Snoot::AnalyseRun do
       expect(failure.error).to eq(err)
     end
   end
+
+  describe "significance pre-filter" do
+    # Sources#candidates and Sources#all must consult orchestration.significant_*
+    # so floors filter out findings that don't warrant addressing before category
+    # selection. These tests inject a fake whose significance methods drop
+    # everything; today's behaviour ignores them and selects raw findings.
+    let(:dropping_orchestration_class) do
+      Class.new(Snoot::Spec::FakeOrchestration) do
+        def significant_smells(_smells) = Set[]
+        def significant_complexities(_complexities) = Set[]
+        def significant_duplications(_duplications) = Set[]
+      end
+    end
+
+    let(:documented_smell) { build_smell(smell_type: build_smell_type(name: "Documented")) }
+
+    it "drops smells filtered out by significance, yielding nothing_to_report" do
+      orch = dropping_orchestration_class.new(smells: Set[documented_smell],
+                                              vendored_docs: { "Documented" => "## doc" })
+      run = invoke_analyse_run(Set[build_path], orchestration: orch)
+      expect(run.outcome).to eq(:nothing_to_report)
+    end
+
+    it "drops complexities filtered out by significance, yielding nothing_to_report" do
+      hit = build_complexity_hit(score: BigDecimal("100.0"))
+      orch = dropping_orchestration_class.new(complexities: Set[hit])
+      run = invoke_analyse_run(Set[build_path], orchestration: orch)
+      expect(run.outcome).to eq(:nothing_to_report)
+    end
+
+    it "drops duplications filtered out by significance, yielding nothing_to_report" do
+      cluster = build_duplication_cluster
+      orch = dropping_orchestration_class.new(duplications: Set[cluster])
+      run = invoke_analyse_run(Set[build_path], orchestration: orch)
+      expect(run.outcome).to eq(:nothing_to_report)
+    end
+  end
+
+  describe "deterministic tie-break" do
+    # Inputs are constructed in reverse-canonical order so the existing
+    # `.find { ... == max }` semantics (insertion-first) would yield the wrong
+    # result. The picker must use an explicit secondary sort key to pick
+    # canonically.
+    def smell_at(type_name, path, line)
+      build_smell(smell_type: build_smell_type(name: type_name),
+                  location: build_location(path: build_path(raw: path), line_start: line))
+    end
+
+    def hit_at(score, path, line)
+      build_complexity_hit(score: BigDecimal(score),
+                           location: build_location(path: build_path(raw: path), line_start: line))
+    end
+
+    describe ".top_smell" do
+      it "breaks smell-type ties by smell_type name ascending" do
+        # Both types tie at count 2; FeatureEnvy < TooManyMethods alphabetically.
+        # Reverse-ordered input so insertion order would pick TooManyMethods.
+        smells = [smell_at("TooManyMethods", "z.rb", 1), smell_at("TooManyMethods", "a.rb", 9),
+                  smell_at("FeatureEnvy", "b.rb", 1), smell_at("FeatureEnvy", "a.rb", 5)]
+        expect(described_class.top_smell(smells).smell_type.name).to eq("FeatureEnvy")
+      end
+
+      it "breaks within-type ties by (path, line_start) ascending" do
+        # Reverse-ordered input so today's `.find` returns the b.rb smell first.
+        smells = [smell_at("FeatureEnvy", "b.rb", 1), smell_at("FeatureEnvy", "a.rb", 5)]
+        expect(described_class.top_smell(smells).location.path.raw).to eq("a.rb")
+      end
+    end
+
+    describe ".top_duplication" do
+      let(:locs) do
+        Set[build_location(path: build_path(raw: "a.rb"), line_start: 1),
+            build_location(path: build_path(raw: "b.rb"), line_start: 1)]
+      end
+
+      it "breaks ties by signature ascending" do
+        clusters = [build_duplication_cluster(signature: "zzz", locations: locs),
+                    build_duplication_cluster(signature: "aaa", locations: locs)]
+        expect(described_class.top_duplication(clusters).signature).to eq("aaa")
+      end
+    end
+
+    describe ".top_complexity" do
+      it "breaks ties by (path, line_start) ascending" do
+        # Reverse-ordered: b.rb first.
+        complexities = [hit_at("30.0", "b.rb", 1), hit_at("30.0", "a.rb", 5)]
+        expect(described_class.top_complexity(complexities).location.path.raw).to eq("a.rb")
+      end
+    end
+  end
 end

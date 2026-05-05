@@ -75,9 +75,9 @@ RSpec.describe Snoot::CLI do
       end
     end
 
-    it "writes 'nothing to report' to stdout on nothing_to_report", :aggregate_failures do
+    it "writes the enriched 'nothing to report' line to stdout on nothing_to_report", :aggregate_failures do
       run_cli
-      expect(stdout.string).to eq("nothing to report\n")
+      expect(stdout.string).to eq("nothing to report — no findings above snoot's significance floor\n")
       expect(stderr.string).to eq("")
     end
 

@@ -99,6 +99,17 @@ contract AnalyserOrchestration {
     -- itself, not the orchestration contract.
     vendored_doc: (smell_type: SmellType) -> String?
 
+    -- Significance pre-filters. Each returns the subset of its input deemed
+    -- significant enough to warrant ReportConsumer attention. Numeric
+    -- thresholds are an implementation policy each adapter owns; the
+    -- contract requires only that the result is a subset of the input and
+    -- is deterministic per @invariant Determinism. This is the gate that
+    -- filters findings that don't warrant addressing before category
+    -- selection in AnalyseRun.
+    significant_smells: (smells: Set<Smell>) -> Set<Smell>
+    significant_complexities: (complexities: Set<ComplexityHit>) -> Set<ComplexityHit>
+    significant_duplications: (duplications: Set<DuplicationCluster>) -> Set<DuplicationCluster>
+
     @invariant Determinism
         -- Each signature is pure within a single CLI invocation: the same
         -- inputs produce the same outputs. Outputs may differ between
@@ -176,20 +187,44 @@ rule AnalyseRun {
     let complexity_findings = flog_analyse(paths)
     let duplication_findings = flay_analyse(paths)
 
+    -- Significance is the "warrants addressing" pre-filter: each analyser
+    -- adapter discards its own noise (per-analyser numeric thresholds are
+    -- the implementation's concern) before category selection runs. The
+    -- doc-less filter for smells sits on top of significance, so only
+    -- significant doc-less smells reach SkippedDocLessSmellWarned. The
+    -- top_finding_overall is computed over the significant union for the
+    -- same reason: the warning is about a finding that would otherwise
+    -- have been actionable.
+    let significant_smell_findings = significant_smells(smell_findings)
+    let significant_complexity_findings = significant_complexities(complexity_findings)
+    let significant_duplication_findings = significant_duplications(duplication_findings)
+
     -- A reek smell is excluded from the candidate pool when no vendored doc
     -- exists for its type. If the would-have-been-selected finding (i.e. the
     -- top-scoring finding before this filter) is one of these, a stderr
     -- warning is emitted (see SkippedDocLessSmellWarned trigger below).
     let documented_smell_findings =
-        filter(smell_findings, s => vendored_doc(s.smell_type) != null)
+        filter(significant_smell_findings, s => vendored_doc(s.smell_type) != null)
 
     let candidate_findings =
-        documented_smell_findings + complexity_findings + duplication_findings
+        documented_smell_findings + significant_complexity_findings + significant_duplication_findings
 
     let top_finding_overall = select_top_finding(
-        smell_findings + complexity_findings + duplication_findings
+        significant_smell_findings + significant_complexity_findings + significant_duplication_findings
     )
 
+    -- select_top_finding orders findings by category priority first, then
+    -- by an analyser-natural primary key, then by deterministic secondary
+    -- keys to break ties. Category priority: Smell > DuplicationCluster >
+    -- ComplexityHit. Within a category the primary key is the analyser's
+    -- natural ranking (smell-type instance count for Smells; locations.size
+    -- for DuplicationClusters; score for ComplexityHits). Ties are broken
+    -- by:
+    --   - Smell: smell_type.name ascending, then path ascending, then
+    --     line_start ascending.
+    --   - DuplicationCluster: signature ascending, then min(location.path)
+    --     ascending, then min(location.line_start) ascending.
+    --   - ComplexityHit: path ascending, then line_start ascending.
     let selected = select_top_finding(candidate_findings)
 
     ensures:
@@ -282,6 +317,28 @@ invariant SelectedFindingsAreRenderable {
                 implies vendored_doc(s.smell_type) != null
 }
 
+-- The selected finding must be significant: it must survive the
+-- significance pre-filter for its variant. This is the "warrants
+-- addressing" gate, complementary to SelectedFindingsAreRenderable's
+-- documented-doc gate. Quantification ranges over each variant; the
+-- implementation in AnalyserOrchestration owns the numeric thresholds.
+-- The membership test uses the singleton {finding} as the input set: an
+-- adapter's policy is per-instance, so the finding is significant iff
+-- significant_*({f}) contains f. This keeps the invariant expressible
+-- without enlarging Run with per-variant finding collections.
+invariant SignificantFindingsOnly {
+    for r in Runs:
+        for s in Smells:
+            (r.outcome = finding_rendered and r.selected_finding = s)
+                implies s in significant_smells({s})
+        for c in ComplexityHits:
+            (r.outcome = finding_rendered and r.selected_finding = c)
+                implies c in significant_complexities({c})
+        for d in DuplicationClusters:
+            (r.outcome = finding_rendered and r.selected_finding = d)
+                implies d in significant_duplications({d})
+}
+
 ------------------------------------------------------------
 -- Surfaces
 ------------------------------------------------------------
@@ -300,13 +357,17 @@ surface CLI {
     @guarantee TerminatesInOneOutcome
         -- Every accepted invocation produces exactly one of the three
         -- terminal outcomes (FindingRendered, NothingToReport,
-        -- AnalysisFailed). The spec does not specify the exit code; that
-        -- is an open question.
+        -- AnalysisFailed). Exit code by outcome:
+        --   nothing_to_report -> 0
+        --   finding_rendered  -> 1
+        --   analysis_failed   -> 2
 
     @guarantee StdoutMutuallyExclusive
         -- A run produces stdout content corresponding to its outcome:
         --   finding_rendered  -> stdout = formatted four-section report
-        --   nothing_to_report -> stdout = 'nothing to report' acknowledgement
+        --   nothing_to_report -> stdout = single-line acknowledgement
+        --                        (see the NothingToReport resolution at
+        --                        the bottom for the exact format)
         --   analysis_failed   -> stdout = empty
         -- Stderr carries warnings (missing vendored docs) and analyser
         -- failure detail; these are independent of stdout content.
@@ -365,16 +426,25 @@ surface ReportReader {
 -- Open Questions
 ------------------------------------------------------------
 
-open question "Cost-ranking formula -- how select_top_finding combines reek smell severity, flog complexity scores, and flay duplication signal into a single ordering across all three categories"
+-- Resolved: Cost-ranking formula -- category priority is Smell >
+-- DuplicationCluster > ComplexityHit, with a per-analyser significance
+-- pre-filter owned by the AnalyserOrchestration adapter (see the
+-- significant_* signatures on the contract). Numeric thresholds are not
+-- part of the spec.
 
-open question "Tie-breaking -- when multiple candidate findings tie at the highest score, which one wins (the spec asserts only that selection is deterministic for a given input; the tie-break rule itself is implementation-defined)"
+-- Resolved: Tie-breaking -- the per-category secondary keys for
+-- select_top_finding are documented inline in the AnalyseRun rule. Final
+-- fallback is path/line_start ascending.
 
 open question "Default path set -- whether RunInvoked defaults to a sensible glob (e.g. lib/**/*.rb) when paths is empty, or whether empty paths is rejected at the CLI surface"
 
-open question "Exit-code policy -- whether the CLI exits 0/1 by outcome (finding rendered vs nothing to report) or always exits 0 except on AnalysisFailed; whether a configurable score-gate behaviour returns later"
+-- Resolved: Exit-code policy -- nothing_to_report -> 0,
+-- finding_rendered -> 1, analysis_failed -> 2. Standard CI gating shape.
 
 open question "Framing prose wording -- the exact closing language for the framing section. The design doc's URL-centric draft predates the inline-docs decision; the wording needs adjustment for fully-inlined context"
 
-open question "NothingToReport stdout content -- the exact wording / format of the 'nothing to report' acknowledgement, and whether it carries any structured information (paths examined, analysers run) or is purely a one-liner"
+-- Resolved: NothingToReport stdout content -- a single line, format
+-- "nothing to report -- no findings above snoot's significance floor\n".
+-- No structured fields beyond the wording.
 
 open question "AnalysisFailed surfacing -- what stderr carries on AnalysisFailed (per-analyser detail, the first failure, an aggregated message) and what level of detail the developer needs to act"

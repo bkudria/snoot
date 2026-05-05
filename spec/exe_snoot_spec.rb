@@ -10,8 +10,12 @@ RSpec.describe "exe/snoot" do # rubocop:disable RSpec/DescribeClass
   let(:smelly_source) do
     <<~RUBY
       class Dirty
-        def smelly(x)
+        def smelly_a(x)
           x.a + x.b + x.c + x.d
+        end
+
+        def smelly_b(y)
+          y.a + y.b + y.c + y.d
         end
       end
     RUBY

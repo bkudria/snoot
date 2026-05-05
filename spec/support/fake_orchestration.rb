@@ -38,6 +38,10 @@ module Snoot
       def vendored_doc(smell_type)
         @vendored_docs[smell_type.name]
       end
+
+      def significant_smells(smells) = smells
+      def significant_complexities(complexities) = complexities
+      def significant_duplications(duplications) = duplications
     end
   end
 end

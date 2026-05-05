@@ -19,7 +19,7 @@ module Snoot
       EXIT_CODES = {
         finding_rendered: 1,
         nothing_to_report: 0,
-        analysis_failed: 1
+        analysis_failed: 2
       }.freeze
 
       BANNERS = {

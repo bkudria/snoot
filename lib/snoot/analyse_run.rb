@@ -17,13 +17,17 @@ module Snoot
     # re-threading orchestration through every helper.
     Sources = Data.define(:smells, :complexities, :duplications, :orchestration) do
       def all
-        smells.to_a + complexities.to_a + duplications.to_a
+        significant_smells.to_a + significant_complexities.to_a + significant_duplications.to_a
       end
 
       def candidates
-        documented = smells.select { |smell| vendored_doc(smell.smell_type) }
-        documented.to_a + complexities.to_a + duplications.to_a
+        documented = significant_smells.select { |smell| vendored_doc(smell.smell_type) }
+        documented.to_a + significant_complexities.to_a + significant_duplications.to_a
       end
+
+      def significant_smells = orchestration.significant_smells(smells)
+      def significant_complexities = orchestration.significant_complexities(complexities)
+      def significant_duplications = orchestration.significant_duplications(duplications)
 
       def vendored_doc(smell_type)
         orchestration.vendored_doc(smell_type)
@@ -98,16 +102,34 @@ module Snoot
     def top_smell(smells)
       counts = smells.group_by(&:smell_type).transform_values(&:size)
       max = counts.values.max
-      smells.find { |smell| counts[smell.smell_type] == max }
+      smells.select { |smell| counts[smell.smell_type] == max }.min_by { |smell| smell_sort_key(smell) }
     end
 
     def top_duplication(clusters)
-      clusters.max_by { |cluster| cluster.locations.size }
+      sizes = clusters.to_h { |cluster| [cluster, cluster.locations.size] }
+      max = sizes.values.max
+      sizes.select { |_, size| size == max }.keys.min_by { |cluster| duplication_sort_key(cluster) }
     end
 
     def top_complexity(complexities)
       max_score = complexities.map(&:score).max
-      complexities.find { |complexity| complexity.score == max_score }
+      complexities.select { |hit| hit.score == max_score }.min_by { |hit| complexity_sort_key(hit) }
+    end
+
+    def smell_sort_key(smell)
+      type = smell.smell_type
+      loc = smell.location
+      [type.name, loc.path.raw, loc.line_start]
+    end
+
+    def duplication_sort_key(cluster)
+      locs = cluster.locations
+      [cluster.signature, locs.map { |loc| loc.path.raw }.min, locs.map(&:line_start).min]
+    end
+
+    def complexity_sort_key(hit)
+      loc = hit.location
+      [loc.path.raw, loc.line_start]
     end
   end
 end

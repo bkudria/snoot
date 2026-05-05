@@ -9,8 +9,12 @@ RSpec.describe Snoot::CLI::Argv do
   let(:smelly_ruby) do
     <<~RUBY
       class Dirty
-        def smelly(x)
+        def smelly_a(x)
           x.a + x.b + x.c + x.d
+        end
+
+        def smelly_b(y)
+          y.a + y.b + y.c + y.d
         end
       end
     RUBY
@@ -75,12 +79,16 @@ RSpec.describe Snoot::CLI::Argv do
       end
     end
 
-    it "exits 1 with stderr message when analysis fails", :aggregate_failures do
+    it "exits 2 with stderr message when analysis fails", :aggregate_failures do
       orchestration = fake_orchestration(reek_raises: StandardError.new("boom"))
       code = run_argv(["lib/foo.rb"], orchestration: orchestration)
-      expect(code).to eq(1)
+      expect(code).to eq(2)
       expect(stderr.string).to include("analysis failed:", "boom")
       expect(stdout.string).to be_empty
+    end
+
+    it "maps :analysis_failed to exit code 2 in EXIT_CODES" do
+      expect(described_class::EXIT_CODES.fetch(:analysis_failed)).to eq(2)
     end
   end
 end
