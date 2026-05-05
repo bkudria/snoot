@@ -32,7 +32,7 @@ module Snoot
         end
 
       run = run.with(smells: smells.to_set)
-      documented = smells.reject { |smell| orchestration.vendored_doc(smell.smell_type).nil? }
+      documented = smells.select { |smell| orchestration.vendored_doc(smell.smell_type) }
       complexities_a = complexities.to_a
       duplications_a = duplications.to_a
       candidates = documented.to_a + complexities_a + duplications_a
@@ -41,7 +41,7 @@ module Snoot
       top_overall = select_top_finding(all)
       if top_overall.is_a?(Smell)
         top_smell_type = top_overall.smell_type
-        if orchestration.vendored_doc(top_smell_type).nil?
+        unless orchestration.vendored_doc(top_smell_type)
           events << Event.new(name: :skipped_doc_less_smell_warned,
                               run: run, smell_type: top_smell_type, error: nil)
         end

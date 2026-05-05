@@ -21,8 +21,7 @@ module Snoot
         paths.each_with_object(Set[]) do |path, smells|
           examiner = Reek::Examiner.new(Pathname.new(path.raw))
           examiner.smells.each do |warning|
-            lines = warning.lines
-            next if lines.nil? || lines.empty?
+            next unless warning.lines&.any?
 
             smells << build_smell(warning)
           end
@@ -32,10 +31,9 @@ module Snoot
       def flog_analyse(paths)
         flog = Flog.new
         flog.flog(*paths.map(&:raw))
-        flog.totals.each_with_object(Set[]) do |(class_method, score), hits|
-          hit = build_complexity_hit(class_method, score, flog.method_locations[class_method])
-          hits << hit unless hit.nil?
-        end
+        flog.totals.filter_map do |class_method, score|
+          build_complexity_hit(class_method, score, flog.method_locations[class_method])
+        end.to_set
       end
 
       def flay_analyse(paths)
@@ -76,7 +74,7 @@ module Snoot
 
       def build_complexity_hit(class_method, score, raw_location)
         loc = parse_flog_location(raw_location)
-        return nil if loc.nil?
+        return unless loc
 
         ComplexityHit.new(
           location: loc,
@@ -99,10 +97,8 @@ module Snoot
       # Returns nil when the entry is missing (e.g. main#none) so callers
       # can skip top-level expressions that lack a method-level location.
       def parse_flog_location(raw)
-        return nil if raw.nil? || raw.empty?
-
-        file, range = raw.split(":", 2)
-        return nil if file.nil? || range.nil?
+        file, range = raw.to_s.split(":", 2)
+        return unless file && range
 
         line_start, _line_end = range.split("-", 2).map(&:to_i)
         Location.new(

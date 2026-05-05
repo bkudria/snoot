@@ -34,7 +34,7 @@ module Snoot
       raise StateError, "transition #{outcome} -> #{target} is not declared" unless allowed.include?(target)
 
       if target == :finding_rendered
-        raise StateError, "selected_finding required for :finding_rendered" if selected_finding.nil?
+        raise StateError, "selected_finding required for :finding_rendered" unless selected_finding
 
         with(outcome: target, selected_finding: selected_finding)
       else
