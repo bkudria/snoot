@@ -19,9 +19,7 @@ module Snoot
 
     def initialize(paths:, outcome:, selected_finding: nil, smells: Set[])
       super
-      return unless outcome == :finding_rendered && selected_finding.nil?
-
-      raise StateError, "selected_finding required for :finding_rendered"
+      validate_finding_rendered_invariant!
     end
 
     def selected_finding
@@ -31,6 +29,14 @@ module Snoot
       end
       _raw_selected_finding
     end
+
+    def validate_finding_rendered_invariant!
+      return unless outcome == :finding_rendered
+      return if _raw_selected_finding
+
+      raise StateError, "selected_finding required for :finding_rendered"
+    end
+    private :validate_finding_rendered_invariant!
 
     def transition_to(target, selected_finding: nil)
       allowed = TRANSITIONS.fetch(outcome, [])
