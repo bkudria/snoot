@@ -18,30 +18,38 @@ module Snoot
     Event = Data.define(:name, :operator, :paths, :run, :finding, :sections)
     NOTHING_TO_REPORT = "nothing to report\n"
 
+    # Streams bundles the stdout/stderr pair injected at the CLI
+    # surface, keeping run_invoked and Argv.run within Reek's
+    # LongParameterList limit while preserving IO injection for tests.
+    Streams = Data.define(:stdout, :stderr) do
+      def self.default
+        new(stdout: $stdout, stderr: $stderr)
+      end
+    end
+
     # CLI is the value returned by CLI.for(operator) -- a thin handle
     # carrying the authenticated Operator and exposing run_invoked as
     # the single entry point into the analyse/render pipeline.
     CLI = Data.define(:operator) do
-      def run_invoked(paths, orchestration:, stdout: $stdout, stderr: $stderr)
-        events = [Event.new(name: :run_invoked, operator: operator, paths: paths,
-                            run: nil, finding: nil, sections: nil)]
+      def run_invoked(paths, orchestration:, streams: Streams.default)
+        events = [Event.new(name: :run_invoked, operator:, paths:, run: nil, finding: nil, sections: nil)]
         run, analyse_events = AnalyseRun.invoke(paths, orchestration: orchestration)
         events.concat(analyse_events)
         case run.outcome
-        when :finding_rendered then emit_report(run, orchestration, paths, events, stdout)
-        when :nothing_to_report then stdout.write(NOTHING_TO_REPORT)
-        when :analysis_failed then Snoot::CLI.emit_failure(analyse_events, stderr)
+        when :finding_rendered then events << emit_report(run, orchestration: orchestration, streams: streams)
+        when :nothing_to_report then streams.stdout.write(NOTHING_TO_REPORT)
+        when :analysis_failed then Snoot::CLI.emit_failure(analyse_events, streams.stderr)
         end
         [run, events]
       end
 
       private
 
-      def emit_report(run, orchestration, paths, events, stdout)
+      def emit_report(run, orchestration:, streams:)
         RenderReport.invoke(run, orchestration: orchestration) => { sections:, finding: }
-        stdout.write(Snoot::CLI.format_report(sections))
-        events << Event.new(name: :report_emitted, operator: operator, paths: paths,
-                            run: run, finding: finding, sections: sections)
+        streams.stdout.write(Snoot::CLI.format_report(sections))
+        Event.new(name: :report_emitted, operator: operator, paths: run.paths,
+                  run: run, finding: finding, sections: sections)
       end
     end
 

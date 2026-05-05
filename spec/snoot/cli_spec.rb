@@ -12,7 +12,8 @@ RSpec.describe Snoot::CLI do
   let(:stderr) { null_io }
 
   def run_cli(paths = Set[build_path], operator: build_operator)
-    described_class.for(operator).run_invoked(paths, orchestration: orchestration, stdout: stdout, stderr: stderr)
+    streams = Snoot::CLI::Streams.new(stdout: stdout, stderr: stderr)
+    described_class.for(operator).run_invoked(paths, orchestration: orchestration, streams: streams)
   end
 
   describe "surface-actor.CLI" do

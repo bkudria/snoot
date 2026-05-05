@@ -24,7 +24,8 @@ RSpec.describe Snoot::CLI::Argv do
   end
 
   def run_argv(argv, **)
-    described_class.run(argv, stdout: stdout, stderr: stderr, **)
+    streams = Snoot::CLI::Streams.new(stdout: stdout, stderr: stderr)
+    described_class.run(argv, streams: streams, **)
   end
 
   describe ".run" do

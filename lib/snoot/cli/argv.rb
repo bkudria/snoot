@@ -24,13 +24,14 @@ module Snoot
 
       module_function
 
-      def run(argv, stdout: $stdout, stderr: $stderr,
+      def run(argv, streams: Snoot::CLI::Streams.default,
               orchestration: AnalyserOrchestration::Default)
+        stdout = streams.stdout
         return write_and_return(stdout, "snoot #{Snoot::VERSION}\n", 0) if argv == ["--version"]
         return write_and_return(stdout, USAGE, 0) if argv == ["--help"]
-        return write_and_return(stderr, USAGE, 1) if unknown_flag?(argv)
+        return write_and_return(streams.stderr, USAGE, 1) if unknown_flag?(argv)
 
-        run_pipeline(argv, stdout: stdout, stderr: stderr, orchestration: orchestration)
+        run_pipeline(argv, streams: streams, orchestration: orchestration)
       end
 
       def write_and_return(io, message, code)
@@ -42,9 +43,9 @@ module Snoot
         argv.any? { |arg| arg.start_with?("-") }
       end
 
-      def run_pipeline(argv, stdout:, stderr:, orchestration:)
+      def run_pipeline(argv, streams:, orchestration:)
         run, _events = Snoot::CLI.for(Snoot::Operator.new).run_invoked(
-          build_paths(argv), orchestration: orchestration, stdout: stdout, stderr: stderr
+          build_paths(argv), orchestration: orchestration, streams: streams
         )
         EXIT_CODES.fetch(run.outcome)
       end
