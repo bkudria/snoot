@@ -21,14 +21,12 @@ module Snoot
 
     def invoke(run, orchestration:)
       finding = run.selected_finding
-      sections = build_sections(run, finding, orchestration)
+      sections = if finding.is_a?(Smell)
+                   smell_sections(run, finding, orchestration)
+                 else
+                   non_smell_sections(finding)
+                 end
       Report.new(run: run, finding: finding, sections: sections)
-    end
-
-    def build_sections(run, finding, orchestration)
-      return smell_sections(run, finding, orchestration) if finding.is_a?(Smell)
-
-      non_smell_sections(finding, orchestration)
     end
 
     def smell_sections(run, smell, orchestration)
@@ -38,7 +36,7 @@ module Snoot
       }
     end
 
-    def non_smell_sections(finding, _orchestration)
+    def non_smell_sections(finding)
       {
         header: render_header(finding),
         finding_context: render_finding_context(finding),
