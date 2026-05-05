@@ -106,13 +106,16 @@ module Snoot
     end
 
     def top_duplication(clusters)
-      max = clusters.map(&:size).max
-      clusters.select { |cluster| cluster.size == max }.min_by { |cluster| duplication_sort_key(cluster) }
+      top_by(clusters, metric: :size, &method(:duplication_sort_key))
     end
 
     def top_complexity(complexities)
-      max_score = complexities.map(&:score).max
-      complexities.select { |hit| hit.score == max_score }.min_by { |hit| complexity_sort_key(hit) }
+      top_by(complexities, metric: :score, &method(:complexity_sort_key))
+    end
+
+    def top_by(items, metric:, &sort_key)
+      max = items.map(&metric).max
+      items.select { |item| item.public_send(metric) == max }.min_by(&sort_key)
     end
 
     def smell_sort_key(smell)
