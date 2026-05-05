@@ -9,7 +9,9 @@
 -- Excludes:
 --   - Build-time vendored-doc workflow (sync, packaging, version pinning)
 --   - Gem packaging, dependency management, CLI argument parsing internals
---   - CI gating policy and exit-code semantics (open question)
+--   - CI gating policy (operator decisions about which exit codes
+--     fail builds, retry behaviour, etc.) -- exit-code semantics
+--     themselves are in scope, see CLI surface
 --   - Diff-aware analysis, JSON output, MCP, pre-commit hooks (non-goals
 --     enumerated in the design doc)
 -- Centred on: the LLM agent reading the emitted report.
@@ -73,6 +75,17 @@ value SmellType {
     name: String
 }
 
+-- An analyser failure surfaced to the operator on outcome = analysis_failed.
+-- The analyser field identifies which of the three analysers (Reek, Flog,
+-- Flay) produced the failure; message is the human-readable error detail
+-- carried on stderr. Only the first failed analyser in canonical order
+-- (Reek -> Flog -> Flay) is recorded; the orchestration aborts on first
+-- failure and does not invoke subsequent analysers.
+value AnalyserFailure {
+    analyser: reek | flog | flay
+    message: String
+}
+
 ------------------------------------------------------------
 -- Contracts
 ------------------------------------------------------------
@@ -109,6 +122,16 @@ contract AnalyserOrchestration {
     significant_smells: (smells: Set<Smell>) -> Set<Smell>
     significant_complexities: (complexities: Set<ComplexityHit>) -> Set<ComplexityHit>
     significant_duplications: (duplications: Set<DuplicationCluster>) -> Set<DuplicationCluster>
+
+    -- first_failure runs the three analysers in canonical order (Reek ->
+    -- Flog -> Flay) and returns the first AnalyserFailure encountered, or
+    -- null if all three succeed. Once an analyser fails, subsequent
+    -- analysers in the canonical order are not invoked; the orchestration
+    -- aborts on first failure. This signature respects @invariant
+    -- Determinism: for the same path set, the same outcome (including which
+    -- analyser fails first, if any, and its message) is produced within a
+    -- single CLI invocation.
+    first_failure: (paths: Set<Path>) -> AnalyserFailure?
 
     @invariant Determinism
         -- Each signature is pure within a single CLI invocation: the same
@@ -156,6 +179,11 @@ entity Run {
 
     selected_finding: Finding when outcome = finding_rendered
 
+    -- The analyser failure detail surfaced when the run aborts. Present
+    -- only on outcome = analysis_failed; carries the first analyser to fail
+    -- in canonical order (Reek -> Flog -> Flay) and its error message.
+    failure: AnalyserFailure when outcome = analysis_failed
+
     -- The full reek-smell set produced by AnalyseRun. Carried so RenderReport
     -- can enumerate every instance of the selected smell type without re-
     -- invoking the analyser. Empty for outcome = pending or analysis_failed.
@@ -180,58 +208,75 @@ entity Run {
 rule AnalyseRun {
     when: RunInvoked(paths)
 
-    -- Black-box analyser invocations. Each returns the analyser's findings
-    -- for the configured path set, or signals failure via the
-    -- analysers_succeeded predicate consulted below.
-    let smell_findings = reek_analyse(paths)
-    let complexity_findings = flog_analyse(paths)
-    let duplication_findings = flay_analyse(paths)
-
-    -- Significance is the "warrants addressing" pre-filter: each analyser
-    -- adapter discards its own noise (per-analyser numeric thresholds are
-    -- the implementation's concern) before category selection runs. The
-    -- doc-less filter for smells sits on top of significance, so only
-    -- significant doc-less smells reach SkippedDocLessSmellWarned. The
-    -- top_finding_overall is computed over the significant union for the
-    -- same reason: the warning is about a finding that would otherwise
-    -- have been actionable.
-    let significant_smell_findings = significant_smells(smell_findings)
-    let significant_complexity_findings = significant_complexities(complexity_findings)
-    let significant_duplication_findings = significant_duplications(duplication_findings)
-
-    -- A reek smell is excluded from the candidate pool when no vendored doc
-    -- exists for its type. If the would-have-been-selected finding (i.e. the
-    -- top-scoring finding before this filter) is one of these, a stderr
-    -- warning is emitted (see SkippedDocLessSmellWarned trigger below).
-    let documented_smell_findings =
-        filter(significant_smell_findings, s => vendored_doc(s.smell_type) != null)
-
-    let candidate_findings =
-        documented_smell_findings + significant_complexity_findings + significant_duplication_findings
-
-    let top_finding_overall = select_top_finding(
-        significant_smell_findings + significant_complexity_findings + significant_duplication_findings
-    )
-
-    -- select_top_finding orders findings by category priority first, then
-    -- by an analyser-natural primary key, then by deterministic secondary
-    -- keys to break ties. Category priority: Smell > DuplicationCluster >
-    -- ComplexityHit. Within a category the primary key is the analyser's
-    -- natural ranking (smell-type instance count for Smells; locations.size
-    -- for DuplicationClusters; score for ComplexityHits). Ties are broken
-    -- by:
-    --   - Smell: smell_type.name ascending, then path ascending, then
-    --     line_start ascending.
-    --   - DuplicationCluster: signature ascending, then min(location.path)
-    --     ascending, then min(location.line_start) ascending.
-    --   - ComplexityHit: path ascending, then line_start ascending.
-    let selected = select_top_finding(candidate_findings)
-
     ensures:
         let run = Run.created(paths: paths, outcome: pending)
-        if not analysers_succeeded(run.paths):
+
+        -- first_failure runs the three analysers in canonical order
+        -- (Reek -> Flog -> Flay) and returns the first AnalyserFailure
+        -- encountered, or null when all three succeed. On failure,
+        -- subsequent analysers are not invoked (abort semantic). Only the
+        -- success branch below collects findings, so the analyser-output
+        -- bindings are scoped inside that branch rather than at rule
+        -- scope.
+        let failure = first_failure(run.paths)
+
+        if failure != null:
             run.outcome = analysis_failed
+            run.failure = failure
         else:
+            -- Black-box analyser invocations. Each returns the analyser's
+            -- findings for the configured path set. Reached only when
+            -- first_failure returned null, so all three are guaranteed to
+            -- have succeeded.
+            let smell_findings = reek_analyse(run.paths)
+            let complexity_findings = flog_analyse(run.paths)
+            let duplication_findings = flay_analyse(run.paths)
+
+            -- Significance is the "warrants addressing" pre-filter: each
+            -- analyser adapter discards its own noise (per-analyser
+            -- numeric thresholds are the implementation's concern) before
+            -- category selection runs. The doc-less filter for smells
+            -- sits on top of significance, so only significant doc-less
+            -- smells reach SkippedDocLessSmellWarned. The
+            -- top_finding_overall is computed over the significant union
+            -- for the same reason: the warning is about a finding that
+            -- would otherwise have been actionable.
+            let significant_smell_findings = significant_smells(smell_findings)
+            let significant_complexity_findings = significant_complexities(complexity_findings)
+            let significant_duplication_findings = significant_duplications(duplication_findings)
+
+            -- A reek smell is excluded from the candidate pool when no
+            -- vendored doc exists for its type. If the would-have-been-
+            -- selected finding (i.e. the top-scoring finding before this
+            -- filter) is one of these, a stderr warning is emitted (see
+            -- SkippedDocLessSmellWarned trigger below).
+            let documented_smell_findings =
+                filter(significant_smell_findings, s => vendored_doc(s.smell_type) != null)
+
+            let candidate_findings =
+                documented_smell_findings + significant_complexity_findings + significant_duplication_findings
+
+            let top_finding_overall = select_top_finding(
+                significant_smell_findings + significant_complexity_findings + significant_duplication_findings
+            )
+
+            -- select_top_finding orders findings by category priority
+            -- first, then by an analyser-natural primary key, then by
+            -- deterministic secondary keys to break ties. Category
+            -- priority: Smell > DuplicationCluster > ComplexityHit.
+            -- Within a category the primary key is the analyser's
+            -- natural ranking (smell-type instance count for Smells;
+            -- locations.size for DuplicationClusters; score for
+            -- ComplexityHits). Ties are broken by:
+            --   - Smell: smell_type.name ascending, then path ascending,
+            --     then line_start ascending.
+            --   - DuplicationCluster: signature ascending, then
+            --     min(location.path) ascending, then
+            --     min(location.line_start) ascending.
+            --   - ComplexityHit: path ascending, then line_start
+            --     ascending.
+            let selected = select_top_finding(candidate_findings)
+
             if candidate_findings.count = 0:
                 run.outcome = nothing_to_report
             else:
@@ -360,15 +405,28 @@ surface CLI {
         --   finding_rendered  -> 1
         --   analysis_failed   -> 2
 
+    @guarantee EmptyPathsDefault
+        -- An operator invocation that supplies no paths is treated as if
+        -- Path(".") had been supplied: the CLI surface normalises the
+        -- empty path set to {Path(".")} before RunInvoked fires.
+        -- RunInvoked is therefore always invoked with a non-empty path
+        -- set; downstream rules (including AnalyseRun) never observe an
+        -- empty paths argument.
+
     @guarantee StdoutMutuallyExclusive
         -- A run produces stdout content corresponding to its outcome:
-        --   finding_rendered  -> stdout = formatted four-section report
+        --   finding_rendered  -> stdout = formatted report (variant-
+        --                        specific shape, see the ReportReader
+        --                        surface guarantees)
         --   nothing_to_report -> stdout = single-line acknowledgement
         --                        (see the NothingToReport resolution at
         --                        the bottom for the exact format)
         --   analysis_failed   -> stdout = empty
-        -- Stderr carries warnings (missing vendored docs) and analyser
-        -- failure detail; these are independent of stdout content.
+        -- Stderr carries warnings (missing vendored docs) at all outcomes.
+        -- On outcome = analysis_failed, stderr additionally carries the
+        -- failed analyser's message (run.failure.message): one analyser's
+        -- error, not aggregated across analysers and not multi-line per
+        -- analyser. These stderr contents are independent of stdout.
 }
 
 surface ReportReader {
@@ -378,7 +436,8 @@ surface ReportReader {
 
     -- The agent's view of a rendered report. Section identifiers are
     -- structural anchors; their content is the implementation's
-    -- responsibility, but the four sections always appear in this order.
+    -- responsibility, but each variant's sections always appear in the
+    -- declared order (see the per-variant guarantees below).
     exposes:
         run.selected_finding
         run.selected_finding.kind
@@ -394,7 +453,7 @@ surface ReportReader {
         --                  ordered by descending instance count, with
         --                  alphabetical path as the tie-break.
 
-    @guarantee NonSmellFourSectionShape
+    @guarantee NonSmellReportShape
         -- For ComplexityHit and DuplicationCluster findings, a rendered
         -- report contains, in order:
         --   1. Header         -- one-line summary (analyser-implicit, finding
@@ -403,14 +462,13 @@ surface ReportReader {
         --                        message; for DuplicationCluster, all cluster
         --                        locations are enumerated
         --   3. Doc            -- one inlined hand-written prose constant
-        --   4. Framing        -- closing prose directing the agent's reading
 
     @guarantee AnalyserProvenanceImplicit
         -- The report does not label the originating analyser. The shape of
-        -- the report (doc + instances vs four-section structure) and the
-        -- finding's wording (smell name vs complexity language vs
-        -- duplication enumeration) are sufficient for the agent to infer
-        -- provenance.
+        -- the report (doc + instances for Smell vs header + finding_context
+        -- + doc for non-Smell) and the finding's wording (smell name vs
+        -- complexity language vs duplication enumeration) are sufficient
+        -- for the agent to infer provenance.
 
     @guidance
         -- The agent should treat the inlined doc as primary context for
@@ -434,7 +492,10 @@ surface ReportReader {
 -- select_top_finding are documented inline in the AnalyseRun rule. Final
 -- fallback is path/line_start ascending.
 
-open question "Default path set -- whether RunInvoked defaults to a sensible glob (e.g. lib/**/*.rb) when paths is empty, or whether empty paths is rejected at the CLI surface"
+-- Resolved: Default path set -- the CLI surface normalises an empty path
+-- set to {Path(".")} before RunInvoked fires (see @guarantee
+-- EmptyPathsDefault). RunInvoked is never invoked with empty paths; no
+-- glob expansion or rejection happens at the spec level.
 
 -- Resolved: Exit-code policy -- nothing_to_report -> 0,
 -- finding_rendered -> 1, analysis_failed -> 2. Standard CI gating shape.
@@ -448,4 +509,11 @@ open question "Default path set -- whether RunInvoked defaults to a sensible glo
 -- "nothing to report -- no findings above snoot's significance floor\n".
 -- No structured fields beyond the wording.
 
-open question "AnalysisFailed surfacing -- what stderr carries on AnalysisFailed (per-analyser detail, the first failure, an aggregated message) and what level of detail the developer needs to act"
+-- Resolved: AnalysisFailed surfacing -- only the first failed analyser is
+-- surfaced. The orchestration runs the analysers in canonical order
+-- (Reek -> Flog -> Flay) and aborts on first failure; subsequent
+-- analysers are not invoked. Stderr carries that one analyser's message
+-- (run.failure.message); it is not aggregated across analysers and not
+-- multi-line per analyser. See the AnalyserFailure value type, the
+-- first_failure signature on AnalyserOrchestration, the failure field on
+-- Run, and @guarantee StdoutMutuallyExclusive on the CLI surface.
