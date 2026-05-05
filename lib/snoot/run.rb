@@ -19,6 +19,9 @@ module Snoot
 
     def initialize(paths:, outcome:, selected_finding: nil, smells: Set[])
       super
+      return unless outcome == :finding_rendered && selected_finding.nil?
+
+      raise StateError, "selected_finding required for :finding_rendered"
     end
 
     def selected_finding

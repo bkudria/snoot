@@ -14,6 +14,8 @@ RSpec.configure do |config|
   end
 
   config.include Snoot::Spec::Factories
+  config.include PropCheck, :pbt
+  config.include Snoot::Spec::PropCheckGenerators, :pbt
 
   config.disable_monkey_patching!
   config.order = :random

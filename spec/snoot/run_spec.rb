@@ -31,6 +31,14 @@ RSpec.describe Snoot::Run do
     end
   end
 
+  describe "construction-guard.Run.selected_finding" do
+    it "rejects outcome=:finding_rendered with nil selected_finding" do
+      expect do
+        described_class.new(paths: Set[], outcome: :finding_rendered, selected_finding: nil)
+      end.to raise_error(Snoot::StateError, /selected_finding/)
+    end
+  end
+
   describe "when-presence.Run.selected_finding" do
     it "is present when outcome = :finding_rendered" do
       run = build_run_at(:finding_rendered)

@@ -9,20 +9,22 @@ require "spec_helper"
 #         implies vendored_doc(s.smell_type) != null
 RSpec.describe "Invariant: SelectedFindingsAreRenderable" do # rubocop:disable RSpec/DescribeClass
   describe "invariant.SelectedFindingsAreRenderable" do
-    it "every rendered Smell selection has a vendored doc available" do
-      skip "bridge: Run audit + vendored_doc lookup not implemented"
-      Snoot::Run.all.each do |run|
+    it "AnalyseRun's selection ensures any rendered Smell has a vendored doc" do
+      real_type = Snoot::SmellType.new(name: "FeatureEnvy")
+      smell = build_smell(smell_type: real_type)
+      orch = fake_orchestration(smells: Set[smell], vendored_docs: { "FeatureEnvy" => "## doc" })
+      run, _events = Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch)
+
+      expect(Snoot.vendored_doc(run.selected_finding.smell_type)).not_to be_nil
+    end
+
+    it "holds after AnalyseRun for arbitrary analyser outputs", :pbt do
+      forall(analyse_run_inputs_gen) do |inputs|
+        run = run_analyse_with_inputs(inputs)
         next unless run.outcome == :finding_rendered && run.selected_finding.is_a?(Snoot::Smell)
 
         expect(Snoot.vendored_doc(run.selected_finding.smell_type)).not_to be_nil
       end
-    end
-
-    it "holds after AnalyseRun for arbitrary analyser outputs", :pbt do
-      skip "bridge: PBT framework + AnalyseRun action not wired"
-      # Plan: generate arbitrary mixes of (doc-having, doc-less) smells plus
-      # complexity hits and duplication clusters, run AnalyseRun, check the
-      # implication on the resulting Run.
     end
   end
 end

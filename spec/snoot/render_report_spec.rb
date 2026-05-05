@@ -22,15 +22,6 @@ RSpec.describe Snoot::RenderReport do
     end
   end
 
-  describe "rule-failure.RenderReport.1" do
-    it "is rejected when run.selected_finding is nil" do
-      run = build_run_with_finding(nil)
-      expect do
-        trigger_render_report(run, orchestration: fake_orchestration)
-      end.to raise_error(/selected_finding/i)
-    end
-  end
-
   describe "Smell rendering" do
     def smell_at(file:, line:, message:, type_name: "IrresponsibleModule")
       Snoot::Smell.new(

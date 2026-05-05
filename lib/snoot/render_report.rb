@@ -31,8 +31,6 @@ module Snoot
 
     def invoke(run, orchestration:)
       finding = run.selected_finding
-      raise StateError, "selected_finding is required for RenderReport (got nil)" unless finding
-
       sections = build_sections(run, finding, orchestration)
       Report.new(run: run, finding: finding, sections: sections)
     end

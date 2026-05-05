@@ -7,20 +7,17 @@ require "spec_helper"
 #     r.outcome = finding_rendered implies r.selected_finding != null
 RSpec.describe "Invariant: SingleFindingPerRun" do # rubocop:disable RSpec/DescribeClass
   describe "invariant.SingleFindingPerRun" do
-    it "every persisted Run with outcome=finding_rendered has a non-nil selected_finding" do
-      skip "bridge: Run audit / persistence not implemented"
-      Snoot::Run.all.each do |run|
-        next unless run.outcome == :finding_rendered
-
-        expect(run.selected_finding).not_to be_nil
-      end
+    it "is enforced at construction" do
+      expect do
+        Snoot::Run.new(paths: Set[], outcome: :finding_rendered, selected_finding: nil)
+      end.to raise_error(Snoot::StateError, /selected_finding/)
     end
 
-    it "holds after every state-changing rule that touches Run", :pbt do
-      skip "bridge: PBT framework + transition action map not wired"
-      # Plan: walk the declared transition graph (pending -> {finding_rendered,
-      # nothing_to_report, analysis_failed}) via AnalyseRun, asserting the
-      # implication after each transition.
+    it "holds after AnalyseRun for arbitrary inputs", :pbt do
+      forall(analyse_run_inputs_gen) do |inputs|
+        run = run_analyse_with_inputs(inputs)
+        expect(run.selected_finding).not_to be_nil if run.outcome == :finding_rendered
+      end
     end
   end
 end
