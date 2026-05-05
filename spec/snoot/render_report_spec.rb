@@ -6,7 +6,7 @@ require "bigdecimal"
 # Spec source: snoot.allium -- rule RenderReport
 #   when:    run: Run.outcome becomes finding_rendered
 #   requires: run.selected_finding != null
-#   ensures: ReportEmitted(run, finding, sections: { header, finding_context, doc, framing })
+#   ensures: ReportEmitted(run, finding, sections: { header, finding_context, doc })
 RSpec.describe Snoot::RenderReport do
   let(:orch) { fake_orchestration(vendored_docs: { "FeatureEnvy" => "## doc" }) }
 
@@ -81,10 +81,9 @@ RSpec.describe Snoot::RenderReport do
       expect(instances).not_to include("irrelevant")
     end
 
-    it "omits header, finding_context, and framing for Smell findings", :aggregate_failures do
+    it "omits header and finding_context for Smell findings", :aggregate_failures do
       expect(report.sections).not_to have_key(:header)
       expect(report.sections).not_to have_key(:finding_context)
-      expect(report.sections).not_to have_key(:framing)
     end
   end
 
@@ -109,6 +108,10 @@ RSpec.describe Snoot::RenderReport do
 
     it "renders doc as the high-complexity prose constant" do
       expect(report.sections[:doc]).to eq(Snoot::ComplexityHit::DOC)
+    end
+
+    it "emits exactly the three sections header, finding_context, doc" do
+      expect(report.sections.keys).to eq(%i[header finding_context doc])
     end
   end
 
@@ -136,21 +139,9 @@ RSpec.describe Snoot::RenderReport do
     it "renders doc as the high-duplication prose constant" do
       expect(report.sections[:doc]).to eq(Snoot::DuplicationCluster::DOC)
     end
-  end
 
-  describe "framing section (non-Smell variants only)" do
-    it "is the placeholder string for ComplexityHit" do
-      hit = build_complexity_hit
-      run = build_run_with_finding(hit)
-      report = described_class.invoke(run, orchestration: fake_orchestration)
-      expect(report.sections[:framing]).to eq(Snoot::RenderReport::FRAMING_PLACEHOLDER)
-    end
-
-    it "is the placeholder string for DuplicationCluster" do
-      cluster = build_duplication_cluster
-      run = build_run_with_finding(cluster)
-      report = described_class.invoke(run, orchestration: fake_orchestration)
-      expect(report.sections[:framing]).to eq(Snoot::RenderReport::FRAMING_PLACEHOLDER)
+    it "emits exactly the three sections header, finding_context, doc" do
+      expect(report.sections.keys).to eq(%i[header finding_context doc])
     end
   end
 end

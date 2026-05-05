@@ -7,11 +7,9 @@ module Snoot
   # the orchestration's vendored_doc and instances enumerates every
   # Smell of the selected type grouped by file, ordered by descending
   # count then alphabetical path. For ComplexityHit and DuplicationCluster
-  # findings the four-section shape (header, finding_context, doc,
-  # framing) is preserved.
+  # findings the three-section shape (header, finding_context, doc) is
+  # preserved.
   module RenderReport
-    FRAMING_PLACEHOLDER = "[framing prose: see snoot.allium open question]"
-
     # Report is the value returned by RenderReport.invoke: the source
     # Run, the selected Finding it was built from, and the ordered
     # sections hash that CLI joins into stdout output.
@@ -40,8 +38,7 @@ module Snoot
       {
         header: render_header(finding),
         finding_context: render_finding_context(finding),
-        doc: finding.doc,
-        framing: FRAMING_PLACEHOLDER
+        doc: finding.doc
       }
     end
 

@@ -263,17 +263,15 @@ rule RenderReport {
     --   - instances: every Smell in run.smells whose smell_type matches the
     --                selected_finding's smell_type, grouped by file, with
     --                files ordered by descending instance count and
-    --                alphabetical tie-break. The header / finding_context /
-    --                framing sections are absent because the doc + instances
-    --                pair is sufficient context for an agent acting on a
+    --                alphabetical tie-break. The header / finding_context
+    --                sections are absent because the doc + instances pair
+    --                is sufficient context for an agent acting on a
     --                multi-instance smell type.
     --
     -- For ComplexityHit and DuplicationCluster findings the report is the
-    -- four-section structure (header, finding_context, doc, framing):
+    -- three-section structure (header, finding_context, doc):
     --   - ComplexityHit:      hand-written generic prose for high complexity
     --   - DuplicationCluster: hand-written generic prose for high duplication
-    -- The framing prose anchors the agent's interpretation; its exact
-    -- wording is an open question (see below).
     ensures:
         if run.selected_finding.kind = Smell:
             ReportEmitted(
@@ -285,7 +283,7 @@ rule RenderReport {
             ReportEmitted(
                 run: run,
                 finding: run.selected_finding,
-                sections: { header, finding_context, doc, framing }
+                sections: { header, finding_context, doc }
             )
 
     @guidance
@@ -418,8 +416,8 @@ surface ReportReader {
         -- The agent should treat the inlined doc as primary context for
         -- acting on the finding. For Smell findings, the Instances list
         -- enumerates every site the agent must consider. For non-Smell
-        -- findings, the framing prose instructs the agent on how to read
-        -- the doc relative to the single finding.
+        -- findings, the header and finding_context sections locate the
+        -- single finding so the agent can read the doc against it.
 }
 
 ------------------------------------------------------------
@@ -441,7 +439,10 @@ open question "Default path set -- whether RunInvoked defaults to a sensible glo
 -- Resolved: Exit-code policy -- nothing_to_report -> 0,
 -- finding_rendered -> 1, analysis_failed -> 2. Standard CI gating shape.
 
-open question "Framing prose wording -- the exact closing language for the framing section. The design doc's URL-centric draft predates the inline-docs decision; the wording needs adjustment for fully-inlined context"
+-- Resolved: Framing prose wording -- the framing section is removed.
+-- The doc and (for Smell) instances or (for non-Smell) header +
+-- finding_context sections carry the full context an agent needs;
+-- a closing prose anchor was redundant.
 
 -- Resolved: NothingToReport stdout content -- a single line, format
 -- "nothing to report -- no findings above snoot's significance floor\n".
