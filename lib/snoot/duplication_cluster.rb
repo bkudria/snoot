@@ -10,6 +10,7 @@ module Snoot
 
     def kind = :DuplicationCluster
     def doc = self.class::DOC
+    def size = locations.size
 
     def self.from_flay_item(item)
       locations = item.locations.each_with_object(Set[]) do |loc, set|

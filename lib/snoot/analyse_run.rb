@@ -106,9 +106,8 @@ module Snoot
     end
 
     def top_duplication(clusters)
-      sizes = clusters.to_h { |cluster| [cluster, cluster.locations.size] }
-      max = sizes.values.max
-      sizes.select { |_, size| size == max }.keys.min_by { |cluster| duplication_sort_key(cluster) }
+      max = clusters.map(&:size).max
+      clusters.select { |cluster| cluster.size == max }.min_by { |cluster| duplication_sort_key(cluster) }
     end
 
     def top_complexity(complexities)
