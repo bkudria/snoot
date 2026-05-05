@@ -22,13 +22,15 @@ module Snoot
       module_function
 
       def reek_analyse(paths)
-        paths.each_with_object(Set[]) do |path, smells|
-          examiner = Reek::Examiner.new(Pathname.new(path.raw))
-          examiner.smells.each do |warning|
-            next unless warning.lines&.any?
+        paths.flat_map { |path| reek_smells_for(path) }.to_set
+      end
 
-            smells << Smell.from_reek_warning(warning)
-          end
+      def reek_smells_for(path)
+        examiner = Reek::Examiner.new(Pathname.new(path.raw))
+        examiner.smells.filter_map do |warning|
+          next unless warning.lines&.any?
+
+          Smell.from_reek_warning(warning)
         end
       end
 
