@@ -65,12 +65,13 @@ module Snoot
     end
 
     def matching_smell_groups(run, selected)
-      matching = run.smells.select { |s| s.smell_type == selected.smell_type }
-      matching.group_by { |s| s.location.path.raw }.sort_by { |path, smells| [-smells.size, path] }
+      matching = run.smells.select { |smell| smell.smell_type == selected.smell_type }
+      matching.group_by { |smell| smell.location.path.raw }
+              .sort_by { |path, smells| [-smells.size, path] }
     end
 
     def render_instance_group(path, smells)
-      lines = smells.map { |s| "  Line #{s.location.line_start}: #{s.message}" }
+      lines = smells.map { |smell| "  Line #{smell.location.line_start}: #{smell.message}" }
       "#{path}\n#{lines.join("\n")}"
     end
 
@@ -94,7 +95,8 @@ module Snoot
       when ComplexityHit
         "#{loc}\n\nMethod: #{finding.method_name}\nScore: #{finding.score.to_s('F')}"
       when DuplicationCluster
-        "Locations:\n#{finding.locations.map { |l| orch.describe_location(l) }.join("\n")}"
+        rendered = finding.locations.map { |location| orch.describe_location(location) }
+        "Locations:\n#{rendered.join("\n")}"
       end
     end
 

@@ -39,7 +39,7 @@ module Snoot
       end
 
       def unknown_flag?(argv)
-        argv.any? { |a| a.start_with?("-") }
+        argv.any? { |arg| arg.start_with?("-") }
       end
 
       def run_pipeline(argv, stdout:, stderr:, orchestration:)
@@ -51,7 +51,7 @@ module Snoot
 
       def build_paths(argv)
         raws = argv.empty? ? Dir["lib/**/*.rb"] : argv
-        raws.each_with_object(Set[]) { |r, set| set << Snoot::Path.new(raw: r) }
+        raws.each_with_object(Set[]) { |raw, set| set << Snoot::Path.new(raw: raw) }
       end
     end
   end

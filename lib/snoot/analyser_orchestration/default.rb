@@ -20,11 +20,11 @@ module Snoot
       def reek_analyse(paths)
         paths.each_with_object(Set[]) do |path, smells|
           examiner = Reek::Examiner.new(Pathname.new(path.raw))
-          examiner.smells.each do |w|
-            lines = w.lines
+          examiner.smells.each do |warning|
+            lines = warning.lines
             next if lines.nil? || lines.empty?
 
-            smells << build_smell(w)
+            smells << build_smell(warning)
           end
         end
       end

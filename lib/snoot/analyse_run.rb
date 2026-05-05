@@ -25,14 +25,14 @@ module Snoot
           [orchestration.reek_analyse(paths),
            orchestration.flog_analyse(paths),
            orchestration.flay_analyse(paths)]
-        rescue StandardError => e
+        rescue StandardError => error
           failed = run.transition_to(:analysis_failed)
-          events << Event.new(name: :analysis_failed, run: failed, smell_type: nil, error: e)
+          events << Event.new(name: :analysis_failed, run: failed, smell_type: nil, error: error)
           return [failed, events]
         end
 
       run = run.with(smells: smells.to_set)
-      documented = smells.reject { |s| orchestration.vendored_doc(s.smell_type).nil? }
+      documented = smells.reject { |smell| orchestration.vendored_doc(smell.smell_type).nil? }
       complexities_a = complexities.to_a
       duplications_a = duplications.to_a
       candidates = documented.to_a + complexities_a + duplications_a
@@ -72,16 +72,16 @@ module Snoot
     def top_smell(smells)
       counts = smells.group_by(&:smell_type).transform_values(&:size)
       max = counts.values.max
-      smells.find { |s| counts[s.smell_type] == max }
+      smells.find { |smell| counts[smell.smell_type] == max }
     end
 
     def top_duplication(clusters)
-      clusters.max_by { |c| c.locations.size }
+      clusters.max_by { |cluster| cluster.locations.size }
     end
 
     def top_complexity(complexities)
       max_score = complexities.map(&:score).max
-      complexities.find { |c| c.score == max_score }
+      complexities.find { |complexity| complexity.score == max_score }
     end
   end
 end

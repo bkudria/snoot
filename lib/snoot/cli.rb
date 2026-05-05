@@ -46,7 +46,7 @@ module Snoot
       end
 
       def emit_failure(analyse_events, stderr)
-        failure = analyse_events.find { |e| e.name == :analysis_failed }
+        failure = analyse_events.find { |event| event.name == :analysis_failed }
         stderr.write("analysis failed: #{failure.error.message}\n") if failure
       end
 

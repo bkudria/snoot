@@ -13,3 +13,8 @@ AllCops:
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes
+
+# Aligned with reek's UncommunicativeVariableName: prefer a descriptive name
+# over the default `e`.
+Naming/RescuedExceptionsVariableName:
+  PreferredName: error
