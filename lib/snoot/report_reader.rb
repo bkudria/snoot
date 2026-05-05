@@ -7,6 +7,10 @@ module Snoot
   # :finding_rendered, or nil otherwise. The Reader is a thin view --
   # Run remains the source of truth.
   module ReportReader
+    # Reader is the view returned by ReportReader.for: a thin wrapper
+    # over a finding-rendered Run that exposes only selected_finding
+    # and its kind to a ReportConsumer. The Run remains the source of
+    # truth.
     Reader = Data.define(:run) do
       def selected_finding
         run.selected_finding

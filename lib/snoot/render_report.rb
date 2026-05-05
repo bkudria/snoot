@@ -22,6 +22,9 @@ module Snoot
       "Consider whether the duplicated shape belongs to a single helper, " \
       "module, or value type."
 
+    # Report is the value returned by RenderReport.invoke: the source
+    # Run, the selected Finding it was built from, and the ordered
+    # sections hash that CLI joins into stdout output.
     Report = Data.define(:run, :finding, :sections)
 
     module_function

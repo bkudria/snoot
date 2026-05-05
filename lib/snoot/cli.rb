@@ -11,9 +11,16 @@ module Snoot
   # stderr (analysis_failed) per the StdoutMutuallyExclusive guarantee.
   # Returns [run, events].
   module CLI
+    # Event is the audit record emitted by the CLI surface for each
+    # observable step (run_invoked, report_emitted) and forwarded
+    # AnalyseRun events. Returned alongside the Run so callers can
+    # assert on the sequence.
     Event = Data.define(:name, :operator, :paths, :run, :finding, :sections)
     NOTHING_TO_REPORT = "nothing to report\n"
 
+    # CLI is the value returned by CLI.for(operator) -- a thin handle
+    # carrying the authenticated Operator and exposing run_invoked as
+    # the single entry point into the analyse/render pipeline.
     CLI = Data.define(:operator) do
       def run_invoked(paths, orchestration:, stdout: $stdout, stderr: $stderr)
         events = [Event.new(name: :run_invoked, operator: operator, paths: paths,

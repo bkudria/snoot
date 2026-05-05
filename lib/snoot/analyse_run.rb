@@ -5,6 +5,10 @@ module Snoot
   # terminal outcome by orchestrating the three analysers and selecting one
   # finding (or none, or signalling failure). Returns [run, events].
   module AnalyseRun
+    # Event is the audit record emitted during AnalyseRun: signals
+    # analysis_failed (with the underlying error) or
+    # skipped_doc_less_smell_warned (with the offending smell_type).
+    # Carries the current Run snapshot for traceability.
     Event = Data.define(:name, :run, :smell_type, :error)
 
     module_function

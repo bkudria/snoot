@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 module Snoot
+  # Run is the entity from snoot.allium tracking one analysis pass: the
+  # input paths, the outcome (pending, finding_rendered,
+  # nothing_to_report, analysis_failed), the selected_finding when one
+  # was chosen, and the set of smells gathered during analysis.
+  # Encodes the declared transitions and gates selected_finding access
+  # behind the :finding_rendered outcome.
   Run = Data.define(:paths, :outcome, :selected_finding, :smells) do
     # rubocop:disable Lint/ConstantDefinitionInBlock
     # The Data.define block IS the class body; this constant is attached to Run.
