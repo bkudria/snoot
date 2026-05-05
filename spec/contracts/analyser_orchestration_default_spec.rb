@@ -5,15 +5,7 @@ require "spec_helper"
 # Spec source: snoot.allium -- contract AnalyserOrchestration
 #              implementation: Snoot::AnalyserOrchestration::Default
 RSpec.describe "AnalyserOrchestration::Default" do
-  let(:adapter) { Snoot::AnalyserOrchestration::Default.new }
-
-  describe "describe_location" do
-    it "renders 'path:line_start-line_end'" do
-      loc = build_location(path: build_path(raw: "lib/x.rb"),
-                           line_start: 10, line_end: 20)
-      expect(adapter.describe_location(loc)).to eq("lib/x.rb:10-20")
-    end
-  end
+  let(:adapter) { Snoot::AnalyserOrchestration::Default }
 
   describe "vendored_doc" do
     it "returns the reek-bundled doc for a known smell type", :aggregate_failures do

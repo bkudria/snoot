@@ -25,7 +25,7 @@ module Snoot
       module_function
 
       def run(argv, stdout: $stdout, stderr: $stderr,
-              orchestration: AnalyserOrchestration::Default.new)
+              orchestration: AnalyserOrchestration::Default)
         return write_and_return(stdout, "snoot #{Snoot::VERSION}\n", 0) if argv == ["--version"]
         return write_and_return(stdout, USAGE, 0) if argv == ["--help"]
         return write_and_return(stderr, USAGE, 1) if unknown_flag?(argv)

@@ -38,10 +38,6 @@ module Snoot
       def vendored_doc(smell_type)
         @vendored_docs[smell_type.name]
       end
-
-      def describe_location(location)
-        "#{location.path.raw}:#{location.line_start}-#{location.line_end}"
-      end
     end
   end
 end

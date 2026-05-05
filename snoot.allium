@@ -94,14 +94,10 @@ contract AnalyserOrchestration {
 
     -- vendored_doc maps a smell type to its bundled markdown doc, or null
     -- when no doc is bundled for that smell type. Consulted both to filter
-    -- the smell candidate pool and to render the doc section.
+    -- the smell candidate pool and to render the doc section. Location
+    -- rendering for the FindingContext section is carried by Location
+    -- itself, not the orchestration contract.
     vendored_doc: (smell_type: SmellType) -> String?
-
-    -- describe_location renders a location for the report's
-    -- FindingContext section (path:line_start-line_end). Listed here so
-    -- the contract carries the location-rendering obligation alongside
-    -- the analyser signatures it serves.
-    describe_location: (location: Location) -> String
 
     @invariant Determinism
         -- Each signature is pure within a single CLI invocation: the same

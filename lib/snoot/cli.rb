@@ -30,7 +30,7 @@ module Snoot
         case run.outcome
         when :finding_rendered then emit_report(run, orchestration, paths, events, stdout)
         when :nothing_to_report then stdout.write(NOTHING_TO_REPORT)
-        when :analysis_failed then emit_failure(analyse_events, stderr)
+        when :analysis_failed then Snoot::CLI.emit_failure(analyse_events, stderr)
         end
         [run, events]
       end
@@ -38,20 +38,10 @@ module Snoot
       private
 
       def emit_report(run, orchestration, paths, events, stdout)
-        report = RenderReport.invoke(run, orchestration: orchestration)
-        sections = report.sections
-        stdout.write(format_report(sections))
+        RenderReport.invoke(run, orchestration: orchestration) => { sections:, finding: }
+        stdout.write(Snoot::CLI.format_report(sections))
         events << Event.new(name: :report_emitted, operator: operator, paths: paths,
-                            run: run, finding: report.finding, sections: sections)
-      end
-
-      def emit_failure(analyse_events, stderr)
-        failure = analyse_events.find { |event| event.name == :analysis_failed }
-        stderr.write("analysis failed: #{failure.error.message}\n") if failure
-      end
-
-      def format_report(sections)
-        "#{sections.values.join("\n\n")}\n"
+                            run: run, finding: finding, sections: sections)
       end
     end
 
@@ -61,6 +51,15 @@ module Snoot
       raise TypeError, "CLI requires an Operator, got #{actor.class}" unless actor.is_a?(Operator)
 
       CLI.new(operator: actor)
+    end
+
+    def emit_failure(analyse_events, stderr)
+      failure = analyse_events.find { |event| event.name == :analysis_failed }
+      stderr.write("analysis failed: #{failure.error.message}\n") if failure
+    end
+
+    def format_report(sections)
+      "#{sections.values.join("\n\n")}\n"
     end
   end
 end

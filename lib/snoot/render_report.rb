@@ -12,16 +12,6 @@ module Snoot
   module RenderReport
     FRAMING_PLACEHOLDER = "[framing prose: see snoot.allium open question]"
 
-    COMPLEXITY_DOC =
-      "High complexity hits indicate a method or class doing too much. " \
-      "Consider extracting helpers, simplifying conditionals, or " \
-      "splitting the responsibility across smaller units."
-
-    DUPLICATION_DOC =
-      "Structural duplication suggests an extracted abstraction is missing. " \
-      "Consider whether the duplicated shape belongs to a single helper, " \
-      "module, or value type."
-
     # Report is the value returned by RenderReport.invoke: the source
     # Run, the selected Finding it was built from, and the ordered
     # sections hash that CLI joins into stdout output.
@@ -48,11 +38,11 @@ module Snoot
       }
     end
 
-    def non_smell_sections(finding, orchestration)
+    def non_smell_sections(finding, _orchestration)
       {
-        header: render_header(finding, orchestration),
-        finding_context: render_finding_context(finding, orchestration),
-        doc: render_doc(finding, orchestration),
+        header: render_header(finding),
+        finding_context: render_finding_context(finding),
+        doc: finding.doc,
         framing: FRAMING_PLACEHOLDER
       }
     end
@@ -73,8 +63,8 @@ module Snoot
       "#{path}\n#{lines.join("\n")}"
     end
 
-    def render_header(finding, orch)
-      loc = orch.describe_location(finding.location) unless finding.is_a?(DuplicationCluster)
+    def render_header(finding)
+      loc = finding.location.description unless finding.is_a?(DuplicationCluster)
       case finding
       when Smell
         "#{finding.smell_type.name} at #{loc}"
@@ -85,24 +75,16 @@ module Snoot
       end
     end
 
-    def render_finding_context(finding, orch)
-      loc = orch.describe_location(finding.location) unless finding.is_a?(DuplicationCluster)
+    def render_finding_context(finding)
+      loc = finding.location.description unless finding.is_a?(DuplicationCluster)
       case finding
       when Smell
         "#{loc}\n\n#{finding.message}"
       when ComplexityHit
         "#{loc}\n\nMethod: #{finding.method_name}\nScore: #{finding.score.to_s('F')}"
       when DuplicationCluster
-        rendered = finding.locations.map { |location| orch.describe_location(location) }
+        rendered = finding.locations.map(&:description)
         "Locations:\n#{rendered.join("\n")}"
-      end
-    end
-
-    def render_doc(finding, orch)
-      case finding
-      when Smell then orch.vendored_doc(finding.smell_type)
-      when ComplexityHit then COMPLEXITY_DOC
-      when DuplicationCluster then DUPLICATION_DOC
       end
     end
   end

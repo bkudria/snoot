@@ -21,7 +21,7 @@ module Snoot
         end
       end
 
-      def analyse_reek(source, adapter: Snoot::AnalyserOrchestration::Default.new)
+      def analyse_reek(source, adapter: Snoot::AnalyserOrchestration::Default)
         result = nil
         captured_path = nil
         with_ruby_tempfile(source) do |path|
@@ -31,7 +31,7 @@ module Snoot
         [result, captured_path]
       end
 
-      def analyse_flog(source, adapter: Snoot::AnalyserOrchestration::Default.new)
+      def analyse_flog(source, adapter: Snoot::AnalyserOrchestration::Default)
         result = nil
         captured_path = nil
         with_ruby_tempfile(source) do |path|
@@ -41,7 +41,7 @@ module Snoot
         [result, captured_path]
       end
 
-      def analyse_flay(src1, src2, adapter: Snoot::AnalyserOrchestration::Default.new)
+      def analyse_flay(src1, src2, adapter: Snoot::AnalyserOrchestration::Default)
         result = nil
         paths = []
         with_ruby_tempfile(src1) do |p1|

@@ -4,11 +4,9 @@
 # behavioural specification this implementation realises.
 module Snoot
   # Surfaces the AnalyserOrchestration contract's vendored_doc at module
-  # scope, backed by a memoised default orchestration. Lazy so the
-  # AnalyserOrchestration::Default constant is resolved at call time, after
-  # the requires below have run.
+  # scope, delegating to the singleton Default orchestration module.
   def self.vendored_doc(smell_type)
-    (@default_orchestration ||= AnalyserOrchestration::Default.new).vendored_doc(smell_type)
+    AnalyserOrchestration::Default.vendored_doc(smell_type)
   end
 end
 

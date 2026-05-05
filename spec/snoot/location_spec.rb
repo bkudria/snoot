@@ -19,4 +19,11 @@ RSpec.describe Snoot::Location do
     expect(loc.line_start).to eq(10).and(be_a(Integer))
     expect(loc.line_end).to eq(20).and(be_a(Integer))
   end
+
+  describe "#description" do
+    it "renders 'path:line_start-line_end'" do
+      loc = described_class.new(path: Snoot::Path.new(raw: "lib/x.rb"), line_start: 10, line_end: 20)
+      expect(loc.description).to eq("lib/x.rb:10-20")
+    end
+  end
 end

@@ -108,7 +108,7 @@ RSpec.describe Snoot::RenderReport do
     end
 
     it "renders doc as the high-complexity prose constant" do
-      expect(report.sections[:doc]).to eq(Snoot::RenderReport::COMPLEXITY_DOC)
+      expect(report.sections[:doc]).to eq(Snoot::ComplexityHit::DOC)
     end
   end
 
@@ -134,7 +134,7 @@ RSpec.describe Snoot::RenderReport do
     end
 
     it "renders doc as the high-duplication prose constant" do
-      expect(report.sections[:doc]).to eq(Snoot::RenderReport::DUPLICATION_DOC)
+      expect(report.sections[:doc]).to eq(Snoot::DuplicationCluster::DOC)
     end
   end
 
