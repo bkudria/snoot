@@ -22,16 +22,20 @@ module Snoot
         analysis_failed: 1
       }.freeze
 
+      BANNERS = {
+        ["--version"] => "snoot #{Snoot::VERSION}\n",
+        ["--help"] => USAGE
+      }.freeze
+
       module_function
 
-      def run(argv, streams: Snoot::CLI::Streams.default,
-              orchestration: AnalyserOrchestration::Default)
-        stdout = streams.stdout
-        return write_and_return(stdout, "snoot #{Snoot::VERSION}\n", 0) if argv == ["--version"]
-        return write_and_return(stdout, USAGE, 0) if argv == ["--help"]
+      def run(argv, pipeline: Snoot::CLI::Pipeline.default)
+        streams = pipeline.streams
+        banner = BANNERS[argv]
+        return write_and_return(streams.stdout, banner, 0) if banner
         return write_and_return(streams.stderr, USAGE, 1) if unknown_flag?(argv)
 
-        run_pipeline(argv, streams: streams, orchestration: orchestration)
+        run_pipeline(argv, pipeline: pipeline)
       end
 
       def write_and_return(io, message, code)
@@ -43,9 +47,9 @@ module Snoot
         argv.any? { |arg| arg.start_with?("-") }
       end
 
-      def run_pipeline(argv, streams:, orchestration:)
+      def run_pipeline(argv, pipeline:)
         run, _events = Snoot::CLI.for(Snoot::Operator.new).run_invoked(
-          build_paths(argv), orchestration: orchestration, streams: streams
+          build_paths(argv), pipeline: pipeline
         )
         EXIT_CODES.fetch(run.outcome)
       end
