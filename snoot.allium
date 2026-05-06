@@ -382,6 +382,17 @@ invariant SignificantFindingsOnly {
                 implies d in significant_duplications({d})
 }
 
+-- The smells field is an analysis output, populated only after AnalyseRun
+-- has gathered reek's smell set. On outcome = pending the analyser pass
+-- has not yet produced a value to render; on outcome = analysis_failed
+-- the orchestration aborted before reek_analyse was invoked. In both
+-- cases run.smells is empty -- consumers reading run.smells need not
+-- branch on these outcomes.
+invariant SmellsEmptyOnPendingOrFailed {
+    for r in Runs:
+        r.outcome in {pending, analysis_failed} implies r.smells.count = 0
+}
+
 ------------------------------------------------------------
 -- Surfaces
 ------------------------------------------------------------
