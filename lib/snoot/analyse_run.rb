@@ -38,27 +38,24 @@ module Snoot
 
     def invoke(paths, orchestration:)
       run = Run.new(paths: paths, outcome: :pending)
-      sources, failure = analyse(paths, orchestration)
+      failure = orchestration.first_failure(paths)
       return analysis_failure(run, failure) if failure
 
-      decide_outcome(run, sources)
+      decide_outcome(run, analyse(paths, orchestration))
     end
 
     def analyse(paths, orchestration)
-      sources = Sources.new(
+      Sources.new(
         smells: orchestration.reek_analyse(paths),
         complexities: orchestration.flog_analyse(paths),
         duplications: orchestration.flay_analyse(paths),
         orchestration: orchestration
       )
-      [sources, nil]
-    rescue StandardError => error
-      [nil, error]
     end
 
-    def analysis_failure(run, error)
-      failed = run.transition_to(:analysis_failed)
-      [failed, [Event.new(name: :analysis_failed, run: failed, smell_type: nil, error: error)]]
+    def analysis_failure(run, failure)
+      failed = run.transition_to(:analysis_failed, failure: failure)
+      [failed, [Event.new(name: :analysis_failed, run: failed, smell_type: nil, error: nil)]]
     end
 
     def decide_outcome(run, sources)

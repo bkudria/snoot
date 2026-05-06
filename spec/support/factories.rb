@@ -87,14 +87,23 @@ module Snoot
         Snoot::DuplicationCluster.new(signature: signature, locations: locations)
       end
 
-      def build_run(paths: Set[], outcome: :pending, selected_finding: nil)
-        Snoot::Run.new(paths: paths, outcome: outcome, selected_finding: selected_finding)
+      def build_run(paths: Set[], outcome: :pending, selected_finding: nil, failure: nil)
+        Snoot::Run.new(
+          paths: paths, outcome: outcome,
+          selected_finding: selected_finding, failure: failure
+        )
       end
 
-      def build_run_at(outcome, with_finding: nil)
+      def build_analyser_failure(analyser: :reek, message: "boom")
+        Snoot::AnalyserFailure.new(analyser: analyser, message: message)
+      end
+
+      def build_run_at(outcome, with_finding: nil, with_failure: nil)
         case outcome
-        when :pending, :nothing_to_report, :analysis_failed
+        when :pending, :nothing_to_report
           build_run(outcome: outcome)
+        when :analysis_failed
+          build_run(outcome: :analysis_failed, failure: with_failure || build_analyser_failure)
         when :finding_rendered
           build_run(outcome: :finding_rendered, selected_finding: with_finding || build_smell)
         else

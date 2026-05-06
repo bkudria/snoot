@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require "tempfile"
 
 # Spec source: snoot.allium -- contract AnalyserOrchestration
 #              implementation: Snoot::AnalyserOrchestration::Default
@@ -217,6 +218,62 @@ RSpec.describe "AnalyserOrchestration::Default" do
     it "passes duplications through unchanged" do
       clusters = Set[build_duplication_cluster]
       expect(fake.significant_duplications(clusters)).to eq(clusters)
+    end
+  end
+
+  describe "FakeOrchestration first_failure" do
+    it "returns nil when no analyser is configured to raise" do
+      expect(fake_orchestration.first_failure(Set[build_path])).to be_nil
+    end
+
+    it "tags :reek when reek_raises is set", :aggregate_failures do
+      fake = fake_orchestration(reek_raises: StandardError.new("reek-boom"))
+      failure = fake.first_failure(Set[build_path])
+      expect(failure).to be_a(Snoot::AnalyserFailure)
+      expect(failure.analyser).to eq(:reek)
+      expect(failure.message).to eq("reek-boom")
+    end
+
+    it "tags :flog when flog_raises is set" do
+      fake = fake_orchestration(flog_raises: StandardError.new("flog-boom"))
+      expect(fake.first_failure(Set[build_path]).analyser).to eq(:flog)
+    end
+
+    it "tags :flay when flay_raises is set" do
+      fake = fake_orchestration(flay_raises: StandardError.new("flay-boom"))
+      expect(fake.first_failure(Set[build_path]).analyser).to eq(:flay)
+    end
+
+    it "honours canonical order: when flog and flay both raise, returns :flog" do
+      fake = fake_orchestration(
+        flog_raises: StandardError.new("flog-first"),
+        flay_raises: StandardError.new("flay-also")
+      )
+      expect(fake.first_failure(Set[build_path]).analyser).to eq(:flog)
+    end
+  end
+
+  describe "Default first_failure" do
+    let(:smell_free_src) do
+      <<~RUBY
+        # A trivial, smell-free class for the empty-result test.
+        class Tiny
+        end
+      RUBY
+    end
+
+    def with_temp_path(src)
+      Tempfile.create(["good", ".rb"]) do |io|
+        io.write(src)
+        io.flush
+        yield Snoot::Path.new(raw: io.path)
+      end
+    end
+
+    it "returns nil when all three analysers succeed" do
+      with_temp_path(smell_free_src) do |path|
+        expect(adapter.first_failure(Set[path])).to be_nil
+      end
     end
   end
 end

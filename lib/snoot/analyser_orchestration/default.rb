@@ -23,6 +23,12 @@ module Snoot
       SMELL_TYPE_INSTANCE_FLOOR = 2
       COMPLEXITY_SCORE_FLOOR = BigDecimal("25")
 
+      ANALYSER_PROBES = [
+        %i[reek reek_analyse],
+        %i[flog flog_analyse],
+        %i[flay flay_analyse]
+      ].freeze
+
       module_function
 
       def reek_analyse(paths)
@@ -72,6 +78,19 @@ module Snoot
       end
 
       def significant_duplications(duplications) = duplications
+
+      # first_failure runs the three analysers in canonical order
+      # (Reek -> Flog -> Flay) and returns the first AnalyserFailure
+      # encountered, or nil when all three succeed. Subsequent
+      # analysers are not invoked once one has failed.
+      def first_failure(paths)
+        ANALYSER_PROBES.each do |tag, method|
+          send(method, paths)
+        rescue StandardError => error
+          return AnalyserFailure.new(analyser: tag, message: error.message)
+        end
+        nil
+      end
     end
   end
 end

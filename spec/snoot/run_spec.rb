@@ -29,6 +29,12 @@ RSpec.describe Snoot::Run do
       moved = run.transition_to(:nothing_to_report)
       expect(moved.smells).to eq(Set[smell])
     end
+
+    it "carries an AnalyserFailure on .failure when outcome = :analysis_failed" do
+      af = Snoot::AnalyserFailure.new(analyser: :reek, message: "boom")
+      run = described_class.new(paths: Set[], outcome: :analysis_failed, failure: af)
+      expect(run.failure).to eq(af)
+    end
   end
 
   describe "construction-guard.Run.selected_finding" do
@@ -36,6 +42,14 @@ RSpec.describe Snoot::Run do
       expect do
         described_class.new(paths: Set[], outcome: :finding_rendered, selected_finding: nil)
       end.to raise_error(Snoot::StateError, /selected_finding/)
+    end
+  end
+
+  describe "construction-guard.Run.failure" do
+    it "rejects outcome=:analysis_failed with nil failure" do
+      expect do
+        described_class.new(paths: Set[], outcome: :analysis_failed)
+      end.to raise_error(Snoot::StateError, /failure/)
     end
   end
 
@@ -56,6 +70,21 @@ RSpec.describe Snoot::Run do
     end
   end
 
+  describe "when-presence.Run.failure" do
+    it "is present when outcome = :analysis_failed" do
+      run = build_run_at(:analysis_failed)
+      expect(run.failure).to be_a(Snoot::AnalyserFailure)
+    end
+
+    it "raises when accessed at any other outcome", :aggregate_failures do
+      %i[pending nothing_to_report finding_rendered].each do |state|
+        run = build_run_at(state)
+        expect { run.failure }.to raise_error(/analysis_failed/i),
+                                  "expected #{state} access to raise"
+      end
+    end
+  end
+
   describe "transition-edge.Run.outcome" do
     it "pending -> finding_rendered is reachable via AnalyseRun" do
       run = drive_to(:finding_rendered)
@@ -70,6 +99,19 @@ RSpec.describe Snoot::Run do
     it "pending -> analysis_failed is reachable via AnalyseRun" do
       run = drive_to(:analysis_failed)
       expect(run.outcome).to eq(:analysis_failed)
+    end
+
+    it "transition_to(:analysis_failed, failure:) carries the failure onto the new Run" do
+      af = Snoot::AnalyserFailure.new(analyser: :flog, message: "score too high")
+      run = described_class.new(paths: Set[], outcome: :pending)
+      moved = run.transition_to(:analysis_failed, failure: af)
+      expect(moved.failure).to eq(af)
+    end
+
+    it "transition_to(:analysis_failed) without a failure raises StateError" do
+      run = described_class.new(paths: Set[], outcome: :pending)
+      expect { run.transition_to(:analysis_failed) }
+        .to raise_error(Snoot::StateError, /failure/)
     end
   end
 

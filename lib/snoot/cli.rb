@@ -53,12 +53,12 @@ module Snoot
       # :reek:FeatureEnvy -- this is the dispatch layer between the
       # pipeline's IO bundle (streams) and the per-outcome writer; the
       # whole job is to route to the right sink.
-      def events_for_outcome(run, analyse_events, pipeline:)
+      def events_for_outcome(run, _analyse_events, pipeline:)
         streams = pipeline.streams
         case run.outcome
         when :finding_rendered then [emit_report(run, pipeline: pipeline)]
         when :nothing_to_report then Snoot::CLI.emit_nothing_to_report(streams.stdout)
-        when :analysis_failed then Snoot::CLI.emit_failure(analyse_events, streams.stderr)
+        when :analysis_failed then Snoot::CLI.emit_failure(run, streams.stderr)
         else []
         end
       end
@@ -87,9 +87,8 @@ module Snoot
       []
     end
 
-    def emit_failure(analyse_events, stderr)
-      failure = analyse_events.find { |event| event.name == :analysis_failed }
-      stderr.write("analysis failed: #{failure.error.message}\n") if failure
+    def emit_failure(run, stderr)
+      stderr.write("analysis failed (#{run.failure.analyser}): #{run.failure.message}\n")
       []
     end
 

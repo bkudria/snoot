@@ -61,12 +61,29 @@ RSpec.describe Snoot::AnalyseRun do
   end
 
   describe "rule-failure.AnalyseRun -- analyser raises" do
-    it "emits an :analysis_failed event carrying the rescued error", :aggregate_failures do
-      err = StandardError.new("boom")
-      _run, events = described_class.invoke(Set[build_path], orchestration: fake_orchestration(reek_raises: err))
-      failure = events.find { |e| e.name == :analysis_failed }
-      expect(failure).not_to be_nil
-      expect(failure.error).to eq(err)
+    def invoke_with(**raises)
+      described_class.invoke(Set[build_path], orchestration: fake_orchestration(**raises))
+    end
+
+    it "drives the run to :analysis_failed with run.failure populated" do
+      run, = invoke_with(reek_raises: StandardError.new("reek-boom"))
+      expect(run).to have_attributes(outcome: :analysis_failed,
+                                     failure: Snoot::AnalyserFailure.new(analyser: :reek, message: "reek-boom"))
+    end
+
+    it "tags the failure :flog when Flog raises" do
+      run, = invoke_with(flog_raises: StandardError.new("flog-boom"))
+      expect(run.failure).to have_attributes(analyser: :flog, message: "flog-boom")
+    end
+
+    it "tags the failure :flay when Flay raises" do
+      run, = invoke_with(flay_raises: StandardError.new("flay-boom"))
+      expect(run.failure).to have_attributes(analyser: :flay, message: "flay-boom")
+    end
+
+    it "still emits an :analysis_failed audit event referencing the failed run" do
+      _run, events = invoke_with(reek_raises: StandardError.new("boom"))
+      expect(events.find { |e| e.name == :analysis_failed }&.run&.outcome).to eq(:analysis_failed)
     end
   end
 

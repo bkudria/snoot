@@ -7,7 +7,7 @@ module Snoot
   # was chosen, and the set of smells gathered during analysis.
   # Encodes the declared transitions and gates selected_finding access
   # behind the :finding_rendered outcome.
-  Run = Data.define(:paths, :outcome, :selected_finding, :smells) do
+  Run = Data.define(:paths, :outcome, :selected_finding, :smells, :failure) do
     # rubocop:disable Lint/ConstantDefinitionInBlock
     # The Data.define block IS the class body; this constant is attached to Run.
     TRANSITIONS = {
@@ -16,10 +16,12 @@ module Snoot
     # rubocop:enable Lint/ConstantDefinitionInBlock
 
     alias_method :_raw_selected_finding, :selected_finding
+    alias_method :_raw_failure, :failure
 
-    def initialize(paths:, outcome:, selected_finding: nil, smells: Set[])
+    def initialize(paths:, outcome:, selected_finding: nil, smells: Set[], failure: nil)
       super
       validate_finding_rendered_invariant!
+      validate_analysis_failed_invariant!
     end
 
     def selected_finding
@@ -30,6 +32,14 @@ module Snoot
       _raw_selected_finding
     end
 
+    def failure
+      unless outcome == :analysis_failed
+        raise StateError,
+              "failure is only available when outcome = :analysis_failed (got #{outcome.inspect})"
+      end
+      _raw_failure
+    end
+
     def validate_finding_rendered_invariant!
       return unless outcome == :finding_rendered
       return if _raw_selected_finding
@@ -38,17 +48,42 @@ module Snoot
     end
     private :validate_finding_rendered_invariant!
 
-    def transition_to(target, selected_finding: nil)
-      allowed = TRANSITIONS.fetch(outcome, [])
-      raise StateError, "transition #{outcome} -> #{target} is not declared" unless allowed.include?(target)
+    def validate_analysis_failed_invariant!
+      return unless outcome == :analysis_failed
+      return if _raw_failure
 
-      if target == :finding_rendered
-        raise StateError, "selected_finding required for :finding_rendered" unless selected_finding
+      raise StateError, "failure required for :analysis_failed"
+    end
+    private :validate_analysis_failed_invariant!
 
-        with(outcome: target, selected_finding: selected_finding)
-      else
-        with(outcome: target, selected_finding: nil)
+    def transition_to(target, selected_finding: nil, failure: nil)
+      ensure_transition_allowed!(target)
+      case target
+      when :finding_rendered then transition_finding_rendered(selected_finding)
+      when :analysis_failed then transition_analysis_failed(failure)
+      else with(outcome: target, selected_finding: nil, failure: nil)
       end
     end
+
+    def ensure_transition_allowed!(target)
+      return if TRANSITIONS.fetch(outcome, []).include?(target)
+
+      raise StateError, "transition #{outcome} -> #{target} is not declared"
+    end
+    private :ensure_transition_allowed!
+
+    def transition_finding_rendered(selected_finding)
+      raise StateError, "selected_finding required for :finding_rendered" unless selected_finding
+
+      with(outcome: :finding_rendered, selected_finding: selected_finding, failure: nil)
+    end
+    private :transition_finding_rendered
+
+    def transition_analysis_failed(failure)
+      raise StateError, "failure required for :analysis_failed" unless failure
+
+      with(outcome: :analysis_failed, selected_finding: nil, failure: failure)
+    end
+    private :transition_analysis_failed
   end
 end

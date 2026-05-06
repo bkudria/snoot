@@ -83,7 +83,7 @@ RSpec.describe Snoot::CLI::Argv do
       orchestration = fake_orchestration(reek_raises: StandardError.new("boom"))
       code = run_argv(["lib/foo.rb"], orchestration: orchestration)
       expect(code).to eq(2)
-      expect(stderr.string).to include("analysis failed:", "boom")
+      expect(stderr.string).to include("analysis failed (reek):", "boom")
       expect(stdout.string).to be_empty
     end
 

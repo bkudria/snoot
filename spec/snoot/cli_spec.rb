@@ -81,13 +81,31 @@ RSpec.describe Snoot::CLI do
       expect(stderr.string).to eq("")
     end
 
-    context "when analysis raises" do
+    context "when reek raises" do
       let(:orchestration) { fake_orchestration(reek_raises: StandardError.new("boom")) }
 
-      it "writes 'analysis failed: <msg>' to stderr and leaves stdout empty on analysis_failed", :aggregate_failures do
+      it "writes 'analysis failed (reek): <msg>' to stderr and leaves stdout empty", :aggregate_failures do
         run_cli
         expect(stdout.string).to eq("")
-        expect(stderr.string).to eq("analysis failed: boom\n")
+        expect(stderr.string).to eq("analysis failed (reek): boom\n")
+      end
+    end
+
+    context "when flog raises" do
+      let(:orchestration) { fake_orchestration(flog_raises: StandardError.new("score-too-high")) }
+
+      it "tags the analyser as flog on stderr" do
+        run_cli
+        expect(stderr.string).to eq("analysis failed (flog): score-too-high\n")
+      end
+    end
+
+    context "when flay raises" do
+      let(:orchestration) { fake_orchestration(flay_raises: StandardError.new("dup-error")) }
+
+      it "tags the analyser as flay on stderr" do
+        run_cli
+        expect(stderr.string).to eq("analysis failed (flay): dup-error\n")
       end
     end
   end
