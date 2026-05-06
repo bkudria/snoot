@@ -2,6 +2,7 @@
 
 require "spec_helper"
 require "tempfile"
+require "tmpdir"
 
 # Spec source: snoot.allium -- contract AnalyserOrchestration
 #              implementation: Snoot::AnalyserOrchestration::Default
@@ -63,6 +64,14 @@ RSpec.describe "AnalyserOrchestration::Default" do
       expect(irresponsible).not_to be_nil
       expect(irresponsible&.message.to_s).to start_with("Undocumented ").and(include("has no descriptive comment"))
     end
+
+    it "expands a directory Path to its .rb files (defers to Reek's SourceLocator)" do
+      Dir.mktmpdir do |dir|
+        File.write(File.join(dir, "dirty.rb"), smelly_src)
+        smells = adapter.reek_analyse(Set[Snoot::Path.new(raw: dir)])
+        expect(smells).not_to be_empty
+      end
+    end
   end
 
   describe "flog_analyse" do
@@ -106,6 +115,14 @@ RSpec.describe "AnalyserOrchestration::Default" do
     it "returns an empty Set for a file with no methods" do
       expect(analyse_flog(trivial_src).first).to eq(Set[])
     end
+
+    it "expands a directory Path to its .rb files (defers to PathExpander)" do
+      Dir.mktmpdir do |dir|
+        File.write(File.join(dir, "tangled.rb"), complex_src)
+        hits = adapter.flog_analyse(Set[Snoot::Path.new(raw: dir)])
+        expect(hits).not_to be_empty
+      end
+    end
   end
 
   describe "flay_analyse" do
@@ -144,6 +161,13 @@ RSpec.describe "AnalyserOrchestration::Default" do
       src_a = "class Solo; def only; 1; end; end\n"
       src_b = "class Lone; def alone; 2; end; end\n"
       expect(analyse_flay(src_a, src_b).first).to eq(Set[])
+    end
+
+    it "expands a directory Path to its .rb files (defers to PathExpander)" do
+      Dir.mktmpdir do |dir|
+        dup_pair.each_with_index { |src, i| File.write(File.join(dir, "f#{i}.rb"), src) }
+        expect(adapter.flay_analyse(Set[Snoot::Path.new(raw: dir)])).not_to be_empty
+      end
     end
   end
 

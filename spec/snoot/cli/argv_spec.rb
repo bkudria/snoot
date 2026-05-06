@@ -71,8 +71,12 @@ RSpec.describe Snoot::CLI::Argv do
       end
     end
 
-    it "defaults empty argv to Dir['lib/**/*.rb'] in cwd", :aggregate_failures do
-      with_seeded_lib("dirty.rb", smelly_ruby) do
+    it "defaults empty argv to Path('.') per @guarantee EmptyPathsDefault" do
+      expect(described_class.build_paths([])).to eq(Set[Snoot::Path.new(raw: ".")])
+    end
+
+    it "scans the current directory when no paths are given", :aggregate_failures do
+      with_seeded_cwd("dirty.rb", smelly_ruby) do
         code = run_argv([])
         expect(code).to eq(1)
         expect(stdout.string).to include("## Instances\n\n")

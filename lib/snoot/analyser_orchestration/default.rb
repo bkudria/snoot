@@ -3,7 +3,11 @@
 require "bigdecimal"
 require "flay"
 require "flog"
+require "path_expander"
 require "reek"
+require "reek/cli/options"
+require "reek/configuration/app_configuration"
+require "reek/source/source_locator"
 
 module Snoot
   module AnalyserOrchestration
@@ -32,11 +36,13 @@ module Snoot
       module_function
 
       def reek_analyse(paths)
-        paths.flat_map { |path| reek_smells_for(path) }.to_set
+        Reek::Source::SourceLocator.new(paths.map(&:raw)).sources
+                                   .flat_map { |pathname| reek_smells_for(pathname) }
+                                   .to_set
       end
 
-      def reek_smells_for(path)
-        examiner = Reek::Examiner.new(Pathname.new(path.raw))
+      def reek_smells_for(pathname)
+        examiner = Reek::Examiner.new(pathname)
         examiner.smells.filter_map do |warning|
           next unless warning.lines&.any?
 
@@ -45,8 +51,9 @@ module Snoot
       end
 
       def flog_analyse(paths)
+        files = PathExpander.new(paths.map(&:raw), "**/*.{rb,rake}").process
         flog = Flog.new
-        flog.flog(*paths.map(&:raw))
+        flog.flog(*files)
         flog.totals.filter_map do |class_method, score|
           ComplexityHit.from_flog_entry(
             class_method: class_method, score: score,
@@ -56,8 +63,9 @@ module Snoot
       end
 
       def flay_analyse(paths)
+        files = PathExpander.new(paths.map(&:raw), "**/*.rb").process
         flay = Flay.new
-        flay.process(*paths.map(&:raw))
+        flay.process(*files)
         flay.analyze.each_with_object(Set[]) do |item, clusters|
           clusters << DuplicationCluster.from_flay_item(item)
         end

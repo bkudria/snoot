@@ -13,7 +13,7 @@ module Snoot
                snoot --version
                snoot --help
 
-        With no path arguments, snoot scans Dir["lib/**/*.rb"].
+        With no path arguments, snoot scans the current directory.
       HELP
 
       EXIT_CODES = {
@@ -55,7 +55,7 @@ module Snoot
       end
 
       def build_paths(argv)
-        raws = argv.empty? ? Dir["lib/**/*.rb"] : argv
+        raws = argv.empty? ? ["."] : argv
         raws.each_with_object(Set[]) { |raw, set| set << Snoot::Path.new(raw: raw) }
       end
     end

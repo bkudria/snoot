@@ -63,6 +63,15 @@ module Snoot
         end
       end
 
+      def with_seeded_cwd(filename, source)
+        Dir.mktmpdir do |dir|
+          Dir.chdir(dir) do
+            File.write(filename, source)
+            yield
+          end
+        end
+      end
+
       def build_path(raw: "lib/foo.rb")
         Snoot::Path.new(raw: raw)
       end
