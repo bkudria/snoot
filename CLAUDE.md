@@ -42,6 +42,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the commit-message convention.
 
 ## Project state
 
-`lib/` does not exist yet. `spec/spec_helper.rb` is wired to load it once it
-does (the `require "snoot"` line is currently commented out). The project is
-in a spec-first phase: tests are pending until the implementation lands.
+`lib/` holds the implementation, loaded by `spec/spec_helper.rb` via
+`require "snoot"`. The gem version lives in `lib/snoot/version.rb`,
+and the Ruby toolchain is pinned via `.ruby-version`. See
+[`README.md`](README.md) for what the gem does and [`GOALS.md`](GOALS.md)
+for the design rationale.
