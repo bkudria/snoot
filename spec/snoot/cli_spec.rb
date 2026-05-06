@@ -77,8 +77,19 @@ RSpec.describe Snoot::CLI do
 
     it "writes the enriched 'nothing to report' line to stdout on nothing_to_report", :aggregate_failures do
       run_cli
-      expect(stdout.string).to eq("nothing to report — no findings above snoot's significance floor\n")
+      expect(stdout.string).to eq("nothing to report -- no findings above snoot's significance floor\n")
       expect(stderr.string).to eq("")
+    end
+
+    context "when the top finding is a doc-less smell" do
+      let(:smell) { build_smell(smell_type: build_smell_type(name: "Undocumented")) }
+      let(:orchestration) { fake_orchestration(smells: Set[smell]) }
+
+      it "writes a missing-vendored-doc warning to stderr (SkippedDocLessSmellWarned)", :aggregate_failures do
+        run_cli
+        expect(stderr.string).to eq("warning: skipping doc-less smell type 'Undocumented'\n")
+        expect(stdout.string).to eq("nothing to report -- no findings above snoot's significance floor\n")
+      end
     end
 
     context "when reek raises" do
@@ -107,6 +118,17 @@ RSpec.describe Snoot::CLI do
         run_cli
         expect(stderr.string).to eq("analysis failed (flay): dup-error\n")
       end
+    end
+  end
+
+  describe "surface-guarantee.EmptyPathsDefault" do
+    let(:default_paths) { Set[Snoot::Path.new(raw: ".")] }
+
+    it "normalises an empty path set to {Path('.')} before RunInvoked fires", :aggregate_failures do
+      run, events = run_cli(Set[])
+      expect(run.paths).to eq(default_paths)
+      run_invoked = events.find { |e| e.name == :run_invoked }
+      expect(run_invoked.paths).to eq(default_paths)
     end
   end
 

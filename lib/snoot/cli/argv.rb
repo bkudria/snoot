@@ -55,8 +55,7 @@ module Snoot
       end
 
       def build_paths(argv)
-        raws = argv.empty? ? ["."] : argv
-        raws.each_with_object(Set[]) { |raw, set| set << Snoot::Path.new(raw: raw) }
+        argv.each_with_object(Set[]) { |raw, set| set << Snoot::Path.new(raw: raw) }
       end
     end
   end

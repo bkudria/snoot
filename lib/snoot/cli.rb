@@ -16,7 +16,8 @@ module Snoot
     # AnalyseRun events. Returned alongside the Run so callers can
     # assert on the sequence.
     Event = Data.define(:name, :operator, :paths, :run, :finding, :sections)
-    NOTHING_TO_REPORT = "nothing to report — no findings above snoot's significance floor\n"
+    NOTHING_TO_REPORT = "nothing to report -- no findings above snoot's significance floor\n"
+    DEFAULT_PATHS = Set[Snoot::Path.new(raw: ".")].freeze
 
     # Streams bundles the stdout/stderr pair injected at the CLI
     # surface; nested inside Pipeline so the IO sinks travel together
@@ -41,9 +42,11 @@ module Snoot
     # the single entry point into the analyse/render pipeline.
     CLI = Data.define(:operator) do
       def run_invoked(paths, pipeline: Pipeline.default)
+        paths = Snoot::CLI.default_paths if paths.empty?
         events = [Event.new(name: :run_invoked, operator:, paths:, run: nil, finding: nil, sections: nil)]
         run, analyse_events = AnalyseRun.invoke(paths, orchestration: pipeline.orchestration)
         events.concat(analyse_events)
+        Snoot::CLI.emit_warnings(analyse_events, pipeline.streams.stderr)
         events.concat(events_for_outcome(run, analyse_events, pipeline: pipeline))
         [run, events]
       end
@@ -90,6 +93,18 @@ module Snoot
     def emit_failure(run, stderr)
       stderr.write("analysis failed (#{run.failure.analyser}): #{run.failure.message}\n")
       []
+    end
+
+    def default_paths
+      DEFAULT_PATHS
+    end
+
+    def emit_warnings(analyse_events, stderr)
+      analyse_events.each do |event|
+        next unless event.name == :skipped_doc_less_smell_warned
+
+        stderr.write("warning: skipping doc-less smell type '#{event.smell_type.name}'\n")
+      end
     end
 
     def format_report(sections)

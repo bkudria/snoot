@@ -71,8 +71,8 @@ RSpec.describe Snoot::CLI::Argv do
       end
     end
 
-    it "defaults empty argv to Path('.') per @guarantee EmptyPathsDefault" do
-      expect(described_class.build_paths([])).to eq(Set[Snoot::Path.new(raw: ".")])
+    it "returns an empty path set for empty argv (CLI surface owns @guarantee EmptyPathsDefault)" do
+      expect(described_class.build_paths([])).to eq(Set[])
     end
 
     it "scans the current directory when no paths are given", :aggregate_failures do
