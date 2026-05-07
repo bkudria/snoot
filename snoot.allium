@@ -99,11 +99,13 @@ value AnalyserFailure {
 -- of scope.
 contract AnalyserOrchestration {
     -- Each analyser receives the configured path set and returns its
-    -- findings of the corresponding Finding variant. The analyser entity
-    -- appears as a parameter to record which tool the signature is for.
-    reek_analyse: (analyser: Reek, paths: Set<Path>) -> Set<Smell>
-    flog_analyse: (analyser: Flog, paths: Set<Path>) -> Set<ComplexityHit>
-    flay_analyse: (analyser: Flay, paths: Set<Path>) -> Set<DuplicationCluster>
+    -- findings of the corresponding Finding variant. The signature name
+    -- identifies which tool the call targets; the external entities
+    -- Reek, Flog, Flay declared above record the spec's dependency on
+    -- those tools without needing to thread through as call-site arguments.
+    reek_analyse: (paths: Set<Path>) -> Set<Smell>
+    flog_analyse: (paths: Set<Path>) -> Set<ComplexityHit>
+    flay_analyse: (paths: Set<Path>) -> Set<DuplicationCluster>
 
     -- vendored_doc maps a smell type to its bundled markdown doc, or null
     -- when no doc is bundled for that smell type. Consulted both to filter
@@ -209,7 +211,7 @@ rule AnalyseRun {
     when: RunInvoked(paths)
 
     ensures:
-        let run = Run.created(paths: paths, outcome: pending)
+        let run = Run.created(paths: paths, outcome: pending, smells: {})
 
         -- first_failure runs the three analysers in canonical order
         -- (Reek -> Flog -> Flay) and returns the first AnalyserFailure
@@ -231,6 +233,11 @@ rule AnalyseRun {
             let smell_findings = reek_analyse(run.paths)
             let complexity_findings = flog_analyse(run.paths)
             let duplication_findings = flay_analyse(run.paths)
+
+            -- Carry the full smell set on the Run so RenderReport can
+            -- enumerate every instance of the selected smell type without
+            -- re-invoking reek (see Run.smells).
+            run.smells = smell_findings
 
             -- Significance is the "warrants addressing" pre-filter: each
             -- analyser adapter discards its own noise (per-analyser
@@ -346,6 +353,16 @@ rule RenderReport {
 invariant SingleFindingPerRun {
     for r in Runs:
         r.outcome = finding_rendered implies r.selected_finding != null
+}
+
+-- A failed run carries a failure record describing which analyser aborted
+-- and the message it produced. The structural `when outcome = analysis_failed`
+-- obligation already pins the field's presence; this invariant makes the
+-- guarantee explicit so consumers can rely on r.failure being non-null
+-- whenever they observe r.outcome = analysis_failed.
+invariant FailurePresentOnFailedRuns {
+    for r in Runs:
+        r.outcome = analysis_failed implies r.failure != null
 }
 
 -- The selection filter excludes doc-less smells. Therefore: when a run's

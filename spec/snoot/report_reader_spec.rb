@@ -31,5 +31,12 @@ RSpec.describe Snoot::ReportReader do
       expect(reader.selected_finding).to eq(run.selected_finding)
       expect(reader.kind).to eq(run.selected_finding.kind)
     end
+
+    it "does not expose the underlying Run to the consumer" do
+      reader_actor = build_report_consumer
+      run = build_run_at(:finding_rendered, with_finding: build_smell_with_doc)
+      reader = described_class.for(reader_actor, run: run)
+      expect(reader).not_to respond_to(:run)
+    end
   end
 end
