@@ -8,7 +8,7 @@ module Snoot
   DuplicationCluster = Data.define(:signature, :locations) do
     include Finding
 
-    def kind = :DuplicationCluster
+    def kind = DuplicationCluster
     def doc = self.class::DOC
     def size = locations.size
 

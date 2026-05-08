@@ -9,7 +9,7 @@ module Snoot
   ComplexityHit = Data.define(:location, :method_name, :score) do
     include Finding
 
-    def kind = :ComplexityHit
+    def kind = ComplexityHit
     def doc = self.class::DOC
 
     # Flog stores method locations as "file:line" or "file:line-line_max".

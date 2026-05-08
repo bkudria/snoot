@@ -8,7 +8,7 @@ module Snoot
   Smell = Data.define(:smell_type, :location, :message) do
     include Finding
 
-    def kind = :Smell
+    def kind = Smell
 
     def self.from_reek_warning(warning)
       lines = warning.lines
