@@ -4,13 +4,16 @@ require "spec_helper"
 
 # Spec source: snoot.allium -- invariant SignificantFindingsOnly
 #   for r in Runs:
-#     r.outcome = finding_rendered implies
-#       r.selected_finding ∈ (significant_smells ∪ significant_complexities ∪ significant_duplications)
+#     for s in Smells: r.selected_finding = s implies s ∈ significant_smells(r.smells)
+#     for c in ComplexityHits: r.selected_finding = c implies c ∈ significant_complexities({c})
+#     for d in DuplicationClusters: r.selected_finding = d implies d ∈ significant_duplications({d})
 #
 # This complements SelectedFindingsAreRenderable (which guards vendored docs)
 # with the "warrants addressing" gate. Floors live in
-# AnalyserOrchestration::Default; the invariant is over the contract methods,
-# not specific thresholds.
+# AnalyserOrchestration::Default. The smell branch uses r.smells because
+# Default's smell-significance policy is collection-relative (count-based);
+# complexity and duplication adapters are per-instance, so the singleton
+# {f} suffices for those.
 RSpec.describe "Invariant: SignificantFindingsOnly" do # rubocop:disable RSpec/DescribeClass
   let(:default_significance_class) do
     Class.new(Snoot::Spec::FakeOrchestration) do
@@ -31,13 +34,6 @@ RSpec.describe "Invariant: SignificantFindingsOnly" do # rubocop:disable RSpec/D
   let(:singleton_smell) { build_smell(smell_type: build_smell_type(name: "FeatureEnvy")) }
   let(:sub_floor_hit) { build_complexity_hit(score: BigDecimal("24.0")) }
 
-  def significant_union(smells, complexities, duplications)
-    default = Snoot::AnalyserOrchestration::Default
-    default.significant_smells(smells).to_a +
-      default.significant_complexities(complexities).to_a +
-      default.significant_duplications(duplications).to_a
-  end
-
   describe "invariant.SignificantFindingsOnly" do
     it "drops a singleton smell + a sub-floor complexity to nothing_to_report" do
       orch = default_significance_class.new(smells: Set[singleton_smell], complexities: Set[sub_floor_hit],
@@ -46,7 +42,7 @@ RSpec.describe "Invariant: SignificantFindingsOnly" do # rubocop:disable RSpec/D
       expect(run.outcome).to eq(:nothing_to_report)
     end
 
-    it "selects a finding only from the significant union when finding_rendered", :pbt do # rubocop:disable RSpec/ExampleLength
+    it "the selected finding survives its variant's significance check", :pbt do # rubocop:disable RSpec/ExampleLength,RSpec/MultipleExpectations
       forall(analyse_run_inputs_gen) do |inputs|
         smells, complexities, duplications, _raise = inputs
         orch = default_significance_class.new(smells: smells, complexities: complexities,
@@ -54,7 +50,15 @@ RSpec.describe "Invariant: SignificantFindingsOnly" do # rubocop:disable RSpec/D
         run, = Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch)
         next unless run.outcome == :finding_rendered
 
-        expect(significant_union(smells, complexities, duplications)).to include(run.selected_finding)
+        default = Snoot::AnalyserOrchestration::Default
+        case run.selected_finding
+        when Snoot::Smell
+          expect(default.significant_smells(run.smells)).to include(run.selected_finding)
+        when Snoot::ComplexityHit
+          expect(default.significant_complexities(Set[run.selected_finding])).to include(run.selected_finding)
+        when Snoot::DuplicationCluster
+          expect(default.significant_duplications(Set[run.selected_finding])).to include(run.selected_finding)
+        end
       end
     end
   end

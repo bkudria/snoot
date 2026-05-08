@@ -382,15 +382,19 @@ invariant SelectedFindingsAreRenderable {
 -- addressing" gate, complementary to SelectedFindingsAreRenderable's
 -- documented-doc gate. Quantification ranges over each variant; the
 -- implementation in AnalyserOrchestration owns the numeric thresholds.
--- The membership test uses the singleton {finding} as the input set: an
--- adapter's policy is per-instance, so the finding is significant iff
--- significant_*({f}) contains f. This keeps the invariant expressible
--- without enlarging Run with per-variant finding collections.
+-- The membership test's input set differs by variant. Smells use
+-- r.smells (already carried on Run for RenderReport) because an adapter
+-- may apply a collection-relative policy -- the production Default
+-- adapter filters by smell-type recurrence count, so a singleton {s}
+-- input would be incorrectly empty. Complexity and duplication adapters
+-- are per-instance (score floor and identity respectively), so the
+-- singleton {f} suffices for those without enlarging Run with their
+-- finding collections.
 invariant SignificantFindingsOnly {
     for r in Runs:
         for s in Smells:
             (r.outcome = finding_rendered and r.selected_finding = s)
-                implies s in significant_smells({s})
+                implies s in significant_smells(r.smells)
         for c in ComplexityHits:
             (r.outcome = finding_rendered and r.selected_finding = c)
                 implies c in significant_complexities({c})
