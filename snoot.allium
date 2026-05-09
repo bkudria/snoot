@@ -38,21 +38,15 @@ external entity Flay {
     -- yields zero or more DuplicationCluster instances.
 }
 
--- The two parties on the consumer side of the gem. Both are external: the
--- gem does not own their identity. Operator initiates a Run; ReportConsumer
--- reads its emitted bytes. The spec faces these entity types directly from
--- surfaces; no actor declarations are needed because no narrowing condition
--- applies (any Operator may invoke; any ReportConsumer may read).
+-- The first-class actor on the consumer side of the gem. Operator initiates
+-- a Run; the report is read from the gem's emitted bytes by an external
+-- party (an LLM coding agent or a developer at a terminal), but the spec
+-- faces only Operator directly because no narrowing condition applies (any
+-- Operator may invoke).
 
 external entity Operator {
     -- Whoever invokes the CLI. May be a human at a terminal, a CI process,
     -- or an agent shelling out. The spec does not distinguish.
-}
-
-external entity ReportConsumer {
-    -- The party reading the emitted report. The spec is centred on the
-    -- LLM coding agent in this role, but a developer reading stdout is a
-    -- valid ReportConsumer too.
 }
 
 ------------------------------------------------------------
@@ -125,7 +119,8 @@ contract AnalyserOrchestration {
     vendored_doc: (smell_type: SmellType) -> String?
 
     -- Significance pre-filters. Each returns the subset of its input deemed
-    -- significant enough to warrant ReportConsumer attention. Numeric
+    -- significant enough to warrant attention from the agent reading the
+    -- report. Numeric
     -- thresholds are an implementation policy each adapter owns; the
     -- contract requires only that the result is a subset of the input and
     -- is deterministic per @invariant Determinism. This is the gate that
@@ -348,10 +343,44 @@ rule RenderReport {
                 sections: { header, finding_context, doc }
             )
 
+    @guarantee SmellReportShape
+        -- For Smell findings, a rendered report contains, in order:
+        --   1. Doc       -- the vendored markdown for the selected smell type
+        --   2. Instances -- '## Instances' heading followed by per-file
+        --                  groupings of every Smell in run.smells matching
+        --                  the selected smell_type. Each file group is the
+        --                  raw path on its own line, then 2-space-indented
+        --                  'Line N: <message>' lines. File groups are
+        --                  ordered by descending instance count, with
+        --                  alphabetical path as the tie-break.
+
+    @guarantee NonSmellReportShape
+        -- For ComplexityHit and DuplicationCluster findings, a rendered
+        -- report contains, in order:
+        --   1. Header         -- one-line summary (analyser-implicit, finding
+        --                        name, location)
+        --   2. FindingContext -- file path(s), line range(s), the analyser's
+        --                        message; for DuplicationCluster, all cluster
+        --                        locations are enumerated
+        --   3. Doc            -- one inlined hand-written prose constant
+
+    @guarantee AnalyserProvenanceImplicit
+        -- The report does not label the originating analyser. The shape of
+        -- the report (doc + instances for Smell vs header + finding_context
+        -- + doc for non-Smell) and the finding's wording (smell name vs
+        -- complexity language vs duplication enumeration) are sufficient
+        -- for the agent to infer provenance.
+
     @guidance
         -- Section ordering within each variant shape is structural.
         -- Implementations should emit sections in the declared order so an
-        -- agent / parser can rely on predictable landmarks.
+        -- agent / parser can rely on predictable landmarks. The agent
+        -- reading the report should treat the inlined doc as primary
+        -- context for acting on the finding. For Smell findings, the
+        -- Instances list enumerates every site the agent must consider.
+        -- For non-Smell findings, the header and finding_context sections
+        -- locate the single finding so the agent can read the doc against
+        -- it.
 }
 
 ------------------------------------------------------------
@@ -468,8 +497,8 @@ surface CLI {
     @guarantee StdoutMutuallyExclusive
         -- A run produces stdout content corresponding to its outcome:
         --   finding_rendered  -> stdout = formatted report (variant-
-        --                        specific shape, see the ReportReader
-        --                        surface guarantees)
+        --                        specific shape, see the RenderReport
+        --                        rule's @guarantee blocks)
         --   nothing_to_report -> stdout = single-line acknowledgement
         --                        (see the NothingToReport resolution at
         --                        the bottom for the exact format)
@@ -479,55 +508,6 @@ surface CLI {
         -- failed analyser's message (run.failure.message): one analyser's
         -- error, not aggregated across analysers and not multi-line per
         -- analyser. These stderr contents are independent of stdout.
-}
-
-surface ReportReader {
-    facing reader: ReportConsumer
-
-    context run: Run where outcome = finding_rendered
-
-    -- The agent's view of a rendered report. Section identifiers are
-    -- structural anchors; their content is the implementation's
-    -- responsibility, but each variant's sections always appear in the
-    -- declared order (see the per-variant guarantees below).
-    exposes:
-        run.selected_finding
-        run.selected_finding.kind
-
-    @guarantee SmellReportShape
-        -- For Smell findings, a rendered report contains, in order:
-        --   1. Doc       -- the vendored markdown for the selected smell type
-        --   2. Instances -- '## Instances' heading followed by per-file
-        --                  groupings of every Smell in run.smells matching
-        --                  the selected smell_type. Each file group is the
-        --                  raw path on its own line, then 2-space-indented
-        --                  'Line N: <message>' lines. File groups are
-        --                  ordered by descending instance count, with
-        --                  alphabetical path as the tie-break.
-
-    @guarantee NonSmellReportShape
-        -- For ComplexityHit and DuplicationCluster findings, a rendered
-        -- report contains, in order:
-        --   1. Header         -- one-line summary (analyser-implicit, finding
-        --                        name, location)
-        --   2. FindingContext -- file path(s), line range(s), the analyser's
-        --                        message; for DuplicationCluster, all cluster
-        --                        locations are enumerated
-        --   3. Doc            -- one inlined hand-written prose constant
-
-    @guarantee AnalyserProvenanceImplicit
-        -- The report does not label the originating analyser. The shape of
-        -- the report (doc + instances for Smell vs header + finding_context
-        -- + doc for non-Smell) and the finding's wording (smell name vs
-        -- complexity language vs duplication enumeration) are sufficient
-        -- for the agent to infer provenance.
-
-    @guidance
-        -- The agent should treat the inlined doc as primary context for
-        -- acting on the finding. For Smell findings, the Instances list
-        -- enumerates every site the agent must consider. For non-Smell
-        -- findings, the header and finding_context sections locate the
-        -- single finding so the agent can read the doc against it.
 }
 
 ------------------------------------------------------------
