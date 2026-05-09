@@ -142,6 +142,12 @@ RSpec.describe Snoot::Run do
       expect { run.transition_to(:analysis_failed) }
         .to raise_error(Snoot::StateError, /failure/)
     end
+
+    it "transition_to(:finding_rendered) without a selected_finding raises StateError" do
+      run = described_class.new(paths: Set[], outcome: :pending)
+      expect { run.transition_to(:finding_rendered) }
+        .to raise_error(Snoot::StateError, /selected_finding/)
+    end
   end
 
   describe "transition-rejected.Run.outcome" do
