@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "bigdecimal"
-require "fileutils"
 require "stringio"
 require "tempfile"
 require "tmpdir"
@@ -51,16 +50,6 @@ module Snoot
           end
         end
         [result, *paths]
-      end
-
-      def with_seeded_lib(filename, source)
-        Dir.mktmpdir do |dir|
-          Dir.chdir(dir) do
-            FileUtils.mkdir_p("lib")
-            File.write("lib/#{filename}", source)
-            yield
-          end
-        end
       end
 
       def with_seeded_cwd(filename, source)
