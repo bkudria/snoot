@@ -17,12 +17,12 @@ module Snoot
     # re-threading orchestration through every helper.
     Sources = Data.define(:smells, :complexities, :duplications, :orchestration) do
       def all
-        significant_smells.to_a + significant_complexities.to_a + significant_duplications.to_a
+        significant_smells | significant_complexities | significant_duplications
       end
 
       def candidates
-        documented = significant_smells.select { |smell| vendored_doc(smell.smell_type) }
-        documented.to_a + significant_complexities.to_a + significant_duplications.to_a
+        documented = significant_smells.select { |smell| vendored_doc(smell.smell_type) }.to_set
+        documented | significant_complexities | significant_duplications
       end
 
       def significant_smells = orchestration.significant_smells(smells)

@@ -132,6 +132,17 @@ RSpec.describe Snoot::AnalyseRun do
       run = invoke_analyse_run(Set[build_path], orchestration: orch)
       expect(run.outcome).to eq(:nothing_to_report)
     end
+
+    it "Sources#all and #candidates return Sets per snoot.allium:251-285", :aggregate_failures do # rubocop:disable RSpec/ExampleLength
+      sources = Snoot::AnalyseRun::Sources.new(
+        smells: Set[],
+        complexities: Set[],
+        duplications: Set[],
+        orchestration: fake_orchestration
+      )
+      expect(sources.all).to be_a(Set)
+      expect(sources.candidates).to be_a(Set)
+    end
   end
 
   describe "deterministic tie-break" do
