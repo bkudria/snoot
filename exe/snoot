@@ -2,4 +2,4 @@
 # frozen_string_literal: true
 
 require "snoot"
-exit Snoot::CLI::Argv.run(ARGV)
+exit Snoot::CLI.run(ARGV)

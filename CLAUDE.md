@@ -14,7 +14,7 @@ Allium-concept directories for everything else.
 
 - `spec/snoot/` — specs that describe a Ruby class. Path mirrors the
   namespace (`Snoot::Finding` → `spec/snoot/finding_spec.rb`,
-  `Snoot::CLI::Argv` → `spec/snoot/cli/argv_spec.rb`). This satisfies
+  `Snoot::CLI::Event` → `spec/snoot/cli/event_spec.rb`). This satisfies
   `RSpec/SpecFilePathFormat`.
 - `spec/contracts/` — Allium contract specs (`RSpec.describe` a contract
   string, e.g. `"AnalyserOrchestration::Default"`).

@@ -1,15 +1,24 @@
 # frozen_string_literal: true
 
 module Snoot
+  # rubocop:disable Metrics/ModuleLength -- the surface bundles argv
+  # entry, operator binding, the post-parse pipeline, three Data types,
+  # and an Event sub-module; split lengths by responsibility rather
+  # than mechanically partitioning the surface.
   # CLI is the surface from snoot.allium that exposes the gem to an
-  # Operator. .for narrows on actor type (only Operator is admitted)
-  # and returns a CLI value carrying the operator. run_invoked drives
-  # the pipeline: emits RunInvoked, calls AnalyseRun to produce a
-  # terminal Run, and dispatches on outcome -- writing the formatted
-  # report to stdout (finding_rendered), an acknowledgement to stdout
-  # (nothing_to_report), or an error line to stderr (analysis_failed)
-  # per the StdoutMutuallyExclusive guarantee.
-  # Returns [run, events].
+  # Operator. The module covers the full surface: argv-shape entry
+  # (.run -- UsageErrorExit), operator binding (.for -> Session), and
+  # the post-parse pipeline (run_invoked -- TerminatesInOneOutcome,
+  # EmptyPathsDefault, StdoutMutuallyExclusive). .run consults BANNERS
+  # for --version/--help, rejects unknown flags with exit 64, and
+  # otherwise threads argv through .for(Operator.new).run_invoked,
+  # mapping the terminal outcome to an EXIT_CODES integer. .for narrows
+  # on actor type (only Operator is admitted) and returns a CLI value
+  # carrying the operator. Session#run_invoked emits RunInvoked, calls
+  # AnalyseRun to produce a terminal Run, and dispatches on outcome --
+  # writing the formatted report to stdout (finding_rendered), an
+  # acknowledgement to stdout (nothing_to_report), or an error line to
+  # stderr (analysis_failed). Returns [run, events] from run_invoked.
   module CLI
     # Event is the marker module sum-typing the two audit records the
     # CLI surface emits: RunInvoked at the entry point and
@@ -36,6 +45,27 @@ module Snoot
     end
     NOTHING_TO_REPORT = "nothing to report -- no findings above snoot's significance floor\n"
     DEFAULT_PATHS = Set[Snoot::Path.new(raw: ".")].freeze
+
+    USAGE = <<~HELP
+      Usage: snoot [paths...]
+             snoot --version
+             snoot --help
+
+      With no path arguments, snoot scans the current directory.
+    HELP
+
+    EXIT_CODES = {
+      finding_rendered: 1,
+      nothing_to_report: 0,
+      analysis_failed: 2
+    }.freeze
+
+    USAGE_ERROR_EXIT_CODE = 64
+
+    BANNERS = {
+      ["--version"] => "snoot #{Snoot::VERSION}\n",
+      ["--help"] => USAGE
+    }.freeze
 
     # Pipeline bundles the analyser orchestration and the stdout/stderr
     # pair that together define a CLI invocation's wiring -- the trio
@@ -119,5 +149,32 @@ module Snoot
     def format_report(sections)
       "#{sections.values.join("\n\n")}\n"
     end
+
+    def run(argv, pipeline: Pipeline.default)
+      banner = BANNERS[argv]
+      return write_and_return(pipeline.stdout, banner, 0) if banner
+      return write_and_return(pipeline.stderr, USAGE, USAGE_ERROR_EXIT_CODE) if unknown_flag?(argv)
+
+      run_pipeline(argv, pipeline: pipeline)
+    end
+
+    def write_and_return(io, message, code)
+      io.write(message)
+      code
+    end
+
+    def unknown_flag?(argv)
+      argv.any? { |arg| arg.start_with?("-") }
+    end
+
+    def run_pipeline(argv, pipeline:)
+      run, _events = self.for(Operator.new).run_invoked(build_paths(argv), pipeline: pipeline)
+      EXIT_CODES.fetch(run.outcome)
+    end
+
+    def build_paths(argv)
+      argv.each_with_object(Set[]) { |raw, set| set << Path.new(raw: raw) }
+    end
   end
+  # rubocop:enable Metrics/ModuleLength
 end

@@ -151,4 +151,93 @@ RSpec.describe Snoot::CLI do
       it { is_expected.to eq(:analysis_failed) }
     end
   end
+
+  describe ".run" do
+    let(:smelly_ruby) do
+      <<~RUBY
+        class Dirty
+          def smelly_a(x)
+            x.a + x.b + x.c + x.d
+          end
+
+          def smelly_b(y)
+            y.a + y.b + y.c + y.d
+          end
+        end
+      RUBY
+    end
+    let(:smell_free_ruby) do
+      <<~RUBY
+        # A trivial, smell-free class for the empty-result test.
+        class Tiny
+        end
+      RUBY
+    end
+
+    def run_argv(argv, orchestration: Snoot::AnalyserOrchestration::Default)
+      pipeline = Snoot::CLI::Pipeline.new(orchestration: orchestration, stdout: stdout, stderr: stderr)
+      described_class.run(argv, pipeline: pipeline)
+    end
+
+    it "writes the version to stdout and returns 0 for --version", :aggregate_failures do
+      code = run_argv(["--version"])
+      expect(code).to eq(0)
+      expect(stdout.string).to eq("snoot #{Snoot::VERSION}\n")
+      expect(stderr.string).to be_empty
+    end
+
+    it "writes usage to stdout and returns 0 for --help", :aggregate_failures do
+      code = run_argv(["--help"])
+      expect(code).to eq(0)
+      expect(stdout.string).to include("Usage: snoot", "[paths...]")
+      expect(stderr.string).to be_empty
+    end
+
+    it "writes usage to stderr and returns 64 for an unknown flag", :aggregate_failures do
+      code = run_argv(["--unknown-flag"])
+      expect(code).to eq(64)
+      expect(stderr.string).to include("Usage: snoot")
+      expect(stdout.string).to be_empty
+    end
+
+    it "passes a single Ruby file path through the pipeline (nothing_to_report)", :aggregate_failures do
+      with_ruby_tempfile(smell_free_ruby) do |path|
+        code = run_argv([path])
+        expect(code).to eq(0)
+        expect([stdout.string, stderr.string]).to eq([Snoot::CLI::NOTHING_TO_REPORT, ""])
+      end
+    end
+
+    it "exits 1 with a doc + Instances report on stdout when a Smell finding is rendered", :aggregate_failures do
+      with_ruby_tempfile(smelly_ruby) do |path|
+        code = run_argv([path])
+        expect(code).to eq(1)
+        expect(stdout.string).to include("## Instances\n\n", path)
+      end
+    end
+
+    it "returns an empty path set for empty argv (CLI surface owns @guarantee EmptyPathsDefault)" do
+      expect(described_class.build_paths([])).to eq(Set[])
+    end
+
+    it "scans the current directory when no paths are given", :aggregate_failures do
+      with_seeded_cwd("dirty.rb", smelly_ruby) do
+        code = run_argv([])
+        expect(code).to eq(1)
+        expect(stdout.string).to include("## Instances\n\n")
+      end
+    end
+
+    it "exits 2 with stderr message when analysis fails", :aggregate_failures do
+      orchestration = fake_orchestration(reek_raises: StandardError.new("boom"))
+      code = run_argv(["lib/foo.rb"], orchestration: orchestration)
+      expect(code).to eq(2)
+      expect(stderr.string).to include("analysis failed (reek):", "boom")
+      expect(stdout.string).to be_empty
+    end
+
+    it "maps :analysis_failed to exit code 2 in EXIT_CODES" do
+      expect(described_class::EXIT_CODES.fetch(:analysis_failed)).to eq(2)
+    end
+  end
 end
