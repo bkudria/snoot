@@ -6,9 +6,10 @@ require "spec_helper"
 #   for r in Runs:
 #     r.outcome in {pending, analysis_failed} implies r.smells.count = 0
 #
-# AnalyseRun never collects smells on the failure branch (first_failure
-# aborts before reek_analyse runs); :pending Runs are constructed empty
-# and only gain smells transiently in decide_outcome before transition.
+# AnalyseRun never collects smells on the failure branch (analyse
+# returns AnalyserFailure before any captured smells reach the run);
+# :pending Runs are constructed empty and only gain smells transiently
+# in decide_outcome before transition.
 # This invariant is observed against terminal Runs returned by
 # AnalyseRun.invoke.
 RSpec.describe "Invariant: SmellsEmptyOnPendingOrFailed" do # rubocop:disable RSpec/DescribeClass

@@ -43,12 +43,12 @@ module Snoot
       def significant_complexities(complexities) = complexities
       def significant_duplications(duplications) = duplications
 
-      def first_failure(_paths)
+      def analyse(_paths)
         return Snoot::AnalyserFailure.new(analyser: :reek, message: @reek_raises.message) if @reek_raises
         return Snoot::AnalyserFailure.new(analyser: :flog, message: @flog_raises.message) if @flog_raises
         return Snoot::AnalyserFailure.new(analyser: :flay, message: @flay_raises.message) if @flay_raises
 
-        nil
+        Snoot::Sources.new(smells: @smells, complexities: @complexities, duplications: @duplications)
       end
     end
   end

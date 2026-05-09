@@ -11,7 +11,7 @@ module Snoot
   #   significant_smells(smells) -> Set<Smell>
   #   significant_complexities(complexities) -> Set<ComplexityHit>
   #   significant_duplications(duplications) -> Set<DuplicationCluster>
-  #   first_failure(paths) -> AnalyserFailure?
+  #   analyse(paths) -> Sources | AnalyserFailure
   #
   # Each call is pure within a single CLI invocation (the Determinism
   # invariant in snoot.allium). Outputs may differ across invocations as

@@ -14,7 +14,7 @@ RSpec.describe Snoot::AnalyseRun do
       run = invoke_analyse_run(paths)
       expect(run).to be_a(Snoot::Run)
       expect(run.paths).to eq(paths)
-      expect(%i[finding_rendered nothing_to_report analysis_failed]).to include(run.outcome) # rubocop:disable RSpec/ExpectActual
+      expect(run.outcome).to(satisfy { |o| %i[finding_rendered nothing_to_report analysis_failed].include?(o) })
     end
 
     it "filters reek smells without vendored docs out of the candidate pool" do
@@ -39,6 +39,13 @@ RSpec.describe Snoot::AnalyseRun do
       events = capture_emitted_events { invoke_analyse_run_with_doc_less_top_smell }
       warning = events.find { |event| event.name == :skipped_doc_less_smell_warned }
       expect(warning.run.outcome).not_to eq(:pending)
+    end
+
+    it "invokes orchestration.analyse exactly once (no double analyser run)", :aggregate_failures do
+      orch = fake_orchestration
+      allow(orch).to receive(:analyse).and_call_original
+      described_class.invoke(Set[build_path], orchestration: orch)
+      expect(orch).to have_received(:analyse).once
     end
   end
 
@@ -111,6 +118,8 @@ RSpec.describe Snoot::AnalyseRun do
     end
 
     let(:documented_smell) { build_smell(smell_type: build_smell_type(name: "Documented")) }
+    let(:empty_sources) { Snoot::Sources.new(smells: Set[], complexities: Set[], duplications: Set[]) }
+    let(:empty_view) { Snoot::AnalyseRun::SourcesView.new(sources: empty_sources, orchestration: fake_orchestration) }
 
     it "drops smells filtered out by significance, yielding nothing_to_report" do
       orch = dropping_orchestration_class.new(smells: Set[documented_smell],
@@ -133,15 +142,9 @@ RSpec.describe Snoot::AnalyseRun do
       expect(run.outcome).to eq(:nothing_to_report)
     end
 
-    it "Sources#all and #candidates return Sets per snoot.allium:251-285", :aggregate_failures do # rubocop:disable RSpec/ExampleLength
-      sources = Snoot::AnalyseRun::Sources.new(
-        smells: Set[],
-        complexities: Set[],
-        duplications: Set[],
-        orchestration: fake_orchestration
-      )
-      expect(sources.all).to be_a(Set)
-      expect(sources.candidates).to be_a(Set)
+    it "SourcesView#all and #candidates return Sets per snoot.allium:251-285", :aggregate_failures do
+      expect(empty_view.all).to be_a(Set)
+      expect(empty_view.candidates).to be_a(Set)
     end
   end
 

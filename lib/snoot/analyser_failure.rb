@@ -5,6 +5,6 @@ module Snoot
   # outcome = analysis_failed. The `analyser` tag (one of :reek, :flog,
   # :flay) names which of the three analysers failed in canonical
   # order; `message` is the human-readable error detail carried on
-  # stderr. Produced by AnalyserOrchestration#first_failure.
+  # stderr. Produced by AnalyserOrchestration#analyse on a failed run.
   AnalyserFailure = Data.define(:analyser, :message)
 end

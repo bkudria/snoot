@@ -11,11 +11,17 @@ module Snoot
     # Carries the current Run snapshot for traceability.
     Event = Data.define(:name, :run, :smell_type, :error)
 
-    # Sources carries the three analyser outputs plus the orchestration
-    # that produced them, so downstream phases can ask for derived
-    # views (`all`, `candidates`) and consult `vendored_doc?` without
-    # re-threading orchestration through every helper.
-    Sources = Data.define(:smells, :complexities, :duplications, :orchestration) do
+    # SourcesView wraps a Snoot::Sources value with the orchestration
+    # that produced it, so downstream phases can ask for derived views
+    # (`all`, `candidates`) and consult `vendored_doc?` without
+    # re-threading orchestration through every helper. The underlying
+    # Sources is the spec-level value type returned by
+    # AnalyserOrchestration#analyse.
+    SourcesView = Data.define(:sources, :orchestration) do
+      def smells = sources.smells
+      def complexities = sources.complexities
+      def duplications = sources.duplications
+
       def all
         significant_smells | significant_complexities | significant_duplications
       end
@@ -38,19 +44,10 @@ module Snoot
 
     def invoke(paths, orchestration:)
       run = Run.new(paths: paths, outcome: :pending)
-      failure = orchestration.first_failure(paths)
-      return analysis_failure(run, failure) if failure
+      result = orchestration.analyse(paths)
+      return analysis_failure(run, result) if result.is_a?(AnalyserFailure)
 
-      decide_outcome(run, analyse(paths, orchestration))
-    end
-
-    def analyse(paths, orchestration)
-      Sources.new(
-        smells: orchestration.reek_analyse(paths),
-        complexities: orchestration.flog_analyse(paths),
-        duplications: orchestration.flay_analyse(paths),
-        orchestration: orchestration
-      )
+      decide_outcome(run, SourcesView.new(sources: result, orchestration: orchestration))
     end
 
     def analysis_failure(run, failure)

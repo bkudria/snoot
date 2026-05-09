@@ -265,27 +265,33 @@ RSpec.describe "AnalyserOrchestration::Default" do
     end
   end
 
-  describe "FakeOrchestration first_failure" do
-    it "returns nil when no analyser is configured to raise" do
-      expect(fake_orchestration.first_failure(Set[build_path])).to be_nil
+  describe "FakeOrchestration analyse" do
+    let(:smell) { build_smell }
+    let(:complexity) { build_complexity_hit }
+    let(:duplication) { build_duplication_cluster }
+    let(:configured_fake) do
+      fake_orchestration(smells: Set[smell], complexities: Set[complexity], duplications: Set[duplication])
     end
 
-    it "tags :reek when reek_raises is set", :aggregate_failures do
+    it "returns a Sources bundling the configured analyser outputs" do
+      expected = Snoot::Sources.new(smells: Set[smell], complexities: Set[complexity], duplications: Set[duplication])
+      expect(configured_fake.analyse(Set[build_path])).to eq(expected)
+    end
+
+    it "returns AnalyserFailure(:reek) when reek_raises is set" do
       fake = fake_orchestration(reek_raises: StandardError.new("reek-boom"))
-      failure = fake.first_failure(Set[build_path])
-      expect(failure).to be_a(Snoot::AnalyserFailure)
-      expect(failure.analyser).to eq(:reek)
-      expect(failure.message).to eq("reek-boom")
+      expect(fake.analyse(Set[build_path]))
+        .to be_a(Snoot::AnalyserFailure).and(have_attributes(analyser: :reek, message: "reek-boom"))
     end
 
-    it "tags :flog when flog_raises is set" do
+    it "returns AnalyserFailure(:flog) when flog_raises is set" do
       fake = fake_orchestration(flog_raises: StandardError.new("flog-boom"))
-      expect(fake.first_failure(Set[build_path]).analyser).to eq(:flog)
+      expect(fake.analyse(Set[build_path]).analyser).to eq(:flog)
     end
 
-    it "tags :flay when flay_raises is set" do
+    it "returns AnalyserFailure(:flay) when flay_raises is set" do
       fake = fake_orchestration(flay_raises: StandardError.new("flay-boom"))
-      expect(fake.first_failure(Set[build_path]).analyser).to eq(:flay)
+      expect(fake.analyse(Set[build_path]).analyser).to eq(:flay)
     end
 
     it "honours canonical order: when flog and flay both raise, returns :flog" do
@@ -293,11 +299,11 @@ RSpec.describe "AnalyserOrchestration::Default" do
         flog_raises: StandardError.new("flog-first"),
         flay_raises: StandardError.new("flay-also")
       )
-      expect(fake.first_failure(Set[build_path]).analyser).to eq(:flog)
+      expect(fake.analyse(Set[build_path]).analyser).to eq(:flog)
     end
   end
 
-  describe "Default first_failure" do
+  describe "Default analyse" do
     let(:smell_free_src) do
       <<~RUBY
         # A trivial, smell-free class for the empty-result test.
@@ -305,6 +311,7 @@ RSpec.describe "AnalyserOrchestration::Default" do
         end
       RUBY
     end
+    let(:paths) { Set[build_path] }
 
     def with_temp_path(src)
       Tempfile.create(["good", ".rb"]) do |io|
@@ -314,9 +321,59 @@ RSpec.describe "AnalyserOrchestration::Default" do
       end
     end
 
-    it "returns nil when all three analysers succeed" do
+    def expected_sources_for(temp_paths)
+      Snoot::Sources.new(
+        smells: adapter.reek_analyse(temp_paths),
+        complexities: adapter.flog_analyse(temp_paths),
+        duplications: adapter.flay_analyse(temp_paths)
+      )
+    end
+
+    it "returns a Sources bundling reek/flog/flay outputs on success" do
       with_temp_path(smell_free_src) do |path|
-        expect(adapter.first_failure(Set[path])).to be_nil
+        temp_paths = Set[path]
+        expect(adapter.analyse(temp_paths)).to eq(expected_sources_for(temp_paths))
+      end
+    end
+
+    context "when reek raises" do
+      before do
+        allow(adapter).to receive(:reek_analyse).and_raise(StandardError.new("reek-boom"))
+        allow(adapter).to receive(:flog_analyse).and_call_original
+        allow(adapter).to receive(:flay_analyse).and_call_original
+      end
+
+      it "returns AnalyserFailure(:reek) and skips flog/flay", :aggregate_failures do
+        result = adapter.analyse(paths)
+        expect(result).to be_a(Snoot::AnalyserFailure).and(have_attributes(analyser: :reek, message: "reek-boom"))
+        expect(adapter).not_to have_received(:flog_analyse)
+        expect(adapter).not_to have_received(:flay_analyse)
+      end
+    end
+
+    context "when flog raises" do
+      before do
+        allow(adapter).to receive(:reek_analyse).and_return(Set[])
+        allow(adapter).to receive(:flog_analyse).and_raise(StandardError.new("flog-boom"))
+        allow(adapter).to receive(:flay_analyse).and_call_original
+      end
+
+      it "returns AnalyserFailure(:flog) and skips flay", :aggregate_failures do
+        result = adapter.analyse(paths)
+        expect(result).to be_a(Snoot::AnalyserFailure).and(have_attributes(analyser: :flog, message: "flog-boom"))
+        expect(adapter).not_to have_received(:flay_analyse)
+      end
+    end
+
+    context "when flay raises" do
+      before do
+        allow(adapter).to receive_messages(reek_analyse: Set[], flog_analyse: Set[])
+        allow(adapter).to receive(:flay_analyse).and_raise(StandardError.new("flay-boom"))
+      end
+
+      it "returns AnalyserFailure(:flay)" do
+        expect(adapter.analyse(paths))
+          .to be_a(Snoot::AnalyserFailure).and(have_attributes(analyser: :flay, message: "flay-boom"))
       end
     end
   end

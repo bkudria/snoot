@@ -91,17 +91,21 @@ module Snoot
 
       def significant_duplications(duplications) = duplications
 
-      # first_failure runs the three analysers in canonical order
-      # (Reek -> Flog -> Flay) and returns the first AnalyserFailure
-      # encountered, or nil when all three succeed. Subsequent
-      # analysers are not invoked once one has failed.
-      def first_failure(paths)
+      # analyse runs the three analysers in canonical order (Reek ->
+      # Flog -> Flay), capturing each result as it succeeds. On the
+      # first failure it returns an AnalyserFailure tagged with that
+      # analyser and does not invoke the remaining ones. On full
+      # success it returns a Sources bundling the three result sets.
+      def analyse(paths)
+        outputs = {}
         ANALYSER_PROBES.each do |tag, method|
-          send(method, paths)
+          outputs[tag] = send(method, paths)
         rescue StandardError => error
           return AnalyserFailure.new(analyser: tag, message: error.message)
         end
-        nil
+        Sources.new(
+          smells: outputs[:reek], complexities: outputs[:flog], duplications: outputs[:flay]
+        )
       end
     end
   end

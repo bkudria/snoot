@@ -86,6 +86,16 @@ value AnalyserFailure {
     message: String
 }
 
+-- The bundle of analyser outputs produced by a successful invocation of
+-- AnalyserOrchestration#analyse. Carries the per-analyser finding sets
+-- so AnalyseRun can derive significance and candidate views without
+-- re-invoking the analysers.
+value Sources {
+    smells: Set<Smell>
+    complexities: Set<ComplexityHit>
+    duplications: Set<DuplicationCluster>
+}
+
 ------------------------------------------------------------
 -- Contracts
 ------------------------------------------------------------
@@ -125,15 +135,15 @@ contract AnalyserOrchestration {
     significant_complexities: (complexities: Set<ComplexityHit>) -> Set<ComplexityHit>
     significant_duplications: (duplications: Set<DuplicationCluster>) -> Set<DuplicationCluster>
 
-    -- first_failure runs the three analysers in canonical order (Reek ->
-    -- Flog -> Flay) and returns the first AnalyserFailure encountered, or
-    -- null if all three succeed. Once an analyser fails, subsequent
-    -- analysers in the canonical order are not invoked; the orchestration
-    -- aborts on first failure. This signature respects @invariant
-    -- Determinism: for the same path set, the same outcome (including which
-    -- analyser fails first, if any, and its message) is produced within a
-    -- single CLI invocation.
-    first_failure: (paths: Set<Path>) -> AnalyserFailure?
+    -- analyse runs the three analysers in canonical order (Reek -> Flog
+    -- -> Flay), capturing each output as it succeeds. On the first
+    -- failure it returns an AnalyserFailure tagged with that analyser
+    -- and does not invoke the remaining ones; on full success it
+    -- returns a Sources bundling the three result sets. This signature
+    -- respects @invariant Determinism: for the same path set, the same
+    -- outcome (including which analyser fails first, if any, and its
+    -- message) is produced within a single CLI invocation.
+    analyse: (paths: Set<Path>) -> Sources | AnalyserFailure
 
     @invariant Determinism
         -- Each signature is pure within a single CLI invocation: the same
@@ -213,26 +223,21 @@ rule AnalyseRun {
     ensures:
         let run = Run.created(paths: paths, outcome: pending, smells: {})
 
-        -- first_failure runs the three analysers in canonical order
-        -- (Reek -> Flog -> Flay) and returns the first AnalyserFailure
-        -- encountered, or null when all three succeed. On failure,
-        -- subsequent analysers are not invoked (abort semantic). Only the
-        -- success branch below collects findings, so the analyser-output
-        -- bindings are scoped inside that branch rather than at rule
-        -- scope.
-        let failure = first_failure(run.paths)
+        -- analyse runs the three analysers in canonical order (Reek ->
+        -- Flog -> Flay) and returns either the captured Sources bundle
+        -- or, on the first analyser error, an AnalyserFailure. A
+        -- single invocation produces both the failure-detection result
+        -- and the per-analyser outputs, so the analysers are not
+        -- re-invoked along the success branch.
+        let result = analyse(run.paths)
 
-        if failure != null:
+        if result is AnalyserFailure:
             run.outcome = analysis_failed
-            run.failure = failure
+            run.failure = result
         else:
-            -- Black-box analyser invocations. Each returns the analyser's
-            -- findings for the configured path set. Reached only when
-            -- first_failure returned null, so all three are guaranteed to
-            -- have succeeded.
-            let smell_findings = reek_analyse(run.paths)
-            let complexity_findings = flog_analyse(run.paths)
-            let duplication_findings = flay_analyse(run.paths)
+            let smell_findings = result.smells
+            let complexity_findings = result.complexities
+            let duplication_findings = result.duplications
 
             -- Carry the full smell set on the Run so RenderReport can
             -- enumerate every instance of the selected smell type without
@@ -562,5 +567,5 @@ surface ReportReader {
 -- analysers are not invoked. Stderr carries that one analyser's message
 -- (run.failure.message); it is not aggregated across analysers and not
 -- multi-line per analyser. See the AnalyserFailure value type, the
--- first_failure signature on AnalyserOrchestration, the failure field on
+-- analyse signature on AnalyserOrchestration, the failure field on
 -- Run, and @guarantee StdoutMutuallyExclusive on the CLI surface.
