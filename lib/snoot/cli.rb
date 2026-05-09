@@ -37,16 +37,16 @@ module Snoot
       end
     end
 
-    # CLI is the value returned by CLI.for(operator) -- a thin handle
+    # Session is the value returned by CLI.for(operator) -- a thin handle
     # carrying the authenticated Operator and exposing run_invoked as
     # the single entry point into the analyse/render pipeline.
-    CLI = Data.define(:operator) do
+    Session = Data.define(:operator) do
       def run_invoked(paths, pipeline: Pipeline.default)
-        paths = Snoot::CLI.default_paths if paths.empty?
+        paths = CLI.default_paths if paths.empty?
         events = [Event.new(name: :run_invoked, operator:, paths:, run: nil, finding: nil, sections: nil)]
         run, analyse_events = AnalyseRun.invoke(paths, orchestration: pipeline.orchestration)
         events.concat(analyse_events)
-        Snoot::CLI.emit_warnings(analyse_events, pipeline.streams.stderr)
+        CLI.emit_warnings(analyse_events, pipeline.streams.stderr)
         events.concat(events_for_outcome(run, analyse_events, pipeline: pipeline))
         [run, events]
       end
@@ -60,8 +60,8 @@ module Snoot
         streams = pipeline.streams
         case run.outcome
         when :finding_rendered then [emit_report(run, pipeline: pipeline)]
-        when :nothing_to_report then Snoot::CLI.emit_nothing_to_report(streams.stdout)
-        when :analysis_failed then Snoot::CLI.emit_failure(run, streams.stderr)
+        when :nothing_to_report then CLI.emit_nothing_to_report(streams.stdout)
+        when :analysis_failed then CLI.emit_failure(run, streams.stderr)
         else []
         end
       end
@@ -71,7 +71,7 @@ module Snoot
       # both arms through pipeline is the surface contract.
       def emit_report(run, pipeline:)
         RenderReport.invoke(run, orchestration: pipeline.orchestration) => { sections:, finding: }
-        pipeline.streams.stdout.write(Snoot::CLI.format_report(sections))
+        pipeline.streams.stdout.write(CLI.format_report(sections))
         Event.new(name: :report_emitted, operator: operator, paths: run.paths,
                   run: run, finding: finding, sections: sections)
       end
@@ -82,7 +82,7 @@ module Snoot
     def for(actor)
       raise TypeError, "CLI requires an Operator, got #{actor.class}" unless actor.is_a?(Operator)
 
-      CLI.new(operator: actor)
+      Session.new(operator: actor)
     end
 
     def emit_nothing_to_report(stdout)
