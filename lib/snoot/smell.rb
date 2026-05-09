@@ -7,7 +7,5 @@ module Snoot
   # frequency of their smell_type within a Run.
   Smell = Data.define(:smell_type, :location, :message) do
     include Finding
-
-    def kind = Smell
   end
 end

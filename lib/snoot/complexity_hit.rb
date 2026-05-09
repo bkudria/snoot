@@ -9,8 +9,6 @@ module Snoot
   ComplexityHit = Data.define(:location, :method_name, :score) do
     include Finding
 
-    def kind = ComplexityHit
-
     def doc
       "High complexity hits indicate a method or class doing too much. " \
         "Consider extracting helpers, simplifying conditionals, or " \
