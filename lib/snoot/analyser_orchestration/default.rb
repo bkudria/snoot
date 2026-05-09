@@ -15,11 +15,14 @@ module Snoot
     # invokes the real Reek/Flog/Flay APIs in-process (no shellouts) and
     # resolves vendored_doc against the reek docs vendored at
     # data/reek_docs/<PascalCase-Hyphen>.md (synced via `rake docs:sync`,
-    # pinned to the bundled reek version). Flog scoring uses Flog's
-    # default options (every scored method emits a ComplexityHit; selection
-    # happens in AnalyseRun). Flay duplication uses Flay's default mass
-    # threshold (16). Stateless: implemented as a module of module
-    # functions, used as the orchestration value directly (no `.new`).
+    # pinned to the bundled reek version). Reek invocation honours a
+    # project-local `.reek.yml` (or any ancestor's, falling back to
+    # `~/.reek.yml`) via `AppConfiguration.from_default_path`, matching
+    # reek's own CLI discovery. Flog scoring uses Flog's default options
+    # (every scored method emits a ComplexityHit; selection happens in
+    # AnalyseRun). Flay duplication uses Flay's default mass threshold
+    # (16). Stateless: implemented as a module of module functions, used
+    # as the orchestration value directly (no `.new`).
     module Default
       DOCS_ROOT = File.expand_path("../../../data/reek_docs", __dir__).freeze
       DOC_FILENAME_PATTERN = /([a-z])([A-Z])/
@@ -36,13 +39,14 @@ module Snoot
       module_function
 
       def reek_analyse(paths)
-        Reek::Source::SourceLocator.new(paths.map(&:raw)).sources
-                                   .flat_map { |pathname| reek_smells_for(pathname) }
+        config = Reek::Configuration::AppConfiguration.from_default_path
+        Reek::Source::SourceLocator.new(paths.map(&:raw), configuration: config).sources
+                                   .flat_map { |pathname| reek_smells_for(pathname, config) }
                                    .to_set
       end
 
-      def reek_smells_for(pathname)
-        examiner = Reek::Examiner.new(pathname)
+      def reek_smells_for(pathname, config)
+        examiner = Reek::Examiner.new(pathname, configuration: config)
         examiner.smells.filter_map do |warning|
           next unless warning.lines&.any?
 

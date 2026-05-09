@@ -72,6 +72,26 @@ RSpec.describe "AnalyserOrchestration::Default" do
         expect(smells).not_to be_empty
       end
     end
+
+    def seed_smelly_subdir(dir, sub)
+      Dir.mkdir(File.join(dir, sub))
+      File.write(File.join(dir, sub, "dirty.rb"), smelly_src)
+    end
+
+    def analyse_with_reek_yml(exclude:, smelly_under:)
+      Dir.mktmpdir do |dir|
+        File.write(File.join(dir, ".reek.yml"), "exclude_paths:\n  - #{exclude}\n")
+        smelly_under.each { |sub| seed_smelly_subdir(dir, sub) }
+        smells = Dir.chdir(dir) { adapter.reek_analyse(Set[Snoot::Path.new(raw: ".")]) }
+        return smells.map { |smell| smell.location.path.raw }
+      end
+    end
+
+    it "honours .reek.yml exclude_paths discovered via cwd-ascent", :aggregate_failures do
+      raw_paths = analyse_with_reek_yml(exclude: "skip", smelly_under: %w[skip keep])
+      expect(raw_paths).not_to be_empty
+      expect(raw_paths).to all(match(%r{(\A|/)keep/}))
+    end
   end
 
   describe "flog_analyse" do
