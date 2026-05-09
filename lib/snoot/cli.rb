@@ -11,11 +11,29 @@ module Snoot
   # stderr (analysis_failed) per the StdoutMutuallyExclusive guarantee.
   # Returns [run, events].
   module CLI
-    # Event is the audit record emitted by the CLI surface for each
-    # observable step (run_invoked, report_emitted) and forwarded
-    # AnalyseRun events. Returned alongside the Run so callers can
-    # assert on the sequence.
-    Event = Data.define(:name, :operator, :paths, :run, :finding, :sections)
+    # Event is the marker module sum-typing the two audit records the
+    # CLI surface emits: RunInvoked at the entry point and
+    # ReportEmitted on a finding_rendered outcome. AnalyseRun's events
+    # are forwarded into the same returned list but live under a
+    # parallel marker (Snoot::AnalyseRun::Event).
+    module Event
+    end
+
+    # RunInvoked carries the Operator and the (possibly defaulted) path
+    # set at the moment the surface is entered.
+    RunInvoked = Data.define(:operator, :paths) do
+      include Event
+
+      def name = :run_invoked
+    end
+
+    # ReportEmitted carries the terminal Run, the selected Finding, and
+    # the rendered sections produced by RenderReport.
+    ReportEmitted = Data.define(:operator, :paths, :run, :finding, :sections) do
+      include Event
+
+      def name = :report_emitted
+    end
     NOTHING_TO_REPORT = "nothing to report -- no findings above snoot's significance floor\n"
     DEFAULT_PATHS = Set[Snoot::Path.new(raw: ".")].freeze
 
@@ -43,7 +61,7 @@ module Snoot
     Session = Data.define(:operator) do
       def run_invoked(paths, pipeline: Pipeline.default)
         paths = CLI.default_paths if paths.empty?
-        events = [Event.new(name: :run_invoked, operator:, paths:, run: nil, finding: nil, sections: nil)]
+        events = [RunInvoked.new(operator:, paths:)]
         run, analyse_events, smells = AnalyseRun.invoke(paths, orchestration: pipeline.orchestration)
         events.concat(analyse_events)
         CLI.emit_warnings(analyse_events, pipeline.streams.stderr)
@@ -72,8 +90,8 @@ module Snoot
       def emit_report(run, smells, pipeline:)
         RenderReport.invoke(run, smells: smells, orchestration: pipeline.orchestration) => { sections:, finding: }
         pipeline.streams.stdout.write(CLI.format_report(sections))
-        Event.new(name: :report_emitted, operator: operator, paths: run.paths,
-                  run: run, finding: finding, sections: sections)
+        ReportEmitted.new(operator: operator, paths: run.paths,
+                          run: run, finding: finding, sections: sections)
       end
     end
 

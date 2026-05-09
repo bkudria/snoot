@@ -5,11 +5,28 @@ module Snoot
   # terminal outcome by orchestrating the three analysers and selecting one
   # finding (or none, or signalling failure). Returns [run, events].
   module AnalyseRun
-    # Event is the audit record emitted during AnalyseRun: signals
-    # analysis_failed (with the underlying error) or
-    # skipped_doc_less_smell_warned (with the offending smell_type).
-    # Carries the current Run snapshot for traceability.
-    Event = Data.define(:name, :run, :smell_type, :error)
+    # Event is the marker module sum-typing the two audit records
+    # AnalyseRun emits: AnalysisFailed on the analysis_failed branch
+    # and SkippedDocLessSmellWarned when the top-overall finding is a
+    # doc-less Smell. Each variant carries only the fields it
+    # populates.
+    module Event
+    end
+
+    # AnalysisFailed carries the terminal Run (with .failure populated).
+    AnalysisFailed = Data.define(:run) do
+      include Event
+
+      def name = :analysis_failed
+    end
+
+    # SkippedDocLessSmellWarned carries the terminal Run and the
+    # offending smell_type that lacked a vendored doc.
+    SkippedDocLessSmellWarned = Data.define(:run, :smell_type) do
+      include Event
+
+      def name = :skipped_doc_less_smell_warned
+    end
 
     # SourcesView wraps a Snoot::Sources value with the orchestration
     # that produced it, so downstream phases can ask for derived views
@@ -52,7 +69,7 @@ module Snoot
 
     def analysis_failure(run, failure)
       failed = run.transition_to(:analysis_failed, failure: failure)
-      [failed, [Event.new(name: :analysis_failed, run: failed, smell_type: nil, error: nil)], Set[]]
+      [failed, [AnalysisFailed.new(run: failed)], Set[]]
     end
 
     def decide_outcome(run, sources)
@@ -81,7 +98,7 @@ module Snoot
     def doc_less_events(run, smell_type)
       return [] unless smell_type
 
-      [Event.new(name: :skipped_doc_less_smell_warned, run: run, smell_type: smell_type, error: nil)]
+      [SkippedDocLessSmellWarned.new(run: run, smell_type: smell_type)]
     end
 
     PICKERS = [
