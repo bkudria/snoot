@@ -16,13 +16,5 @@ module Snoot
         "Consider whether the duplicated shape belongs to a single helper, " \
         "module, or value type."
     end
-
-    def self.from_flay_item(item)
-      locations = item.locations.each_with_object(Set[]) do |loc, set|
-        line = loc.line
-        set << Location.new(path: Path.new(raw: loc.file), line_start: line, line_end: line)
-      end
-      new(signature: item.structural_hash.to_s, locations: locations)
-    end
   end
 end

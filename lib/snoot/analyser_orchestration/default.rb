@@ -71,7 +71,7 @@ module Snoot
         flay = Flay.new
         flay.process(*files)
         flay.analyze.each_with_object(Set[]) do |item, clusters|
-          clusters << DuplicationCluster.from_flay_item(item)
+          clusters << duplication_cluster_from_flay_item(item)
         end
       end
 
@@ -101,6 +101,14 @@ module Snoot
           method_name: class_method,
           score: BigDecimal(score.to_s)
         )
+      end
+
+      def duplication_cluster_from_flay_item(item)
+        locations = item.locations.each_with_object(Set[]) do |loc, set|
+          line = loc.line
+          set << Location.new(path: Path.new(raw: loc.file), line_start: line, line_end: line)
+        end
+        DuplicationCluster.new(signature: item.structural_hash.to_s, locations: locations)
       end
 
       def vendored_doc(smell_type)

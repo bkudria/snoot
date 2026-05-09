@@ -266,6 +266,32 @@ RSpec.describe "AnalyserOrchestration::Default" do
     end
   end
 
+  describe ".duplication_cluster_from_flay_item" do
+    subject(:cluster) { adapter.duplication_cluster_from_flay_item(item) }
+
+    let(:flay_location_a) { double(file: "lib/a.rb", line: 5) }
+    let(:flay_location_b) { double(file: "lib/b.rb", line: 17) }
+    let(:item) do
+      double(structural_hash: 4242, locations: [flay_location_a, flay_location_b])
+    end
+    let(:expected_locations) do
+      Set[
+        Snoot::Location.new(path: Snoot::Path.new(raw: "lib/a.rb"), line_start: 5, line_end: 5),
+        Snoot::Location.new(path: Snoot::Path.new(raw: "lib/b.rb"), line_start: 17, line_end: 17)
+      ]
+    end
+
+    it { is_expected.to be_a(Snoot::DuplicationCluster) }
+
+    it "stringifies item.structural_hash into the signature" do
+      expect(cluster.signature).to eq("4242")
+    end
+
+    it "maps every flay location into a Snoot::Location with line_start = line_end" do
+      expect(cluster.locations).to eq(expected_locations)
+    end
+  end
+
   describe "significant_smells" do
     let(:envy) { build_smell(smell_type: build_smell_type(name: "FeatureEnvy")) }
     let(:tmm_pair) do
