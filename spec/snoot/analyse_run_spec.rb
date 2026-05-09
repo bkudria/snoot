@@ -30,6 +30,16 @@ RSpec.describe Snoot::AnalyseRun do
       events = capture_emitted_events { invoke_analyse_run_with_doc_less_top_smell }
       expect(events).to include(have_attributes(name: :skipped_doc_less_smell_warned))
     end
+
+    it "emits SkippedDocLessSmellWarned with the terminal Run as event.run" do
+      # Spec (snoot.allium:285-303): the warning trigger fires after run.outcome
+      # is assigned, so the run: parameter references the resulting (terminal)
+      # state. Per Allium semantics, trigger emission parameters reference the
+      # resulting state regardless of textual ordering.
+      events = capture_emitted_events { invoke_analyse_run_with_doc_less_top_smell }
+      warning = events.find { |event| event.name == :skipped_doc_less_smell_warned }
+      expect(warning.run.outcome).not_to eq(:pending)
+    end
   end
 
   describe "smells field propagation" do

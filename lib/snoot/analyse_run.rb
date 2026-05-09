@@ -60,24 +60,29 @@ module Snoot
 
     def decide_outcome(run, sources)
       run = run.with(smells: sources.smells.to_set)
-      events = doc_less_warning(run, sources)
-      finalize(run, sources.candidates, events)
+      doc_less_smell_type = doc_less_top_smell_type(sources)
+      terminal = transition(run, sources.candidates)
+      [terminal, doc_less_events(terminal, doc_less_smell_type)]
     end
 
-    def doc_less_warning(run, sources)
+    def doc_less_top_smell_type(sources)
       top = select_top_finding(sources.all)
-      return [] unless top.is_a?(Smell)
+      return nil unless top.is_a?(Smell)
+      return nil if sources.vendored_doc(top.smell_type)
 
-      smell_type = top.smell_type
-      return [] if sources.vendored_doc(smell_type)
+      top.smell_type
+    end
+
+    def transition(run, candidates)
+      return run.transition_to(:nothing_to_report) if candidates.empty?
+
+      run.transition_to(:finding_rendered, selected_finding: select_top_finding(candidates))
+    end
+
+    def doc_less_events(run, smell_type)
+      return [] unless smell_type
 
       [Event.new(name: :skipped_doc_less_smell_warned, run: run, smell_type: smell_type, error: nil)]
-    end
-
-    def finalize(run, candidates, events)
-      return [run.transition_to(:nothing_to_report), events] if candidates.empty?
-
-      [run.transition_to(:finding_rendered, selected_finding: select_top_finding(candidates)), events]
     end
 
     # Tentative -- pending snoot.allium open question on cost-ranking formula.
