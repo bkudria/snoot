@@ -11,8 +11,8 @@ Gem::Specification.new do |spec|
   spec.summary     = "Single-finding agent-targeted reek/flog/flay reporter."
   spec.description = <<~DESC
     snoot orchestrates reek, flog and flay over a configured path set
-    and emits a single agent-targeted four-section report describing
-    one finding. Designed for an LLM coding agent as the reader.
+    and emits a single agent-targeted report describing one finding.
+    Designed for an LLM coding agent as the reader.
   DESC
   spec.homepage    = "https://github.com/bkudria/snoot"
   spec.license     = "MIT"

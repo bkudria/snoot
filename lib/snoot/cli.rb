@@ -6,9 +6,9 @@ module Snoot
   # and returns a CLI value carrying the operator. run_invoked drives
   # the pipeline: emits RunInvoked, calls AnalyseRun to produce a
   # terminal Run, and dispatches on outcome -- writing the formatted
-  # four-section report to stdout (finding_rendered), an
-  # acknowledgement to stdout (nothing_to_report), or an error line to
-  # stderr (analysis_failed) per the StdoutMutuallyExclusive guarantee.
+  # report to stdout (finding_rendered), an acknowledgement to stdout
+  # (nothing_to_report), or an error line to stderr (analysis_failed)
+  # per the StdoutMutuallyExclusive guarantee.
   # Returns [run, events].
   module CLI
     # Event is the marker module sum-typing the two audit records the
