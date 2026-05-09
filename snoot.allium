@@ -69,25 +69,37 @@ value SmellType {
     name: String
 }
 
--- An analyser failure surfaced to the operator on outcome = analysis_failed.
--- The analyser field identifies which of the three analysers (Reek, Flog,
--- Flay) produced the failure; message is the human-readable error detail
--- carried on stderr. Only the first failed analyser in canonical order
--- (Reek -> Flog -> Flay) is recorded; the orchestration aborts on first
--- failure and does not invoke subsequent analysers.
-value AnalyserFailure {
-    analyser: reek | flog | flay
-    message: String
+------------------------------------------------------------
+-- Analyser Result
+------------------------------------------------------------
+
+-- The two-shaped outcome of AnalyserOrchestration#analyse. AnalysisResult is
+-- a sum-type entity so the rule body can narrow on `kind`. Both variants
+-- are short-lived: an instance is created by analyse() and consumed within
+-- a single AnalyseRun execution; neither persists beyond the rule.
+entity AnalysisResult {
+    kind: Sources | AnalyserFailure
 }
 
 -- The bundle of analyser outputs produced by a successful invocation of
 -- AnalyserOrchestration#analyse. Carries the per-analyser finding sets
 -- so AnalyseRun can derive significance and candidate views without
 -- re-invoking the analysers.
-value Sources {
+variant Sources : AnalysisResult {
     smells: Set<Smell>
     complexities: Set<ComplexityHit>
     duplications: Set<DuplicationCluster>
+}
+
+-- An analyser failure surfaced to the operator on outcome = analysis_failed.
+-- The analyser field identifies which of the three analysers (Reek, Flog,
+-- Flay) produced the failure; message is the human-readable error detail
+-- carried on stderr. Only the first failed analyser in canonical order
+-- (Reek -> Flog -> Flay) is recorded; the orchestration aborts on first
+-- failure and does not invoke subsequent analysers.
+variant AnalyserFailure : AnalysisResult {
+    analyser: Reek | Flog | Flay
+    message: String
 }
 
 ------------------------------------------------------------
@@ -102,6 +114,12 @@ value Sources {
 -- it depends on those tools, even though their internal behaviour is out
 -- of scope.
 contract AnalyserOrchestration {
+    -- adapter_label maps an external analyser to its short identifier
+    -- (e.g. "reek", "flog", "flay"). The signature exists to record the
+    -- per-tool dependency on Reek, Flog and Flay at the contract
+    -- boundary; rule bodies do not invoke it.
+    adapter_label: (analyser: Reek | Flog | Flay) -> String
+
     -- vendored_doc maps a smell type to its bundled markdown doc, or null
     -- when no doc is bundled for that smell type. Consulted both to filter
     -- the smell candidate pool and to render the doc section. Location
@@ -129,7 +147,7 @@ contract AnalyserOrchestration {
     -- respects @invariant Determinism: for the same path set, the same
     -- outcome (including which analyser fails first, if any, and its
     -- message) is produced within a single CLI invocation.
-    analyse: (paths: Set<Path>) -> Sources | AnalyserFailure
+    analyse: (paths: Set<Path>) -> AnalysisResult
 
     @invariant Determinism
         -- Each signature is pure within a single CLI invocation: the same
@@ -147,7 +165,9 @@ contract AnalyserOrchestration {
 -- only within the scope of the Run that produced them; they have no
 -- persistence beyond the run.
 
-entity Finding {}
+entity Finding {
+    kind: Smell | ComplexityHit | DuplicationCluster
+}
 
 variant Smell : Finding {
     smell_type: SmellType
@@ -210,10 +230,10 @@ rule AnalyseRun {
         -- re-invoked along the success branch.
         let result = analyse(run.paths)
 
-        if result is AnalyserFailure:
+        if result.kind = AnalyserFailure:
             run.outcome = analysis_failed
             run.failure = result
-        else:
+        else if result.kind = Sources:
             let smell_findings = result.smells
             let complexity_findings = result.complexities
             let duplication_findings = result.duplications
@@ -274,7 +294,7 @@ rule AnalyseRun {
             -- nested if-guards narrow top_finding_overall to a Smell
             -- variant before accessing smell_type.
             if top_finding_overall != null:
-                if top_finding_overall is Smell:
+                if top_finding_overall.kind = Smell:
                     if vendored_doc(top_finding_overall.smell_type) = null:
                         SkippedDocLessSmellWarned(
                             run: run,
@@ -309,7 +329,7 @@ rule RenderReport {
     -- AnalyserOrchestration: behavioural variability is contracted, but
     -- static report copy is owned by the implementation.
     ensures:
-        if run.selected_finding is Smell:
+        if run.selected_finding.kind = Smell:
             ReportEmitted(
                 run: run,
                 finding: run.selected_finding,
