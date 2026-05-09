@@ -12,8 +12,7 @@ RSpec.describe Snoot::CLI do
   let(:stderr) { null_io }
 
   def run_cli(paths = Set[build_path], operator: build_operator)
-    streams = Snoot::CLI::Streams.new(stdout: stdout, stderr: stderr)
-    pipeline = Snoot::CLI::Pipeline.new(orchestration: orchestration, streams: streams)
+    pipeline = Snoot::CLI::Pipeline.new(orchestration: orchestration, stdout: stdout, stderr: stderr)
     described_class.for(operator).run_invoked(paths, pipeline: pipeline)
   end
 

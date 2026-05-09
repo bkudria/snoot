@@ -37,21 +37,12 @@ module Snoot
     NOTHING_TO_REPORT = "nothing to report -- no findings above snoot's significance floor\n"
     DEFAULT_PATHS = Set[Snoot::Path.new(raw: ".")].freeze
 
-    # Streams bundles the stdout/stderr pair injected at the CLI
-    # surface; nested inside Pipeline so the IO sinks travel together
-    # with the analyser orchestration through the dispatch chain.
-    Streams = Data.define(:stdout, :stderr) do
+    # Pipeline bundles the analyser orchestration and the stdout/stderr
+    # pair that together define a CLI invocation's wiring -- the trio
+    # flows through run_invoked, the outcome dispatch, and emit_report.
+    Pipeline = Data.define(:orchestration, :stdout, :stderr) do
       def self.default
-        new(stdout: $stdout, stderr: $stderr)
-      end
-    end
-
-    # Pipeline bundles the analyser orchestration and IO streams that
-    # together define a CLI invocation's wiring -- the pair flows
-    # through run_invoked, the outcome dispatch, and emit_report.
-    Pipeline = Data.define(:orchestration, :streams) do
-      def self.default
-        new(orchestration: AnalyserOrchestration::Default, streams: Streams.default)
+        new(orchestration: AnalyserOrchestration::Default, stdout: $stdout, stderr: $stderr)
       end
     end
 
@@ -64,7 +55,7 @@ module Snoot
         events = [RunInvoked.new(operator:, paths:)]
         run, analyse_events, smells = AnalyseRun.invoke(paths, orchestration: pipeline.orchestration)
         events.concat(analyse_events)
-        CLI.emit_warnings(analyse_events, pipeline.streams.stderr)
+        CLI.emit_warnings(analyse_events, pipeline.stderr)
         events.concat(events_for_outcome(run, smells, pipeline: pipeline))
         [run, events]
       end
@@ -72,14 +63,13 @@ module Snoot
       private
 
       # :reek:FeatureEnvy -- this is the dispatch layer between the
-      # pipeline's IO bundle (streams) and the per-outcome writer; the
-      # whole job is to route to the right sink.
+      # pipeline's IO sinks and the per-outcome writer; the whole job
+      # is to route to the right sink.
       def events_for_outcome(run, smells, pipeline:)
-        streams = pipeline.streams
         case run.outcome
         when :finding_rendered then [emit_report(run, smells, pipeline: pipeline)]
-        when :nothing_to_report then CLI.emit_nothing_to_report(streams.stdout)
-        when :analysis_failed then CLI.emit_failure(run, streams.stderr)
+        when :nothing_to_report then CLI.emit_nothing_to_report(pipeline.stdout)
+        when :analysis_failed then CLI.emit_failure(run, pipeline.stderr)
         else []
         end
       end
@@ -89,7 +79,7 @@ module Snoot
       # both arms through pipeline is the surface contract.
       def emit_report(run, smells, pipeline:)
         RenderReport.invoke(run, smells: smells, orchestration: pipeline.orchestration) => { sections:, finding: }
-        pipeline.streams.stdout.write(CLI.format_report(sections))
+        pipeline.stdout.write(CLI.format_report(sections))
         ReportEmitted.new(operator: operator, paths: run.paths,
                           run: run, finding: finding, sections: sections)
       end

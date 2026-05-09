@@ -28,8 +28,7 @@ RSpec.describe Snoot::CLI::Argv do
   end
 
   def run_argv(argv, orchestration: Snoot::AnalyserOrchestration::Default)
-    streams = Snoot::CLI::Streams.new(stdout: stdout, stderr: stderr)
-    pipeline = Snoot::CLI::Pipeline.new(orchestration: orchestration, streams: streams)
+    pipeline = Snoot::CLI::Pipeline.new(orchestration: orchestration, stdout: stdout, stderr: stderr)
     described_class.run(argv, pipeline: pipeline)
   end
 
