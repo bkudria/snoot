@@ -59,7 +59,7 @@ module Snoot
         flog = Flog.new
         flog.flog(*files)
         flog.totals.filter_map do |class_method, score|
-          ComplexityHit.from_flog_entry(
+          complexity_hit_from_flog_entry(
             class_method: class_method, score: score,
             raw_location: flog.method_locations[class_method]
           )
@@ -85,6 +85,21 @@ module Snoot
             line_end: lines.last
           ),
           message: "#{warning.context} #{warning.message}"
+        )
+      end
+
+      # Flog stores method locations as "file:line" or "file:line-line_max".
+      # Returns nil when the entry is missing (e.g. main#none) so callers
+      # can skip top-level expressions that lack a method-level location.
+      def complexity_hit_from_flog_entry(class_method:, score:, raw_location:)
+        file, range = raw_location.to_s.split(":", 2)
+        return unless file && range
+
+        line_start, = range.split("-", 2).map(&:to_i)
+        ComplexityHit.new(
+          location: Location.new(path: Path.new(raw: file), line_start: line_start, line_end: line_start),
+          method_name: class_method,
+          score: BigDecimal(score.to_s)
         )
       end
 
