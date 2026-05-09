@@ -22,6 +22,8 @@ module Snoot
         analysis_failed: 2
       }.freeze
 
+      USAGE_ERROR_EXIT_CODE = 64
+
       BANNERS = {
         ["--version"] => "snoot #{Snoot::VERSION}\n",
         ["--help"] => USAGE
@@ -33,7 +35,7 @@ module Snoot
         streams = pipeline.streams
         banner = BANNERS[argv]
         return write_and_return(streams.stdout, banner, 0) if banner
-        return write_and_return(streams.stderr, USAGE, 1) if unknown_flag?(argv)
+        return write_and_return(streams.stderr, USAGE, USAGE_ERROR_EXIT_CODE) if unknown_flag?(argv)
 
         run_pipeline(argv, pipeline: pipeline)
       end

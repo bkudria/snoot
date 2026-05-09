@@ -48,9 +48,9 @@ RSpec.describe Snoot::CLI::Argv do
       expect(stderr.string).to be_empty
     end
 
-    it "writes usage to stderr and returns 1 for an unknown flag", :aggregate_failures do
+    it "writes usage to stderr and returns 64 for an unknown flag", :aggregate_failures do
       code = run_argv(["--unknown-flag"])
-      expect(code).to eq(1)
+      expect(code).to eq(64)
       expect(stderr.string).to include("Usage: snoot")
       expect(stdout.string).to be_empty
     end

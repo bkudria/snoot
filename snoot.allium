@@ -437,6 +437,16 @@ surface CLI {
         --   finding_rendered  -> 1
         --   analysis_failed   -> 2
 
+    @guarantee UsageErrorExit
+        -- An invocation whose argv shape the CLI rejects (unknown flag,
+        -- malformed switch) is not an accepted invocation: RunInvoked
+        -- does not fire, no Run is created, and TerminatesInOneOutcome
+        -- does not apply. The CLI exits 64 (POSIX EX_USAGE) and writes
+        -- the usage banner to stderr. Exit code 64 is reserved for this
+        -- pre-domain failure mode so an operator (or CI) can distinguish
+        -- a usage error from finding_rendered, both of which would
+        -- otherwise share an exit code.
+
     @guarantee EmptyPathsDefault
         -- An operator invocation that supplies no paths is treated as if
         -- Path(".") had been supplied: the CLI surface normalises the
