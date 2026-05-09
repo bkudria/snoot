@@ -39,11 +39,7 @@ module Snoot
 
     def transition_to(target, selected_finding: nil, failure: nil)
       ensure_transition_allowed!(target)
-      case target
-      when :finding_rendered then transition_finding_rendered(selected_finding)
-      when :analysis_failed then transition_analysis_failed(failure)
-      else with(outcome: target, selected_finding: nil, failure: nil)
-      end
+      with(outcome: target, selected_finding: selected_finding, failure: failure)
     end
 
     def ensure_transition_allowed!(target)
@@ -52,16 +48,6 @@ module Snoot
       raise StateError, "transition #{outcome} -> #{target} is not declared"
     end
     private :ensure_transition_allowed!
-
-    def transition_finding_rendered(selected_finding)
-      with(outcome: :finding_rendered, selected_finding: selected_finding, failure: nil)
-    end
-    private :transition_finding_rendered
-
-    def transition_analysis_failed(failure)
-      with(outcome: :analysis_failed, selected_finding: nil, failure: failure)
-    end
-    private :transition_analysis_failed
   end
 
   Run::TRANSITIONS = {
