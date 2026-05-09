@@ -3,11 +3,6 @@
 # Top-level namespace for the snoot gem. See `snoot.allium` for the
 # behavioural specification this implementation realises.
 module Snoot
-  # Surfaces the AnalyserOrchestration contract's vendored_doc at module
-  # scope, delegating to the singleton Default orchestration module.
-  def self.vendored_doc(smell_type)
-    AnalyserOrchestration::Default.vendored_doc(smell_type)
-  end
 end
 
 require "snoot/version"
