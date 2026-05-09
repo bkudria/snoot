@@ -324,6 +324,11 @@ rule RenderReport {
     -- three-section structure (header, finding_context, doc):
     --   - ComplexityHit:      hand-written generic prose for high complexity
     --   - DuplicationCluster: hand-written generic prose for high duplication
+    -- The exact prose is static implementation policy of the gem (one
+    -- string per non-Smell variant), not an orchestration-contract
+    -- responsibility. This mirrors the threshold-policy delegation in
+    -- AnalyserOrchestration: behavioural variability is contracted, but
+    -- static report copy is owned by the implementation.
     ensures:
         if run.selected_finding.kind = Smell:
             ReportEmitted(
