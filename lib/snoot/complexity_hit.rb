@@ -8,11 +8,5 @@ module Snoot
   # offending method_name, and the BigDecimal score used for ranking.
   ComplexityHit = Data.define(:location, :method_name, :score) do
     include Finding
-
-    def doc
-      "High complexity hits indicate a method or class doing too much. " \
-        "Consider extracting helpers, simplifying conditionals, or " \
-        "splitting the responsibility across smaller units."
-    end
   end
 end

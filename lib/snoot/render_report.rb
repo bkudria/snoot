@@ -38,8 +38,21 @@ module Snoot
       {
         header: render_header(finding),
         finding_context: render_finding_context(finding),
-        doc: finding.doc
+        doc: finding_doc(finding)
       }
+    end
+
+    def finding_doc(finding)
+      case finding
+      when ComplexityHit
+        "High complexity hits indicate a method or class doing too much. " \
+        "Consider extracting helpers, simplifying conditionals, or " \
+        "splitting the responsibility across smaller units."
+      when DuplicationCluster
+        "Structural duplication suggests an extracted abstraction is missing. " \
+        "Consider whether the duplicated shape belongs to a single helper, " \
+        "module, or value type."
+      end
     end
 
     def render_instances(smells, selected)

@@ -9,11 +9,5 @@ module Snoot
     include Finding
 
     def size = locations.size
-
-    def doc
-      "Structural duplication suggests an extracted abstraction is missing. " \
-        "Consider whether the duplicated shape belongs to a single helper, " \
-        "module, or value type."
-    end
   end
 end
