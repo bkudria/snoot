@@ -22,8 +22,8 @@ RSpec.describe Snoot::CLI do
       expect(described_class.for(build_operator)).not_to be_nil
     end
 
-    it "is not accessible to a non-Operator (e.g. ReportConsumer)" do
-      expect { described_class.for(build_report_consumer) }.to raise_error(StandardError)
+    it "is not accessible to a non-Operator" do
+      expect { described_class.for(Object.new) }.to raise_error(StandardError)
     end
   end
 

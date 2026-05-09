@@ -53,10 +53,6 @@ module Snoot
         end
       end
 
-      def build_report_consumer
-        Snoot::ReportConsumer.new
-      end
-
       def build_operator
         Snoot::Operator.new
       end
