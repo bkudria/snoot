@@ -68,9 +68,11 @@ module Snoot
     def doc_less_top_smell_type(sources)
       top = select_top_finding(sources.all)
       return nil unless top.is_a?(Smell)
-      return nil if sources.vendored_doc(top.smell_type)
 
-      top.smell_type
+      smell_type = top.smell_type
+      return nil if sources.vendored_doc(smell_type)
+
+      smell_type
     end
 
     def transition(run, candidates)
