@@ -6,8 +6,9 @@ module Snoot
   module Spec
     # PropCheck generators for AnalyseRun input mixes. Used by `:pbt`-tagged
     # invariant specs. Real reek smell-type names are drawn so that
-    # Snoot.vendored_doc (production) and FakeOrchestration#vendored_doc
-    # (fake) agree on which smells are documented.
+    # Snoot::AnalyserOrchestration::Default.vendored_doc (production) and
+    # FakeOrchestration#vendored_doc (fake) agree on which smells are
+    # documented.
     module PropCheckGenerators
       include Snoot::Spec::Factories
 
@@ -49,7 +50,7 @@ module Snoot
 
       def real_reek_doc_map
         REAL_REEK_TYPES.to_h do |name|
-          [name, Snoot.vendored_doc(Snoot::SmellType.new(name: name)) || "## stub"]
+          [name, Snoot::AnalyserOrchestration::Default.vendored_doc(Snoot::SmellType.new(name: name)) || "## stub"]
         end
       end
 

@@ -15,7 +15,7 @@ RSpec.describe "Invariant: SelectedFindingsAreRenderable" do # rubocop:disable R
       orch = fake_orchestration(smells: Set[smell], vendored_docs: { "FeatureEnvy" => "## doc" })
       run, _events = Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch)
 
-      expect(Snoot.vendored_doc(run.selected_finding.smell_type)).not_to be_nil
+      expect(Snoot::AnalyserOrchestration::Default.vendored_doc(run.selected_finding.smell_type)).not_to be_nil
     end
 
     it "holds after AnalyseRun for arbitrary analyser outputs", :pbt do
@@ -23,7 +23,7 @@ RSpec.describe "Invariant: SelectedFindingsAreRenderable" do # rubocop:disable R
         run = run_analyse_with_inputs(inputs)
         next unless run.outcome == :finding_rendered && run.selected_finding.is_a?(Snoot::Smell)
 
-        expect(Snoot.vendored_doc(run.selected_finding.smell_type)).not_to be_nil
+        expect(Snoot::AnalyserOrchestration::Default.vendored_doc(run.selected_finding.smell_type)).not_to be_nil
       end
     end
   end
