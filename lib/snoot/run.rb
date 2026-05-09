@@ -22,6 +22,8 @@ module Snoot
       super
       validate_finding_rendered_invariant!
       validate_analysis_failed_invariant!
+      validate_selected_finding_absence!
+      validate_failure_absence!
     end
 
     def selected_finding
@@ -55,6 +57,22 @@ module Snoot
       raise StateError, "failure required for :analysis_failed"
     end
     private :validate_analysis_failed_invariant!
+
+    def validate_selected_finding_absence!
+      return if outcome == :finding_rendered
+      return unless _raw_selected_finding
+
+      raise StateError, "selected_finding only permitted when outcome = :finding_rendered (got #{outcome.inspect})"
+    end
+    private :validate_selected_finding_absence!
+
+    def validate_failure_absence!
+      return if outcome == :analysis_failed
+      return unless _raw_failure
+
+      raise StateError, "failure only permitted when outcome = :analysis_failed (got #{outcome.inspect})"
+    end
+    private :validate_failure_absence!
 
     def transition_to(target, selected_finding: nil, failure: nil)
       ensure_transition_allowed!(target)

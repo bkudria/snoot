@@ -51,6 +51,36 @@ RSpec.describe Snoot::Run do
         described_class.new(paths: Set[], outcome: :analysis_failed)
       end.to raise_error(Snoot::StateError, /failure/)
     end
+
+    it "rejects failure: when outcome != :analysis_failed", :aggregate_failures do # rubocop:disable RSpec/ExampleLength
+      # Allium `when` clause is two-sided: present iff outcome matches.
+      af = Snoot::AnalyserFailure.new(analyser: :reek, message: "boom")
+      %i[pending nothing_to_report].each do |state|
+        expect do
+          described_class.new(paths: Set[], outcome: state, failure: af)
+        end.to raise_error(Snoot::StateError, /failure/),
+               "expected failure: at outcome=#{state} to raise"
+      end
+      finding = build_smell
+      expect do
+        described_class.new(paths: Set[], outcome: :finding_rendered, selected_finding: finding, failure: af)
+      end.to raise_error(Snoot::StateError, /failure/)
+    end
+
+    it "rejects selected_finding: when outcome != :finding_rendered", :aggregate_failures do # rubocop:disable RSpec/ExampleLength
+      # Allium `when` clause is two-sided: present iff outcome matches.
+      finding = build_smell
+      %i[pending nothing_to_report].each do |state|
+        expect do
+          described_class.new(paths: Set[], outcome: state, selected_finding: finding)
+        end.to raise_error(Snoot::StateError, /selected_finding/),
+               "expected selected_finding: at outcome=#{state} to raise"
+      end
+      af = Snoot::AnalyserFailure.new(analyser: :reek, message: "boom")
+      expect do
+        described_class.new(paths: Set[], outcome: :analysis_failed, selected_finding: finding, failure: af)
+      end.to raise_error(Snoot::StateError, /selected_finding/)
+    end
   end
 
   describe "when-presence.Run.selected_finding" do
