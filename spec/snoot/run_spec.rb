@@ -30,6 +30,14 @@ RSpec.describe Snoot::Run do
       expect(moved.smells).to eq(Set[smell])
     end
 
+    it "clears smells when transitioning to :analysis_failed (SmellsEmptyOnPendingOrFailed)" do
+      smell = build_smell
+      run = described_class.new(paths: Set[], outcome: :pending, smells: Set[smell])
+      af = Snoot::AnalyserFailure.new(analyser: :reek, message: "boom")
+      moved = run.transition_to(:analysis_failed, failure: af)
+      expect(moved.smells).to eq(Set[])
+    end
+
     it "carries an AnalyserFailure on .failure when outcome = :analysis_failed" do
       af = Snoot::AnalyserFailure.new(analyser: :reek, message: "boom")
       run = described_class.new(paths: Set[], outcome: :analysis_failed, failure: af)

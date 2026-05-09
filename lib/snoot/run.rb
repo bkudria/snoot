@@ -100,7 +100,7 @@ module Snoot
     def transition_analysis_failed(failure)
       raise StateError, "failure required for :analysis_failed" unless failure
 
-      with(outcome: :analysis_failed, selected_finding: nil, failure: failure)
+      with(outcome: :analysis_failed, selected_finding: nil, failure: failure, smells: Set[])
     end
     private :transition_analysis_failed
   end
