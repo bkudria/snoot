@@ -59,11 +59,9 @@ module Snoot
     end
 
     def render_header(finding)
-      loc = finding.location.description unless finding.is_a?(DuplicationCluster)
       case finding
-      when Smell
-        "#{finding.smell_type.name} at #{loc}"
       when ComplexityHit
+        loc = finding.location.description
         "High complexity in #{finding.method_name} at #{loc} (score: #{finding.score.to_s('F')})"
       when DuplicationCluster
         "Structural duplication: #{finding.locations.size} locations (signature: #{finding.signature})"
@@ -71,12 +69,9 @@ module Snoot
     end
 
     def render_finding_context(finding)
-      loc = finding.location.description unless finding.is_a?(DuplicationCluster)
       case finding
-      when Smell
-        "#{loc}\n\n#{finding.message}"
       when ComplexityHit
-        "#{loc}\n\nMethod: #{finding.method_name}\nScore: #{finding.score.to_s('F')}"
+        "#{finding.location.description}\n\nMethod: #{finding.method_name}\nScore: #{finding.score.to_s('F')}"
       when DuplicationCluster
         rendered = finding.locations.map(&:description)
         "Locations:\n#{rendered.join("\n")}"

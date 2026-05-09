@@ -6,5 +6,7 @@ module Snoot
   # :flay) names which of the three analysers failed in canonical
   # order; `message` is the human-readable error detail carried on
   # stderr. Produced by AnalyserOrchestration#analyse on a failed run.
-  AnalyserFailure = Data.define(:analyser, :message)
+  AnalyserFailure = Data.define(:analyser, :message) do
+    include AnalysisResult
+  end
 end
