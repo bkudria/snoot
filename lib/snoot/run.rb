@@ -8,13 +8,6 @@ module Snoot
   # Encodes the declared transitions and gates selected_finding access
   # behind the :finding_rendered outcome.
   Run = Data.define(:paths, :outcome, :selected_finding, :smells, :failure) do
-    # rubocop:disable Lint/ConstantDefinitionInBlock
-    # The Data.define block IS the class body; this constant is attached to Run.
-    TRANSITIONS = {
-      pending: %i[finding_rendered nothing_to_report analysis_failed].freeze
-    }.freeze
-    # rubocop:enable Lint/ConstantDefinitionInBlock
-
     alias_method :_raw_selected_finding, :selected_finding
     alias_method :_raw_failure, :failure
 
@@ -84,7 +77,7 @@ module Snoot
     end
 
     def ensure_transition_allowed!(target)
-      return if TRANSITIONS.fetch(outcome, []).include?(target)
+      return if Run::TRANSITIONS.fetch(outcome, []).include?(target)
 
       raise StateError, "transition #{outcome} -> #{target} is not declared"
     end
@@ -104,4 +97,8 @@ module Snoot
     end
     private :transition_analysis_failed
   end
+
+  Run::TRANSITIONS = {
+    pending: %i[finding_rendered nothing_to_report analysis_failed].freeze
+  }.freeze
 end
