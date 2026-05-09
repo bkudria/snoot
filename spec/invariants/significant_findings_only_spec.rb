@@ -42,23 +42,30 @@ RSpec.describe "Invariant: SignificantFindingsOnly" do # rubocop:disable RSpec/D
       expect(run.outcome).to eq(:nothing_to_report)
     end
 
-    it "the selected finding survives its variant's significance check", :pbt do # rubocop:disable RSpec/ExampleLength,RSpec/MultipleExpectations
-      forall(analyse_run_inputs_gen) do |inputs|
-        smells, complexities, duplications, _raise = inputs
-        orch = default_significance_class.new(smells: smells, complexities: complexities,
-                                              duplications: duplications, vendored_docs: real_reek_doc_map)
-        run, = Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch)
-        next unless run.outcome == :finding_rendered
+    def build_run_for(inputs)
+      smells, complexities, duplications, _raise = inputs
+      orch = default_significance_class.new(smells: smells, complexities: complexities,
+                                            duplications: duplications, vendored_docs: real_reek_doc_map)
+      Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch).first
+    end
 
-        default = Snoot::AnalyserOrchestration::Default
-        case run.selected_finding
-        when Snoot::Smell
-          expect(default.significant_smells(run.smells)).to include(run.selected_finding)
-        when Snoot::ComplexityHit
-          expect(default.significant_complexities(Set[run.selected_finding])).to include(run.selected_finding)
-        when Snoot::DuplicationCluster
-          expect(default.significant_duplications(Set[run.selected_finding])).to include(run.selected_finding)
-        end
+    def significant_findings_for(run)
+      default = Snoot::AnalyserOrchestration::Default
+      case run.selected_finding
+      when Snoot::Smell then default.significant_smells(run.smells)
+      when Snoot::ComplexityHit then default.significant_complexities(Set[run.selected_finding])
+      when Snoot::DuplicationCluster then default.significant_duplications(Set[run.selected_finding])
+      end
+    end
+
+    def expect_selected_finding_significant(run)
+      expect(significant_findings_for(run)).to include(run.selected_finding)
+    end
+
+    it "the selected finding survives its variant's significance check", :aggregate_failures, :pbt do
+      forall(analyse_run_inputs_gen) do |inputs|
+        run = build_run_for(inputs)
+        expect_selected_finding_significant(run) if run.outcome == :finding_rendered
       end
     end
   end

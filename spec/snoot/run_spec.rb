@@ -54,40 +54,31 @@ RSpec.describe Snoot::Run do
   end
 
   describe "construction-guard.Run.failure" do
+    let(:af) { Snoot::AnalyserFailure.new(analyser: :reek, message: "boom") }
+    let(:finding) { build_smell }
+
+    def expect_state_error(regex, **attrs)
+      expect { described_class.new(paths: Set[], **attrs) }.to raise_error(Snoot::StateError, regex)
+    end
+
     it "rejects outcome=:analysis_failed with nil failure" do
-      expect do
-        described_class.new(paths: Set[], outcome: :analysis_failed)
-      end.to raise_error(Snoot::StateError, /failure/)
+      expect_state_error(/failure/, outcome: :analysis_failed)
     end
 
-    it "rejects failure: when outcome != :analysis_failed", :aggregate_failures do # rubocop:disable RSpec/ExampleLength
+    it "rejects failure: when outcome != :analysis_failed", :aggregate_failures do
       # Allium `when` clause is two-sided: present iff outcome matches.
-      af = Snoot::AnalyserFailure.new(analyser: :reek, message: "boom")
       %i[pending nothing_to_report].each do |state|
-        expect do
-          described_class.new(paths: Set[], outcome: state, failure: af)
-        end.to raise_error(Snoot::StateError, /failure/),
-               "expected failure: at outcome=#{state} to raise"
+        expect_state_error(/failure/, outcome: state, failure: af)
       end
-      finding = build_smell
-      expect do
-        described_class.new(paths: Set[], outcome: :finding_rendered, selected_finding: finding, failure: af)
-      end.to raise_error(Snoot::StateError, /failure/)
+      expect_state_error(/failure/, outcome: :finding_rendered, selected_finding: finding, failure: af)
     end
 
-    it "rejects selected_finding: when outcome != :finding_rendered", :aggregate_failures do # rubocop:disable RSpec/ExampleLength
+    it "rejects selected_finding: when outcome != :finding_rendered", :aggregate_failures do
       # Allium `when` clause is two-sided: present iff outcome matches.
-      finding = build_smell
       %i[pending nothing_to_report].each do |state|
-        expect do
-          described_class.new(paths: Set[], outcome: state, selected_finding: finding)
-        end.to raise_error(Snoot::StateError, /selected_finding/),
-               "expected selected_finding: at outcome=#{state} to raise"
+        expect_state_error(/selected_finding/, outcome: state, selected_finding: finding)
       end
-      af = Snoot::AnalyserFailure.new(analyser: :reek, message: "boom")
-      expect do
-        described_class.new(paths: Set[], outcome: :analysis_failed, selected_finding: finding, failure: af)
-      end.to raise_error(Snoot::StateError, /selected_finding/)
+      expect_state_error(/selected_finding/, outcome: :analysis_failed, selected_finding: finding, failure: af)
     end
   end
 
