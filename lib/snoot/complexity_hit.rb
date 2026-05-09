@@ -10,7 +10,12 @@ module Snoot
     include Finding
 
     def kind = ComplexityHit
-    def doc = self.class::DOC
+
+    def doc
+      "High complexity hits indicate a method or class doing too much. " \
+        "Consider extracting helpers, simplifying conditionals, or " \
+        "splitting the responsibility across smaller units."
+    end
 
     # Flog stores method locations as "file:line" or "file:line-line_max".
     # Returns nil when the entry is missing (e.g. main#none) so callers
@@ -27,9 +32,4 @@ module Snoot
       )
     end
   end
-
-  ComplexityHit::DOC =
-    "High complexity hits indicate a method or class doing too much. " \
-    "Consider extracting helpers, simplifying conditionals, or " \
-    "splitting the responsibility across smaller units."
 end

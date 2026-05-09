@@ -9,8 +9,13 @@ module Snoot
     include Finding
 
     def kind = DuplicationCluster
-    def doc = self.class::DOC
     def size = locations.size
+
+    def doc
+      "Structural duplication suggests an extracted abstraction is missing. " \
+        "Consider whether the duplicated shape belongs to a single helper, " \
+        "module, or value type."
+    end
 
     def self.from_flay_item(item)
       locations = item.locations.each_with_object(Set[]) do |loc, set|
@@ -20,9 +25,4 @@ module Snoot
       new(signature: item.structural_hash.to_s, locations: locations)
     end
   end
-
-  DuplicationCluster::DOC =
-    "Structural duplication suggests an extracted abstraction is missing. " \
-    "Consider whether the duplicated shape belongs to a single helper, " \
-    "module, or value type."
 end
