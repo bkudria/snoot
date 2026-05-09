@@ -50,7 +50,7 @@ module Snoot
         examiner.smells.filter_map do |warning|
           next unless warning.lines&.any?
 
-          Smell.from_reek_warning(warning)
+          smell_from_reek_warning(warning)
         end
       end
 
@@ -73,6 +73,19 @@ module Snoot
         flay.analyze.each_with_object(Set[]) do |item, clusters|
           clusters << DuplicationCluster.from_flay_item(item)
         end
+      end
+
+      def smell_from_reek_warning(warning)
+        lines = warning.lines
+        Smell.new(
+          smell_type: SmellType.new(name: warning.smell_type),
+          location: Location.new(
+            path: Path.new(raw: warning.source),
+            line_start: lines.first,
+            line_end: lines.last
+          ),
+          message: "#{warning.context} #{warning.message}"
+        )
       end
 
       def vendored_doc(smell_type)
