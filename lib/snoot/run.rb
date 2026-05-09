@@ -4,41 +4,22 @@ module Snoot
   # Run is the entity from snoot.allium tracking one analysis pass: the
   # input paths, the outcome (pending, finding_rendered,
   # nothing_to_report, analysis_failed), and the selected_finding when
-  # one was chosen. Encodes the declared transitions and gates
-  # selected_finding access behind the :finding_rendered outcome.
+  # one was chosen. Encodes the declared transitions and the two-sided
+  # presence invariants on selected_finding and failure.
   Run = Data.define(:paths, :outcome, :selected_finding, :failure) do
-    alias_method :_raw_selected_finding, :selected_finding
-    alias_method :_raw_failure, :failure
-
     def initialize(paths:, outcome:, selected_finding: nil, failure: nil)
       super
       validate_selected_finding!
       validate_failure!
     end
 
-    def selected_finding
-      unless outcome == :finding_rendered
-        raise StateError,
-              "selected_finding is only available when outcome = :finding_rendered (got #{outcome.inspect})"
-      end
-      _raw_selected_finding
-    end
-
-    def failure
-      unless outcome == :analysis_failed
-        raise StateError,
-              "failure is only available when outcome = :analysis_failed (got #{outcome.inspect})"
-      end
-      _raw_failure
-    end
-
     def validate_selected_finding!
       if outcome == :finding_rendered
-        return if _raw_selected_finding
+        return if selected_finding
 
         raise StateError, "selected_finding required for :finding_rendered"
       end
-      return unless _raw_selected_finding
+      return unless selected_finding
 
       raise StateError, "selected_finding only permitted when outcome = :finding_rendered (got #{outcome.inspect})"
     end
@@ -46,11 +27,11 @@ module Snoot
 
     def validate_failure!
       if outcome == :analysis_failed
-        return if _raw_failure
+        return if failure
 
         raise StateError, "failure required for :analysis_failed"
       end
-      return unless _raw_failure
+      return unless failure
 
       raise StateError, "failure only permitted when outcome = :analysis_failed (got #{outcome.inspect})"
     end

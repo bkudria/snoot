@@ -62,13 +62,10 @@ RSpec.describe Snoot::Run do
       expect(run.selected_finding).not_to be_nil
     end
 
-    it "is absent (nil or guarded) when outcome != :finding_rendered" do
+    it "is nil when outcome != :finding_rendered" do
       %i[pending nothing_to_report analysis_failed].each do |state|
         run = build_run_at(state)
-        # Design choice (slice 2): access raises rather than returns nil,
-        # mirroring the Allium `when` guard semantics. Message must mention
-        # `finding_rendered` so the cause is obvious.
-        expect { run.selected_finding }.to raise_error(/finding_rendered/i)
+        expect(run.selected_finding).to be_nil
       end
     end
   end
@@ -79,11 +76,10 @@ RSpec.describe Snoot::Run do
       expect(run.failure).to be_a(Snoot::AnalyserFailure)
     end
 
-    it "raises when accessed at any other outcome", :aggregate_failures do
+    it "is nil at any other outcome", :aggregate_failures do
       %i[pending nothing_to_report finding_rendered].each do |state|
         run = build_run_at(state)
-        expect { run.failure }.to raise_error(/analysis_failed/i),
-                                  "expected #{state} access to raise"
+        expect(run.failure).to(be_nil, "expected #{state}.failure to be nil")
       end
     end
   end
