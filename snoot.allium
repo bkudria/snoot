@@ -182,11 +182,6 @@ entity Run {
     -- in canonical order (Reek -> Flog -> Flay) and its error message.
     failure: AnalyserFailure when outcome = analysis_failed
 
-    -- The full reek-smell set produced by AnalyseRun. Carried so RenderReport
-    -- can enumerate every instance of the selected smell type without re-
-    -- invoking the analyser. Empty for outcome = pending or analysis_failed.
-    smells: Set<Smell>
-
     transitions outcome {
         pending -> finding_rendered
         pending -> nothing_to_report
@@ -207,7 +202,7 @@ rule AnalyseRun {
     when: RunInvoked(paths)
 
     ensures:
-        let run = Run.created(paths: paths, outcome: pending, smells: {})
+        let run = Run.created(paths: paths, outcome: pending)
 
         -- analyse runs the three analysers in canonical order (Reek ->
         -- Flog -> Flay) and returns either the captured Sources bundle
@@ -224,11 +219,6 @@ rule AnalyseRun {
             let smell_findings = result.smells
             let complexity_findings = result.complexities
             let duplication_findings = result.duplications
-
-            -- Carry the full smell set on the Run so RenderReport can
-            -- enumerate every instance of the selected smell type without
-            -- re-invoking reek (see Run.smells).
-            run.smells = smell_findings
 
             -- Significance is the "warrants addressing" pre-filter: each
             -- analyser adapter discards its own noise (per-analyser
@@ -303,10 +293,10 @@ rule RenderReport {
     -- For Smell findings the report is two sections:
     --   - doc:       vendored_doc(smell_type) (always non-null here, per the
     --                SelectedFindingsAreRenderable invariant)
-    --   - instances: every Smell in run.smells whose smell_type matches the
-    --                selected_finding's smell_type, grouped by file, with
-    --                files ordered by descending instance count and
-    --                alphabetical tie-break. The header / finding_context
+    --   - instances: every Smell from the analysed sources whose smell_type
+    --                matches the selected_finding's smell_type, grouped by
+    --                file, with files ordered by descending instance count
+    --                and alphabetical tie-break. The header / finding_context
     --                sections are absent because the doc + instances pair
     --                is sufficient context for an agent acting on a
     --                multi-instance smell type.
@@ -338,11 +328,11 @@ rule RenderReport {
         -- For Smell findings, a rendered report contains, in order:
         --   1. Doc       -- the vendored markdown for the selected smell type
         --   2. Instances -- '## Instances' heading followed by per-file
-        --                  groupings of every Smell in run.smells matching
-        --                  the selected smell_type. Each file group is the
-        --                  raw path on its own line, then 2-space-indented
-        --                  'Line N: <message>' lines. File groups are
-        --                  ordered by descending instance count, with
+        --                  groupings of every Smell from the analysed sources
+        --                  matching the selected smell_type. Each file group
+        --                  is the raw path on its own line, then 2-space-
+        --                  indented 'Line N: <message>' lines. File groups
+        --                  are ordered by descending instance count, with
         --                  alphabetical path as the tie-break.
 
     @guarantee NonSmellReportShape
@@ -412,36 +402,24 @@ invariant SelectedFindingsAreRenderable {
 -- addressing" gate, complementary to SelectedFindingsAreRenderable's
 -- documented-doc gate. Quantification ranges over each variant; the
 -- implementation in AnalyserOrchestration owns the numeric thresholds.
--- The membership test's input set differs by variant. Smells use
--- r.smells (already carried on Run for RenderReport) because an adapter
--- may apply a collection-relative policy -- the production Default
--- adapter filters by smell-type recurrence count, so a singleton {s}
--- input would be incorrectly empty. Complexity and duplication adapters
--- are per-instance (score floor and identity respectively), so the
--- singleton {f} suffices for those without enlarging Run with their
--- finding collections.
+-- The membership test's input set differs by variant. The smell branch
+-- ranges over the smell set produced by analyse(r.paths) because an
+-- adapter may apply a collection-relative policy -- the production
+-- Default adapter filters by smell-type recurrence count, so a
+-- singleton {s} input would be incorrectly empty. Complexity and
+-- duplication adapters are per-instance (score floor and identity
+-- respectively), so the singleton {f} suffices for those.
 invariant SignificantFindingsOnly {
     for r in Runs:
         for s in Smells:
             (r.outcome = finding_rendered and r.selected_finding = s)
-                implies s in significant_smells(r.smells)
+                implies s in significant_smells(analyse(r.paths).smells)
         for c in ComplexityHits:
             (r.outcome = finding_rendered and r.selected_finding = c)
                 implies c in significant_complexities({c})
         for d in DuplicationClusters:
             (r.outcome = finding_rendered and r.selected_finding = d)
                 implies d in significant_duplications({d})
-}
-
--- The smells field is an analysis output, populated only after AnalyseRun
--- has gathered reek's smell set. On outcome = pending the analyser pass
--- has not yet produced a value to render; on outcome = analysis_failed
--- the orchestration returned an AnalyserFailure before run.smells could be
--- populated. In both cases run.smells is empty -- consumers reading
--- run.smells need not branch on these outcomes.
-invariant SmellsEmptyOnPendingOrFailed {
-    for r in Runs:
-        r.outcome in {pending, analysis_failed} implies r.smells.count = 0
 }
 
 ------------------------------------------------------------

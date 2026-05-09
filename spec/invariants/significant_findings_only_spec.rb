@@ -4,16 +4,17 @@ require "spec_helper"
 
 # Spec source: snoot.allium -- invariant SignificantFindingsOnly
 #   for r in Runs:
-#     for s in Smells: r.selected_finding = s implies s ∈ significant_smells(r.smells)
+#     for s in Smells:
+#       r.selected_finding = s implies s ∈ significant_smells(analyse(r.paths).smells)
 #     for c in ComplexityHits: r.selected_finding = c implies c ∈ significant_complexities({c})
 #     for d in DuplicationClusters: r.selected_finding = d implies d ∈ significant_duplications({d})
 #
 # This complements SelectedFindingsAreRenderable (which guards vendored docs)
 # with the "warrants addressing" gate. Floors live in
-# AnalyserOrchestration::Default. The smell branch uses r.smells because
-# Default's smell-significance policy is collection-relative (count-based);
-# complexity and duplication adapters are per-instance, so the singleton
-# {f} suffices for those.
+# AnalyserOrchestration::Default. The smell branch ranges over the smell set
+# produced by the analyser pass because Default's smell-significance policy
+# is collection-relative (count-based); complexity and duplication adapters
+# are per-instance, so the singleton {f} suffices for those.
 RSpec.describe "Invariant: SignificantFindingsOnly" do # rubocop:disable RSpec/DescribeClass
   let(:default_significance_class) do
     Class.new(Snoot::Spec::FakeOrchestration) do
@@ -46,26 +47,27 @@ RSpec.describe "Invariant: SignificantFindingsOnly" do # rubocop:disable RSpec/D
       smells, complexities, duplications, _raise = inputs
       orch = default_significance_class.new(smells: smells, complexities: complexities,
                                             duplications: duplications, vendored_docs: real_reek_doc_map)
-      Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch).first
+      run, _events, smells_set = Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch)
+      [run, smells_set]
     end
 
-    def significant_findings_for(run)
+    def significant_findings_for(run, smells)
       default = Snoot::AnalyserOrchestration::Default
       case run.selected_finding
-      when Snoot::Smell then default.significant_smells(run.smells)
+      when Snoot::Smell then default.significant_smells(smells)
       when Snoot::ComplexityHit then default.significant_complexities(Set[run.selected_finding])
       when Snoot::DuplicationCluster then default.significant_duplications(Set[run.selected_finding])
       end
     end
 
-    def expect_selected_finding_significant(run)
-      expect(significant_findings_for(run)).to include(run.selected_finding)
+    def expect_selected_finding_significant(run, smells)
+      expect(significant_findings_for(run, smells)).to include(run.selected_finding)
     end
 
     it "the selected finding survives its variant's significance check", :aggregate_failures, :pbt do
       forall(analyse_run_inputs_gen) do |inputs|
-        run = build_run_for(inputs)
-        expect_selected_finding_significant(run) if run.outcome == :finding_rendered
+        run, smells = build_run_for(inputs)
+        expect_selected_finding_significant(run, smells) if run.outcome == :finding_rendered
       end
     end
   end

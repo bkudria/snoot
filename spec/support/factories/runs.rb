@@ -31,8 +31,8 @@ module Snoot
         events
       end
 
-      def trigger_render_report(run, orchestration: fake_orchestration)
-        Snoot::RenderReport.invoke(run, orchestration: orchestration)
+      def trigger_render_report(run, smells: Set[], orchestration: fake_orchestration)
+        Snoot::RenderReport.invoke(run, smells: smells, orchestration: orchestration)
       end
 
       def capture_report

@@ -52,14 +52,14 @@ module Snoot
 
     def analysis_failure(run, failure)
       failed = run.transition_to(:analysis_failed, failure: failure)
-      [failed, [Event.new(name: :analysis_failed, run: failed, smell_type: nil, error: nil)]]
+      [failed, [Event.new(name: :analysis_failed, run: failed, smell_type: nil, error: nil)], Set[]]
     end
 
     def decide_outcome(run, sources)
-      run = run.with(smells: sources.smells.to_set)
+      smells = sources.smells.to_set
       doc_less_smell_type = doc_less_top_smell_type(sources)
       terminal = transition(run, sources.candidates)
-      [terminal, doc_less_events(terminal, doc_less_smell_type)]
+      [terminal, doc_less_events(terminal, doc_less_smell_type), smells]
     end
 
     def doc_less_top_smell_type(sources)

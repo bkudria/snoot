@@ -44,10 +44,10 @@ module Snoot
       def run_invoked(paths, pipeline: Pipeline.default)
         paths = CLI.default_paths if paths.empty?
         events = [Event.new(name: :run_invoked, operator:, paths:, run: nil, finding: nil, sections: nil)]
-        run, analyse_events = AnalyseRun.invoke(paths, orchestration: pipeline.orchestration)
+        run, analyse_events, smells = AnalyseRun.invoke(paths, orchestration: pipeline.orchestration)
         events.concat(analyse_events)
         CLI.emit_warnings(analyse_events, pipeline.streams.stderr)
-        events.concat(events_for_outcome(run, analyse_events, pipeline: pipeline))
+        events.concat(events_for_outcome(run, smells, pipeline: pipeline))
         [run, events]
       end
 
@@ -56,10 +56,10 @@ module Snoot
       # :reek:FeatureEnvy -- this is the dispatch layer between the
       # pipeline's IO bundle (streams) and the per-outcome writer; the
       # whole job is to route to the right sink.
-      def events_for_outcome(run, _analyse_events, pipeline:)
+      def events_for_outcome(run, smells, pipeline:)
         streams = pipeline.streams
         case run.outcome
-        when :finding_rendered then [emit_report(run, pipeline: pipeline)]
+        when :finding_rendered then [emit_report(run, smells, pipeline: pipeline)]
         when :nothing_to_report then CLI.emit_nothing_to_report(streams.stdout)
         when :analysis_failed then CLI.emit_failure(run, streams.stderr)
         else []
@@ -69,8 +69,8 @@ module Snoot
       # :reek:FeatureEnvy -- pipeline is the IO/orchestration bundle the
       # CLI threads into both the renderer and the stdout sink; routing
       # both arms through pipeline is the surface contract.
-      def emit_report(run, pipeline:)
-        RenderReport.invoke(run, orchestration: pipeline.orchestration) => { sections:, finding: }
+      def emit_report(run, smells, pipeline:)
+        RenderReport.invoke(run, smells: smells, orchestration: pipeline.orchestration) => { sections:, finding: }
         pipeline.streams.stdout.write(CLI.format_report(sections))
         Event.new(name: :report_emitted, operator: operator, paths: run.paths,
                   run: run, finding: finding, sections: sections)

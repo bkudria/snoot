@@ -12,32 +12,6 @@ RSpec.describe Snoot::Run do
       expect(run.outcome).to eq(:pending)
     end
 
-    it "carries an empty smells set by default" do
-      run = described_class.new(paths: Set[], outcome: :pending)
-      expect(run.smells).to eq(Set[])
-    end
-
-    it "accepts and exposes a smells set" do
-      smell = build_smell
-      run = described_class.new(paths: Set[], outcome: :pending, smells: Set[smell])
-      expect(run.smells).to eq(Set[smell])
-    end
-
-    it "preserves smells across transition_to" do
-      smell = build_smell
-      run = described_class.new(paths: Set[], outcome: :pending, smells: Set[smell])
-      moved = run.transition_to(:nothing_to_report)
-      expect(moved.smells).to eq(Set[smell])
-    end
-
-    it "clears smells when transitioning to :analysis_failed (SmellsEmptyOnPendingOrFailed)" do
-      smell = build_smell
-      run = described_class.new(paths: Set[], outcome: :pending, smells: Set[smell])
-      af = Snoot::AnalyserFailure.new(analyser: :reek, message: "boom")
-      moved = run.transition_to(:analysis_failed, failure: af)
-      expect(moved.smells).to eq(Set[])
-    end
-
     it "carries an AnalyserFailure on .failure when outcome = :analysis_failed" do
       af = Snoot::AnalyserFailure.new(analyser: :reek, message: "boom")
       run = described_class.new(paths: Set[], outcome: :analysis_failed, failure: af)

@@ -3,15 +3,14 @@
 module Snoot
   # Run is the entity from snoot.allium tracking one analysis pass: the
   # input paths, the outcome (pending, finding_rendered,
-  # nothing_to_report, analysis_failed), the selected_finding when one
-  # was chosen, and the set of smells gathered during analysis.
-  # Encodes the declared transitions and gates selected_finding access
-  # behind the :finding_rendered outcome.
-  Run = Data.define(:paths, :outcome, :selected_finding, :smells, :failure) do
+  # nothing_to_report, analysis_failed), and the selected_finding when
+  # one was chosen. Encodes the declared transitions and gates
+  # selected_finding access behind the :finding_rendered outcome.
+  Run = Data.define(:paths, :outcome, :selected_finding, :failure) do
     alias_method :_raw_selected_finding, :selected_finding
     alias_method :_raw_failure, :failure
 
-    def initialize(paths:, outcome:, selected_finding: nil, smells: Set[], failure: nil)
+    def initialize(paths:, outcome:, selected_finding: nil, failure: nil)
       super
       validate_selected_finding!
       validate_failure!
@@ -79,7 +78,7 @@ module Snoot
     private :transition_finding_rendered
 
     def transition_analysis_failed(failure)
-      with(outcome: :analysis_failed, selected_finding: nil, failure: failure, smells: Set[])
+      with(outcome: :analysis_failed, selected_finding: nil, failure: failure)
     end
     private :transition_analysis_failed
   end

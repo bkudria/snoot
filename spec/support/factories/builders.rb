@@ -57,12 +57,11 @@ module Snoot
         Snoot::Operator.new
       end
 
-      def build_run_with_finding(finding, smells: nil)
+      def build_run_with_finding(finding)
         Snoot::Run.new(
           paths: Set[build_path],
           outcome: :finding_rendered,
-          selected_finding: finding,
-          smells: smells || (finding.is_a?(Snoot::Smell) ? Set[finding] : Set[])
+          selected_finding: finding
         )
       end
 

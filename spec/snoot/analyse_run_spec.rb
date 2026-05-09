@@ -49,7 +49,7 @@ RSpec.describe Snoot::AnalyseRun do
     end
   end
 
-  describe "smells field propagation" do
+  describe "smells return value" do
     let(:documented_smell) { build_smell(smell_type: build_smell_type(name: "Documented")) }
     let(:sibling_smell) do
       build_smell(
@@ -64,16 +64,23 @@ RSpec.describe Snoot::AnalyseRun do
       )
     end
 
-    it "carries the orchestration's smells onto run.smells when finding_rendered", :aggregate_failures do
-      run = invoke_analyse_run(Set[build_path], orchestration: doc_orch)
+    it "returns the orchestration's smells as the third tuple element when finding_rendered", :aggregate_failures do
+      run, _events, smells = described_class.invoke(Set[build_path], orchestration: doc_orch)
       expect(run.outcome).to eq(:finding_rendered)
-      expect(run.smells).to eq(Set[documented_smell, sibling_smell])
+      expect(smells).to eq(Set[documented_smell, sibling_smell])
     end
 
-    it "carries the orchestration's smells onto run.smells when nothing_to_report", :aggregate_failures do
-      run = invoke_analyse_run(Set[build_path], orchestration: fake_orchestration)
+    it "returns an empty smells set when nothing_to_report", :aggregate_failures do
+      run, _events, smells = described_class.invoke(Set[build_path], orchestration: fake_orchestration)
       expect(run.outcome).to eq(:nothing_to_report)
-      expect(run.smells).to eq(Set[])
+      expect(smells).to eq(Set[])
+    end
+
+    it "returns an empty smells set when analysis_failed", :aggregate_failures do
+      orch = fake_orchestration(reek_raises: StandardError.new("boom"))
+      run, _events, smells = described_class.invoke(Set[build_path], orchestration: orch)
+      expect(run.outcome).to eq(:analysis_failed)
+      expect(smells).to eq(Set[])
     end
   end
 
