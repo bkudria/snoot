@@ -133,30 +133,23 @@ RSpec.describe Snoot::CLI do
   end
 
   describe "surface-guarantee.TerminatesInOneOutcome" do
+    subject(:outcome) { run_cli.first.outcome }
+
     context "with a documented smell" do
       let(:smell) { build_smell(smell_type: build_smell_type(name: "Documented")) }
       let(:orchestration) do
         fake_orchestration(smells: Set[smell], vendored_docs: { "Documented" => "## doc" })
       end
 
-      it "drives the run to :finding_rendered when a documented smell is found" do
-        run, _events = run_cli
-        expect(run.outcome).to eq(:finding_rendered)
-      end
+      it { is_expected.to eq(:finding_rendered) }
     end
 
-    it "drives the run to :nothing_to_report when no findings are produced" do
-      run, _events = run_cli
-      expect(run.outcome).to eq(:nothing_to_report)
-    end
+    it { is_expected.to eq(:nothing_to_report) }
 
     context "when an analyser raises" do
       let(:orchestration) { fake_orchestration(reek_raises: StandardError.new("boom")) }
 
-      it "drives the run to :analysis_failed when an analyser raises" do
-        run, _events = run_cli
-        expect(run.outcome).to eq(:analysis_failed)
-      end
+      it { is_expected.to eq(:analysis_failed) }
     end
   end
 end
