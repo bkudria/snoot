@@ -17,24 +17,6 @@ module Snoot
       end
       # rubocop:enable Metrics/ParameterLists
 
-      def reek_analyse(_paths)
-        raise @reek_raises if @reek_raises
-
-        @smells
-      end
-
-      def flog_analyse(_paths)
-        raise @flog_raises if @flog_raises
-
-        @complexities
-      end
-
-      def flay_analyse(_paths)
-        raise @flay_raises if @flay_raises
-
-        @duplications
-      end
-
       def vendored_doc(smell_type)
         @vendored_docs[smell_type.name]
       end

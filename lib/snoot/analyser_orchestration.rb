@@ -2,11 +2,8 @@
 
 module Snoot
   # AnalyserOrchestration is the contract from snoot.allium that the CLI
-  # surface demands. An implementation must supply eight methods:
+  # surface demands. An implementation must supply five methods:
   #
-  #   reek_analyse(paths) -> Set<Smell>
-  #   flog_analyse(paths) -> Set<ComplexityHit>
-  #   flay_analyse(paths) -> Set<DuplicationCluster>
   #   vendored_doc(smell_type) -> String?
   #   significant_smells(smells) -> Set<Smell>
   #   significant_complexities(complexities) -> Set<ComplexityHit>
@@ -17,7 +14,7 @@ module Snoot
   # invariant in snoot.allium). Outputs may differ across invocations as
   # the source under analysis changes; that is not a violation.
   #
-  # The contract is duck-typed: any object responding to the eight methods
+  # The contract is duck-typed: any object responding to the five methods
   # qualifies. There is no abstract base class to inherit from. The test
   # double is Snoot::Spec::FakeOrchestration; the production adapter is
   # Snoot::AnalyserOrchestration::Default. Location rendering for the
