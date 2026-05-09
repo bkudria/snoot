@@ -35,24 +35,33 @@ module Snoot
     end
 
     def non_smell_sections(finding)
+      case finding
+      when ComplexityHit then complexity_hit_sections(finding)
+      when DuplicationCluster then duplication_cluster_sections(finding)
+      end
+    end
+
+    def complexity_hit_sections(hit)
+      loc = hit.location.description
+      score = hit.score.to_s("F")
       {
-        header: render_header(finding),
-        finding_context: render_finding_context(finding),
-        doc: finding_doc(finding)
+        header: "High complexity in #{hit.method_name} at #{loc} (score: #{score})",
+        finding_context: "#{loc}\n\nMethod: #{hit.method_name}\nScore: #{score}",
+        doc: "High complexity hits indicate a method or class doing too much. " \
+             "Consider extracting helpers, simplifying conditionals, or " \
+             "splitting the responsibility across smaller units."
       }
     end
 
-    def finding_doc(finding)
-      case finding
-      when ComplexityHit
-        "High complexity hits indicate a method or class doing too much. " \
-        "Consider extracting helpers, simplifying conditionals, or " \
-        "splitting the responsibility across smaller units."
-      when DuplicationCluster
-        "Structural duplication suggests an extracted abstraction is missing. " \
-        "Consider whether the duplicated shape belongs to a single helper, " \
-        "module, or value type."
-      end
+    def duplication_cluster_sections(cluster)
+      rendered_locations = cluster.locations.map(&:description)
+      {
+        header: "Structural duplication: #{cluster.locations.size} locations (signature: #{cluster.signature})",
+        finding_context: "Locations:\n#{rendered_locations.join("\n")}",
+        doc: "Structural duplication suggests an extracted abstraction is missing. " \
+             "Consider whether the duplicated shape belongs to a single helper, " \
+             "module, or value type."
+      }
     end
 
     def render_instances(smells, selected)
@@ -69,26 +78,6 @@ module Snoot
     def render_instance_group(path, smells)
       lines = smells.map { |smell| "  Line #{smell.location.line_start}: #{smell.message}" }
       "#{path}\n#{lines.join("\n")}"
-    end
-
-    def render_header(finding)
-      case finding
-      when ComplexityHit
-        loc = finding.location.description
-        "High complexity in #{finding.method_name} at #{loc} (score: #{finding.score.to_s('F')})"
-      when DuplicationCluster
-        "Structural duplication: #{finding.locations.size} locations (signature: #{finding.signature})"
-      end
-    end
-
-    def render_finding_context(finding)
-      case finding
-      when ComplexityHit
-        "#{finding.location.description}\n\nMethod: #{finding.method_name}\nScore: #{finding.score.to_s('F')}"
-      when DuplicationCluster
-        rendered = finding.locations.map(&:description)
-        "Locations:\n#{rendered.join("\n")}"
-      end
     end
   end
 end
