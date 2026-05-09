@@ -147,9 +147,7 @@ contract AnalyserOrchestration {
 -- only within the scope of the Run that produced them; they have no
 -- persistence beyond the run.
 
-entity Finding {
-    kind: Smell | ComplexityHit | DuplicationCluster
-}
+entity Finding {}
 
 variant Smell : Finding {
     smell_type: SmellType
@@ -276,7 +274,7 @@ rule AnalyseRun {
             -- nested if-guards narrow top_finding_overall to a Smell
             -- variant before accessing smell_type.
             if top_finding_overall != null:
-                if top_finding_overall.kind = Smell:
+                if top_finding_overall is Smell:
                     if vendored_doc(top_finding_overall.smell_type) = null:
                         SkippedDocLessSmellWarned(
                             run: run,
@@ -311,7 +309,7 @@ rule RenderReport {
     -- AnalyserOrchestration: behavioural variability is contracted, but
     -- static report copy is owned by the implementation.
     ensures:
-        if run.selected_finding.kind = Smell:
+        if run.selected_finding is Smell:
             ReportEmitted(
                 run: run,
                 finding: run.selected_finding,

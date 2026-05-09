@@ -2,10 +2,8 @@
 
 module Snoot
   # Sum-type marker for the three Finding variants declared in `snoot.allium`:
-  # Smell, ComplexityHit, and DuplicationCluster. Variants include this module
-  # to pick up `kind`, the discriminator declared on the Finding entity -- it
-  # returns the variant's own class.
+  # Smell, ComplexityHit, and DuplicationCluster. Each variant `include`s
+  # this module so consumers can rely on the structural sum-type relationship.
   module Finding
-    def kind = self.class
   end
 end

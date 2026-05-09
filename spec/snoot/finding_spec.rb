@@ -4,14 +4,6 @@ require "spec_helper"
 
 # Spec source: snoot.allium -- entity Finding + variants Smell | ComplexityHit | DuplicationCluster
 RSpec.describe Snoot::Finding do
-  describe "entity-fields.Finding" do
-    it "every variant exposes the kind discriminator as the variant class", :aggregate_failures do
-      expect(build_smell.kind).to eq(Snoot::Smell)
-      expect(build_complexity_hit.kind).to eq(Snoot::ComplexityHit)
-      expect(build_duplication_cluster.kind).to eq(Snoot::DuplicationCluster)
-    end
-  end
-
   describe "sum-type-variant.Smell" do
     it "exposes smell_type, location, message under a Smell guard", :aggregate_failures do
       smell = build_smell
