@@ -84,8 +84,6 @@ module Snoot
       [Event.new(name: :skipped_doc_less_smell_warned, run: run, smell_type: smell_type, error: nil)]
     end
 
-    # Tentative -- pending snoot.allium open question on cost-ranking formula.
-    # Category priority: Smell > DuplicationCluster > ComplexityHit.
     PICKERS = [
       [Smell, :top_smell],
       [DuplicationCluster, :top_duplication],
