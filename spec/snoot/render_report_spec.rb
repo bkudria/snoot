@@ -106,8 +106,12 @@ RSpec.describe Snoot::RenderReport do
       expect(report.sections[:finding_context]).to eq("lib/y.rb:5-30\n\nMethod: Foo#bar\nScore: 12.5")
     end
 
-    it "renders doc as the high-complexity prose constant" do
-      expect(report.sections[:doc]).to eq(Snoot::ComplexityHit::DOC)
+    it "renders doc as the high-complexity prose" do
+      expect(report.sections[:doc]).to eq(
+        "High complexity hits indicate a method or class doing too much. " \
+        "Consider extracting helpers, simplifying conditionals, or " \
+        "splitting the responsibility across smaller units."
+      )
     end
 
     it "emits exactly the three sections header, finding_context, doc" do
@@ -136,8 +140,12 @@ RSpec.describe Snoot::RenderReport do
       expect(report.sections[:finding_context]).to include("lib/b.rb:4-11")
     end
 
-    it "renders doc as the high-duplication prose constant" do
-      expect(report.sections[:doc]).to eq(Snoot::DuplicationCluster::DOC)
+    it "renders doc as the high-duplication prose" do
+      expect(report.sections[:doc]).to eq(
+        "Structural duplication suggests an extracted abstraction is missing. " \
+        "Consider whether the duplicated shape belongs to a single helper, " \
+        "module, or value type."
+      )
     end
 
     it "emits exactly the three sections header, finding_context, doc" do
