@@ -91,7 +91,8 @@ module Snoot
     end
 
     def emit_failure(run, stderr)
-      stderr.write("analysis failed (#{run.failure.analyser}): #{run.failure.message}\n")
+      failure = run.failure
+      stderr.write("analysis failed (#{failure.analyser}): #{failure.message}\n")
       []
     end
 
