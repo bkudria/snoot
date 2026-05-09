@@ -2,10 +2,17 @@
 
 ## Specification
 
-The behavioural spec lives in [`snoot.allium`](snoot.allium). It is the source
-of truth for runtime behaviour; treat it as a contract, not documentation.
-When implementation and spec disagree, the spec wins until the spec is
-amended.
+[`GOALS.md`](GOALS.md), [`snoot.allium`](snoot.allium), the implementation
+in `lib/`, and the tests in `spec/` are peer artifacts: design intent,
+behavioural contract, mechanism, and verification of the same system. The
+four must reflect each other. Changing any one obliges checking and
+updating the others; conflicts are reconciled, not unilaterally decided.
+
+**Before editing `snoot.allium`**, you MUST load the `allium:tend` skill.
+No exceptions.
+
+**Before checking or asserting alignment between `snoot.allium` and the
+codebase**, you MUST load the `allium:weed` skill. No exceptions.
 
 ## Test layout
 

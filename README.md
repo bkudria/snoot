@@ -6,7 +6,7 @@ The report is centred on an LLM coding agent as the reader: each run produces on
 
 ## Status
 
-Pre-1.0. All three analysers are wired into `AnalyserOrchestration::Default` (Reek + Flog + Flay), and `snoot <paths>` drives the full pipeline end-to-end: it reports a single finding to stdout, an acknowledgement when nothing is worth reporting, or a failure line on stderr. With no positional arguments, `snoot` scans the current directory. The exit code is `1` when a finding is rendered, `0` when there is nothing to report, and `2` when analysis fails. The behavioural specification lives in [`snoot.allium`](snoot.allium).
+Pre-1.0. Three analysers (Reek / Flog / Flay) are used, and `snoot <paths>` drives the full pipeline end-to-end: it reports a single finding to stdout, an acknowledgement when nothing is worth reporting, or a failure line on stderr. With no positional arguments, `snoot` scans the current directory. The exit code is `1` when a finding is rendered, `0` when there is nothing to report, and `2` when analysis fails.
 
 ## Install
 
