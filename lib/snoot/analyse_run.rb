@@ -46,7 +46,7 @@ module Snoot
     end
 
     def decide_outcome(run, sources)
-      smells = sources.smells.to_set
+      smells = sources.smells
       top_overall = select_top_finding(sources.significant_union)
       doc_less_smell_type = doc_less_smell_type_of(top_overall, sources)
       selected = doc_less_smell_type ? select_top_finding(sources.candidates) : top_overall
