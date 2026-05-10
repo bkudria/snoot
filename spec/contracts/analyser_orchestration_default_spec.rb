@@ -166,7 +166,7 @@ RSpec.describe "AnalyserOrchestration::Default" do
       expect(analyse_flog(trivial_src).first).to eq(Set[])
     end
 
-    it "expands a directory Path to its .rb files (defers to PathExpander)" do
+    it "expands a directory Path to its .rb/.rake files (defers to PathExpander, matches Flog::CLI)" do
       Dir.mktmpdir do |dir|
         File.write(File.join(dir, "tangled.rb"), complex_src)
         hits = adapter.flog_analyse(Set[Snoot::Path.new(raw: dir)])

@@ -23,6 +23,17 @@ module Snoot
     # AnalyseRun). Flay duplication uses Flay's default mass threshold
     # (16). Stateless: implemented as a module of module functions, used
     # as the orchestration value directly (no `.new`).
+    #
+    # Per-analyser directory expansion mirrors each tool's own CLI
+    # default rather than imposing a snoot-wide glob, so a directory
+    # Path resolves exactly as that tool would resolve it on the command
+    # line. Reek defers to `Reek::Source::SourceLocator` (which also
+    # honours `.reek.yml exclude_paths`); Flog uses `**/*.{rb,rake}` to
+    # match `Flog::CLI`; Flay uses `**/*.rb` (Flay's CLI additionally
+    # appends extensions advertised by installed Flay plugins, which
+    # snoot does not load). The orchestration contract is path-abstract
+    # (snoot.allium:150), so this is implementation policy each adapter
+    # owns.
     module Default
       DOCS_ROOT = File.expand_path("../../../data/reek_docs", __dir__).freeze
       DOC_FILENAME_PATTERN = /([a-z])([A-Z])/
