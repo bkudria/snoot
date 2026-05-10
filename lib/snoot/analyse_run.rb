@@ -30,35 +30,6 @@ module Snoot
       def name = :skipped_doc_less_smell_warned
     end
 
-    # SourcesView wraps a Snoot::Sources value with the orchestration
-    # that produced it, so downstream phases can ask for derived views
-    # (`significant_union`, `candidates`) and consult `vendored_doc?`
-    # without re-threading orchestration through every helper. The
-    # underlying Sources is the spec-level value type returned by
-    # AnalyserOrchestration#analyse.
-    SourcesView = Data.define(:sources, :orchestration) do
-      def smells = sources.smells
-      def complexities = sources.complexities
-      def duplications = sources.duplications
-
-      def significant_union
-        significant_smells | significant_complexities | significant_duplications
-      end
-
-      def candidates
-        documented = significant_smells.select { |smell| vendored_doc(smell.smell_type) }.to_set
-        documented | significant_complexities | significant_duplications
-      end
-
-      def significant_smells = orchestration.significant_smells(smells)
-      def significant_complexities = orchestration.significant_complexities(complexities)
-      def significant_duplications = orchestration.significant_duplications(duplications)
-
-      def vendored_doc(smell_type)
-        orchestration.vendored_doc(smell_type)
-      end
-    end
-
     module_function
 
     def invoke(paths, orchestration:)
@@ -76,13 +47,14 @@ module Snoot
 
     def decide_outcome(run, sources)
       smells = sources.smells.to_set
-      doc_less_smell_type = doc_less_top_smell_type(sources)
-      terminal = transition(run, sources.candidates)
+      top_overall = select_top_finding(sources.significant_union)
+      doc_less_smell_type = doc_less_smell_type_of(top_overall, sources)
+      selected = doc_less_smell_type ? select_top_finding(sources.candidates) : top_overall
+      terminal = transition(run, selected)
       Result.new(run: terminal, events: doc_less_events(terminal, doc_less_smell_type), smells: smells)
     end
 
-    def doc_less_top_smell_type(sources)
-      top = select_top_finding(sources.significant_union)
+    def doc_less_smell_type_of(top, sources)
       return nil unless top.is_a?(Smell)
 
       smell_type = top.smell_type
@@ -91,10 +63,10 @@ module Snoot
       smell_type
     end
 
-    def transition(run, candidates)
-      return run.transition_to(:nothing_to_report) if candidates.empty?
+    def transition(run, selected)
+      return run.transition_to(:nothing_to_report) if selected.nil?
 
-      run.transition_to(:finding_rendered, selected_finding: select_top_finding(candidates))
+      run.transition_to(:finding_rendered, selected_finding: selected)
     end
 
     def doc_less_events(run, smell_type)
