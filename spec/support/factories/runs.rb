@@ -8,8 +8,7 @@ module Snoot
       end
 
       def invoke_analyse_run(paths = Set[build_path], orchestration: fake_orchestration)
-        run, _events = Snoot::AnalyseRun.invoke(paths, orchestration: orchestration)
-        run
+        Snoot::AnalyseRun.invoke(paths, orchestration: orchestration).run
       end
 
       def invoke_analyse_run_with_only_doc_less_smells
@@ -20,10 +19,11 @@ module Snoot
       # Returns [run, events] -- block result for capture_emitted_events.
       def invoke_analyse_run_with_doc_less_top_smell
         smell = build_smell(smell_type: build_smell_type(name: "Undocumented"))
-        Snoot::AnalyseRun.invoke(
+        result = Snoot::AnalyseRun.invoke(
           Set[build_path],
           orchestration: fake_orchestration(smells: Set[smell])
         )
+        [result.run, result.events]
       end
 
       def capture_emitted_events

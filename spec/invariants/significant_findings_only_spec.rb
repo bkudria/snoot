@@ -39,7 +39,7 @@ RSpec.describe "Invariant: SignificantFindingsOnly" do # rubocop:disable RSpec/D
     it "drops a singleton smell + a sub-floor complexity to nothing_to_report" do
       orch = default_significance_class.new(smells: Set[singleton_smell], complexities: Set[sub_floor_hit],
                                             vendored_docs: { "FeatureEnvy" => "## doc" })
-      run, = Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch)
+      Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch) => { run: }
       expect(run.outcome).to eq(:nothing_to_report)
     end
 
@@ -47,7 +47,7 @@ RSpec.describe "Invariant: SignificantFindingsOnly" do # rubocop:disable RSpec/D
       smells, complexities, duplications, _raise = inputs
       orch = default_significance_class.new(smells: smells, complexities: complexities,
                                             duplications: duplications, vendored_docs: real_reek_doc_map)
-      run, _events, smells_set = Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch)
+      Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch) => { run:, smells: smells_set }
       [run, smells_set]
     end
 

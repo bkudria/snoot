@@ -9,7 +9,7 @@ module Snoot
       def run_invoked(paths, pipeline: Pipeline.default)
         paths = CLI.default_paths if paths.empty?
         events = [RunInvoked.new(operator:, paths:)]
-        run, analyse_events, smells = AnalyseRun.invoke(paths, orchestration: pipeline.orchestration)
+        AnalyseRun.invoke(paths, orchestration: pipeline.orchestration) => { run:, events: analyse_events, smells: }
         events.concat(analyse_events)
         CLI.emit_warnings(analyse_events, pipeline.stderr)
         events.concat(events_for_outcome(run, smells, pipeline: pipeline))

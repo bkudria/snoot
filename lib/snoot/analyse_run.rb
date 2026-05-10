@@ -3,7 +3,9 @@
 module Snoot
   # AnalyseRun is the rule from snoot.allium that turns a pending Run into a
   # terminal outcome by orchestrating the three analysers and selecting one
-  # finding (or none, or signalling failure). Returns [run, events].
+  # finding (or none, or signalling failure). Returns an AnalyseRun::Result
+  # value carrying the terminal Run, the audit events emitted along the way,
+  # and the raw smell set the orchestration produced.
   module AnalyseRun
     # Event is the marker module sum-typing the two audit records
     # AnalyseRun emits: AnalysisFailed on the analysis_failed branch
@@ -69,14 +71,14 @@ module Snoot
 
     def analysis_failure(run, failure)
       failed = run.transition_to(:analysis_failed, failure: failure)
-      [failed, [AnalysisFailed.new(run: failed)], Set[]]
+      Result.new(run: failed, events: [AnalysisFailed.new(run: failed)], smells: Set[])
     end
 
     def decide_outcome(run, sources)
       smells = sources.smells.to_set
       doc_less_smell_type = doc_less_top_smell_type(sources)
       terminal = transition(run, sources.candidates)
-      [terminal, doc_less_events(terminal, doc_less_smell_type), smells]
+      Result.new(run: terminal, events: doc_less_events(terminal, doc_less_smell_type), smells: smells)
     end
 
     def doc_less_top_smell_type(sources)

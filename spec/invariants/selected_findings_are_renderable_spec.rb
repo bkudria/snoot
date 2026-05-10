@@ -13,7 +13,7 @@ RSpec.describe "Invariant: SelectedFindingsAreRenderable" do # rubocop:disable R
       real_type = Snoot::SmellType.new(name: "FeatureEnvy")
       smell = build_smell(smell_type: real_type)
       orch = fake_orchestration(smells: Set[smell], vendored_docs: { "FeatureEnvy" => "## doc" })
-      run, _events = Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch)
+      Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch) => { run: }
 
       expect(Snoot::AnalyserOrchestration::Default.vendored_doc(run.selected_finding.smell_type)).not_to be_nil
     end

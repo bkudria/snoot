@@ -61,8 +61,7 @@ module Snoot
           vendored_docs: real_reek_doc_map,
           reek_raises: raise_flag ? StandardError.new("boom") : nil
         )
-        run, _events = Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch)
-        run
+        Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch).run
       end
     end
   end
