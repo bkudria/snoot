@@ -18,6 +18,16 @@ module Snoot
   # .for(Operator.new).run_invoked, mapping the terminal outcome to an
   # EXIT_CODES integer. .for narrows on actor type (only Operator is
   # admitted) and returns a Session carrying the operator.
+  #
+  # The two entry points return deliberately different shapes. .run is
+  # the POSIX boundary: argv -> Integer, consumed by `exit
+  # Snoot::CLI.run(ARGV)` in exe/snoot. Session#run_invoked is the
+  # in-process boundary: Set<Path> -> [Run, Array<Event>], used by
+  # tests and any library embedding that needs the full event list.
+  # Internally .run calls run_invoked and projects Run#outcome through
+  # EXIT_CODES, so the integer is a lossy view of the Run; callers
+  # that need the Run, the events, or both must use the
+  # operator-binding entry.
   module CLI
     NOTHING_TO_REPORT = "nothing to report -- no findings above snoot's significance floor\n"
     DEFAULT_PATHS = Set[Snoot::Path.new(raw: ".")].freeze
