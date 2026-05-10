@@ -32,16 +32,16 @@ module Snoot
 
     # SourcesView wraps a Snoot::Sources value with the orchestration
     # that produced it, so downstream phases can ask for derived views
-    # (`all`, `candidates`) and consult `vendored_doc?` without
-    # re-threading orchestration through every helper. The underlying
-    # Sources is the spec-level value type returned by
+    # (`significant_union`, `candidates`) and consult `vendored_doc?`
+    # without re-threading orchestration through every helper. The
+    # underlying Sources is the spec-level value type returned by
     # AnalyserOrchestration#analyse.
     SourcesView = Data.define(:sources, :orchestration) do
       def smells = sources.smells
       def complexities = sources.complexities
       def duplications = sources.duplications
 
-      def all
+      def significant_union
         significant_smells | significant_complexities | significant_duplications
       end
 
@@ -82,7 +82,7 @@ module Snoot
     end
 
     def doc_less_top_smell_type(sources)
-      top = select_top_finding(sources.all)
+      top = select_top_finding(sources.significant_union)
       return nil unless top.is_a?(Smell)
 
       smell_type = top.smell_type

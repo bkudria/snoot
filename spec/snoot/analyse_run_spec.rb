@@ -159,8 +159,8 @@ RSpec.describe Snoot::AnalyseRun do
       expect(run.outcome).to eq(:nothing_to_report)
     end
 
-    it "SourcesView#all and #candidates return Sets per snoot.allium:251-285", :aggregate_failures do
-      expect(empty_view.all).to be_a(Set)
+    it "SourcesView#significant_union and #candidates return Sets per snoot.allium:251-285", :aggregate_failures do
+      expect(empty_view.significant_union).to be_a(Set)
       expect(empty_view.candidates).to be_a(Set)
     end
   end
