@@ -24,6 +24,14 @@ module Snoot
     # (16). Stateless: implemented as a module of module functions, used
     # as the orchestration value directly (no `.new`).
     #
+    # Default's public surface is exactly the five contracted methods
+    # (vendored_doc, significant_smells, significant_complexities,
+    # significant_duplications, analyse). The per-analyser drivers
+    # (reek_analyse, flog_analyse, flay_analyse) and the per-pathname
+    # helper (reek_smells_for) are private; their behaviour is observed
+    # through analyse. Pure third-party-output translation is delegated
+    # to the sibling module ResultMapping.
+    #
     # Per-analyser directory expansion mirrors each tool's own CLI
     # default rather than imposing a snoot-wide glob, so a directory
     # Path resolves exactly as that tool would resolve it on the command
@@ -68,7 +76,7 @@ module Snoot
         examiner.smells.filter_map do |warning|
           next unless warning.lines&.any?
 
-          smell_from_reek_warning(warning)
+          ResultMapping.smell_from_reek_warning(warning)
         end
       end
 
@@ -77,7 +85,7 @@ module Snoot
         flog = Flog.new
         flog.flog(*files)
         flog.totals.filter_map do |class_method, score|
-          complexity_hit_from_flog_entry(
+          ResultMapping.complexity_hit_from_flog_entry(
             class_method: class_method, score: score,
             raw_location: flog.method_locations[class_method]
           )
@@ -89,44 +97,8 @@ module Snoot
         flay = Flay.new
         flay.process(*files)
         flay.analyze.each_with_object(Set[]) do |item, clusters|
-          clusters << duplication_cluster_from_flay_item(item)
+          clusters << ResultMapping.duplication_cluster_from_flay_item(item)
         end
-      end
-
-      def smell_from_reek_warning(warning)
-        lines = warning.lines
-        Smell.new(
-          smell_type: SmellType.new(name: warning.smell_type),
-          location: Location.new(
-            path: Path.new(raw: warning.source),
-            line_start: lines.first,
-            line_end: lines.last
-          ),
-          message: "#{warning.context} #{warning.message}"
-        )
-      end
-
-      # Flog stores method locations as "file:line" or "file:line-line_max".
-      # Returns nil when the entry is missing (e.g. main#none) so callers
-      # can skip top-level expressions that lack a method-level location.
-      def complexity_hit_from_flog_entry(class_method:, score:, raw_location:)
-        file, range = raw_location.to_s.split(":", 2)
-        return unless file && range
-
-        line_start, = range.split("-", 2).map(&:to_i)
-        ComplexityHit.new(
-          location: Location.new(path: Path.new(raw: file), line_start: line_start, line_end: line_start),
-          method_name: class_method,
-          score: BigDecimal(score.to_s)
-        )
-      end
-
-      def duplication_cluster_from_flay_item(item)
-        locations = item.locations.each_with_object(Set[]) do |loc, set|
-          line = loc.line
-          set << Location.new(path: Path.new(raw: loc.file), line_start: line, line_end: line)
-        end
-        DuplicationCluster.new(signature: item.structural_hash.to_s, locations: locations)
       end
 
       def vendored_doc(smell_type)
@@ -163,6 +135,8 @@ module Snoot
           smells: outputs[:reek], complexities: outputs[:flog], duplications: outputs[:flay]
         )
       end
+
+      private_class_method :reek_analyse, :reek_smells_for, :flog_analyse, :flay_analyse
     end
   end
 end

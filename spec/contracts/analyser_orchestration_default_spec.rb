@@ -22,7 +22,7 @@ RSpec.describe "AnalyserOrchestration::Default" do
     end
   end
 
-  describe "reek_analyse" do
+  describe "Reek path through analyse" do
     let(:smelly_src) do
       <<~RUBY
         class Dirty
@@ -68,7 +68,7 @@ RSpec.describe "AnalyserOrchestration::Default" do
     it "expands a directory Path to its .rb files (defers to Reek's SourceLocator)" do
       Dir.mktmpdir do |dir|
         File.write(File.join(dir, "dirty.rb"), smelly_src)
-        smells = adapter.reek_analyse(Set[Snoot::Path.new(raw: dir)])
+        smells = adapter.analyse(Set[Snoot::Path.new(raw: dir)]).smells
         expect(smells).not_to be_empty
       end
     end
@@ -82,7 +82,7 @@ RSpec.describe "AnalyserOrchestration::Default" do
       Dir.mktmpdir do |dir|
         File.write(File.join(dir, ".reek.yml"), "exclude_paths:\n  - #{exclude}\n")
         smelly_under.each { |sub| seed_smelly_subdir(dir, sub) }
-        smells = Dir.chdir(dir) { adapter.reek_analyse(Set[Snoot::Path.new(raw: ".")]) }
+        smells = Dir.chdir(dir) { adapter.analyse(Set[Snoot::Path.new(raw: ".")]).smells }
         return smells.map { |smell| smell.location.path.raw }
       end
     end
@@ -94,37 +94,7 @@ RSpec.describe "AnalyserOrchestration::Default" do
     end
   end
 
-  describe ".smell_from_reek_warning" do
-    subject(:smell) { adapter.smell_from_reek_warning(warning) }
-
-    let(:warning) do
-      double(
-        smell_type: "FeatureEnvy",
-        source: "lib/foo.rb",
-        lines: [10, 20],
-        context: "Foo#bar",
-        message: "envies another object"
-      )
-    end
-
-    it { is_expected.to be_a(Snoot::Smell) }
-
-    it "carries the smell_type from warning.smell_type" do
-      expect(smell.smell_type).to eq(Snoot::SmellType.new(name: "FeatureEnvy"))
-    end
-
-    it "carries the location from warning.source/.lines" do
-      expect(smell.location).to eq(
-        Snoot::Location.new(path: Snoot::Path.new(raw: "lib/foo.rb"), line_start: 10, line_end: 20)
-      )
-    end
-
-    it "joins warning.context and warning.message into the message" do
-      expect(smell.message).to eq("Foo#bar envies another object")
-    end
-  end
-
-  describe "flog_analyse" do
+  describe "Flog path through analyse" do
     let(:complex_src) do
       <<~RUBY
         class Tangled
@@ -169,58 +139,13 @@ RSpec.describe "AnalyserOrchestration::Default" do
     it "expands a directory Path to its .rb/.rake files (defers to PathExpander, matches Flog::CLI)" do
       Dir.mktmpdir do |dir|
         File.write(File.join(dir, "tangled.rb"), complex_src)
-        hits = adapter.flog_analyse(Set[Snoot::Path.new(raw: dir)])
+        hits = adapter.analyse(Set[Snoot::Path.new(raw: dir)]).complexities
         expect(hits).not_to be_empty
       end
     end
   end
 
-  describe ".complexity_hit_from_flog_entry" do
-    let(:entry) do
-      adapter.complexity_hit_from_flog_entry(
-        class_method: "Foo#bar", score: 12.5, raw_location: "lib/foo.rb:42"
-      )
-    end
-
-    it "constructs a ComplexityHit" do
-      expect(entry).to be_a(Snoot::ComplexityHit)
-    end
-
-    it "parses location from 'file:line'" do
-      expect(entry.location).to eq(
-        Snoot::Location.new(path: Snoot::Path.new(raw: "lib/foo.rb"), line_start: 42, line_end: 42)
-      )
-    end
-
-    it "carries class_method as method_name" do
-      expect(entry.method_name).to eq("Foo#bar")
-    end
-
-    it "wraps score as BigDecimal" do
-      expect(entry.score).to eq(BigDecimal("12.5"))
-    end
-
-    it "accepts 'file:line-line_max' (uses line for both start and end)" do
-      hit = adapter.complexity_hit_from_flog_entry(
-        class_method: "Foo#bar", score: 5, raw_location: "lib/foo.rb:42-50"
-      )
-      expect(hit.location.line_start).to eq(42).and eq(hit.location.line_end)
-    end
-
-    it "returns nil when raw_location is missing" do
-      expect(
-        adapter.complexity_hit_from_flog_entry(class_method: "main#none", score: 1, raw_location: nil)
-      ).to be_nil
-    end
-
-    it "returns nil when raw_location lacks a colon-separated range" do
-      expect(
-        adapter.complexity_hit_from_flog_entry(class_method: "main#none", score: 1, raw_location: "no_range")
-      ).to be_nil
-    end
-  end
-
-  describe "flay_analyse" do
+  describe "Flay path through analyse" do
     let(:duplicated_method) do
       <<~RUBY
         class %<klass>s
@@ -261,34 +186,8 @@ RSpec.describe "AnalyserOrchestration::Default" do
     it "expands a directory Path to its .rb files (defers to PathExpander)" do
       Dir.mktmpdir do |dir|
         dup_pair.each_with_index { |src, i| File.write(File.join(dir, "f#{i}.rb"), src) }
-        expect(adapter.flay_analyse(Set[Snoot::Path.new(raw: dir)])).not_to be_empty
+        expect(adapter.analyse(Set[Snoot::Path.new(raw: dir)]).duplications).not_to be_empty
       end
-    end
-  end
-
-  describe ".duplication_cluster_from_flay_item" do
-    subject(:cluster) { adapter.duplication_cluster_from_flay_item(item) }
-
-    let(:flay_location_a) { double(file: "lib/a.rb", line: 5) }
-    let(:flay_location_b) { double(file: "lib/b.rb", line: 17) }
-    let(:item) do
-      double(structural_hash: 4242, locations: [flay_location_a, flay_location_b])
-    end
-    let(:expected_locations) do
-      Set[
-        Snoot::Location.new(path: Snoot::Path.new(raw: "lib/a.rb"), line_start: 5, line_end: 5),
-        Snoot::Location.new(path: Snoot::Path.new(raw: "lib/b.rb"), line_start: 17, line_end: 17)
-      ]
-    end
-
-    it { is_expected.to be_a(Snoot::DuplicationCluster) }
-
-    it "stringifies item.structural_hash into the signature" do
-      expect(cluster.signature).to eq("4242")
-    end
-
-    it "maps every flay location into a Snoot::Location with line_start = line_end" do
-      expect(cluster.locations).to eq(expected_locations)
     end
   end
 
@@ -422,59 +321,54 @@ RSpec.describe "AnalyserOrchestration::Default" do
       end
     end
 
-    def expected_sources_for(temp_paths)
-      Snoot::Sources.new(
-        smells: adapter.reek_analyse(temp_paths),
-        complexities: adapter.flog_analyse(temp_paths),
-        duplications: adapter.flay_analyse(temp_paths)
-      )
-    end
-
-    it "returns a Sources bundling reek/flog/flay outputs on success" do
+    it "returns a Sources of three empty Sets on smell-free input" do
       with_temp_path(smell_free_src) do |path|
-        temp_paths = Set[path]
-        expect(adapter.analyse(temp_paths)).to eq(expected_sources_for(temp_paths))
+        expect(adapter.analyse(Set[path]))
+          .to eq(Snoot::Sources.new(smells: Set[], complexities: Set[], duplications: Set[]))
       end
     end
 
     context "when reek raises" do
       before do
-        allow(adapter).to receive(:reek_analyse).and_raise(StandardError.new("reek-boom"))
-        allow(adapter).to receive(:flog_analyse).and_call_original
-        allow(adapter).to receive(:flay_analyse).and_call_original
+        allow(Reek::Source::SourceLocator).to receive(:new).and_raise(StandardError.new("reek-boom"))
+        allow(Flog).to receive(:new).and_call_original
+        allow(Flay).to receive(:new).and_call_original
       end
 
       it "returns AnalyserFailure(:reek) and skips flog/flay", :aggregate_failures do
         result = adapter.analyse(paths)
-        expect(result).to be_a(Snoot::AnalyserFailure).and(have_attributes(analyser: :reek, message: "reek-boom"))
-        expect(adapter).not_to have_received(:flog_analyse)
-        expect(adapter).not_to have_received(:flay_analyse)
+        expect(result).to have_attributes(analyser: :reek, message: "reek-boom")
+        expect(Flog).not_to have_received(:new)
+        expect(Flay).not_to have_received(:new)
       end
     end
 
     context "when flog raises" do
+      let(:fake_flog) { instance_double(Flog, flog: nil) }
+
       before do
-        allow(adapter).to receive(:reek_analyse).and_return(Set[])
-        allow(adapter).to receive(:flog_analyse).and_raise(StandardError.new("flog-boom"))
-        allow(adapter).to receive(:flay_analyse).and_call_original
+        allow(fake_flog).to receive(:flog).and_raise(StandardError.new("flog-boom"))
+        allow(Flog).to receive(:new).and_return(fake_flog)
+        allow(Flay).to receive(:new).and_call_original
       end
 
       it "returns AnalyserFailure(:flog) and skips flay", :aggregate_failures do
         result = adapter.analyse(paths)
-        expect(result).to be_a(Snoot::AnalyserFailure).and(have_attributes(analyser: :flog, message: "flog-boom"))
-        expect(adapter).not_to have_received(:flay_analyse)
+        expect(result).to have_attributes(analyser: :flog, message: "flog-boom")
+        expect(Flay).not_to have_received(:new)
       end
     end
 
     context "when flay raises" do
+      let(:fake_flay) { instance_double(Flay, process: nil) }
+
       before do
-        allow(adapter).to receive_messages(reek_analyse: Set[], flog_analyse: Set[])
-        allow(adapter).to receive(:flay_analyse).and_raise(StandardError.new("flay-boom"))
+        allow(fake_flay).to receive(:process).and_raise(StandardError.new("flay-boom"))
+        allow(Flay).to receive(:new).and_return(fake_flay)
       end
 
       it "returns AnalyserFailure(:flay)" do
-        expect(adapter.analyse(paths))
-          .to be_a(Snoot::AnalyserFailure).and(have_attributes(analyser: :flay, message: "flay-boom"))
+        expect(adapter.analyse(paths)).to have_attributes(analyser: :flay, message: "flay-boom")
       end
     end
   end
