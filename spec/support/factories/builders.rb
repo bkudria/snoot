@@ -53,10 +53,6 @@ module Snoot
         end
       end
 
-      def build_operator
-        Snoot::Operator.new
-      end
-
       def build_run_with_finding(finding)
         Snoot::Run.new(
           paths: Set[build_path],

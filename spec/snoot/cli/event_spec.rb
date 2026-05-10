@@ -7,7 +7,7 @@ require "spec_helper"
 RSpec.describe Snoot::CLI::Event do
   describe "sum-type-variant.RunInvoked" do
     it "RunInvoked is a member of the Event sum type", :aggregate_failures do
-      ev = Snoot::CLI::RunInvoked.new(operator: build_operator, paths: Set[])
+      ev = Snoot::CLI::RunInvoked.new(paths: Set[])
       expect(ev).to be_a(Snoot::CLI::RunInvoked)
       expect(ev).to be_a(described_class)
       expect(ev.name).to eq(:run_invoked)
@@ -18,8 +18,7 @@ RSpec.describe Snoot::CLI::Event do
     let(:smell) { build_smell }
     let(:run) { build_run_with_finding(smell) }
     let(:ev) do
-      Snoot::CLI::ReportEmitted.new(operator: build_operator, paths: run.paths,
-                                    run: run, finding: smell, sections: { doc: "x" })
+      Snoot::CLI::ReportEmitted.new(run: run, finding: smell, sections: { doc: "x" })
     end
 
     it "ReportEmitted is a member of the Event sum type", :aggregate_failures do

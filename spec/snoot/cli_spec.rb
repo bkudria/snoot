@@ -4,32 +4,21 @@ require "spec_helper"
 require "stringio"
 
 # Spec source: snoot.allium -- surface CLI
-#   facing operator: Operator
-#   provides: RunInvoked(operator, paths)
+#   provides: RunInvoked(paths)
 RSpec.describe Snoot::CLI do
   let(:orchestration) { fake_orchestration }
   let(:stdout) { null_io }
   let(:stderr) { null_io }
 
-  def run_cli(paths = Set[build_path], operator: build_operator)
+  def run_cli(paths = Set[build_path])
     pipeline = Snoot::CLI::Pipeline.new(orchestration: orchestration, stdout: stdout, stderr: stderr)
-    described_class.for(operator).run_invoked(paths, pipeline: pipeline)
-  end
-
-  describe "surface-actor.CLI" do
-    it "is accessible to an Operator" do
-      expect(described_class.for(build_operator)).not_to be_nil
-    end
-
-    it "is not accessible to a non-Operator" do
-      expect { described_class.for(Object.new) }.to raise_error(StandardError)
-    end
+    described_class.run_invoked(paths, pipeline: pipeline)
   end
 
   describe "surface-provides.CLI" do
     let(:paths) { Set[Snoot::Path.new(raw: "lib/foo.rb")] }
 
-    it "exposes RunInvoked(operator, paths) when invoked by an Operator" do
+    it "exposes RunInvoked(paths) when invoked" do
       events = capture_emitted_events { run_cli(paths) }
       expect(events).to include(have_attributes(name: :run_invoked, paths: paths))
     end

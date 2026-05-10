@@ -38,17 +38,6 @@ external entity Flay {
     -- yields zero or more DuplicationCluster instances.
 }
 
--- The first-class actor on the consumer side of the gem. Operator initiates
--- a Run; the report is read from the gem's emitted bytes by an external
--- party (an LLM coding agent or a developer at a terminal), but the spec
--- faces only Operator directly because no narrowing condition applies (any
--- Operator may invoke).
-
-external entity Operator {
-    -- Whoever invokes the CLI. May be a human at a terminal, a CI process,
-    -- or an agent shelling out. The spec does not distinguish.
-}
-
 ------------------------------------------------------------
 -- Value Types
 ------------------------------------------------------------
@@ -445,12 +434,10 @@ invariant SignificantFindingsOnly {
 ------------------------------------------------------------
 
 surface CLI {
-    facing operator: Operator
-
     -- The CLI's only domain input is the path set. Other flags (verbosity,
     -- output destination) are out of scope at the spec level.
     provides:
-        RunInvoked(operator, paths)
+        RunInvoked(paths)
 
     contracts:
         demands AnalyserOrchestration

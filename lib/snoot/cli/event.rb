@@ -10,9 +10,9 @@ module Snoot
     module Event
     end
 
-    # RunInvoked carries the Operator and the (possibly defaulted) path
-    # set at the moment the surface is entered.
-    RunInvoked = Data.define(:operator, :paths) do
+    # RunInvoked carries the (possibly defaulted) path set at the
+    # moment the surface is entered.
+    RunInvoked = Data.define(:paths) do
       include Event
 
       def name = :run_invoked
@@ -20,7 +20,7 @@ module Snoot
 
     # ReportEmitted carries the terminal Run, the selected Finding, and
     # the rendered sections produced by RenderReport.
-    ReportEmitted = Data.define(:operator, :paths, :run, :finding, :sections) do
+    ReportEmitted = Data.define(:run, :finding, :sections) do
       include Event
 
       def name = :report_emitted
