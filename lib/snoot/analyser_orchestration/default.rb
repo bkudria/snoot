@@ -47,6 +47,13 @@ module Snoot
         %i[flay flay_analyse]
       ].freeze
 
+      # Memoises vendored_doc results by smell_type.name. The corpus is
+      # fixed at gem build time (DOCS_ROOT, pinned to bundled reek) and
+      # the @invariant Determinism contract treats each call pure within
+      # a single CLI invocation, so caching across calls within a
+      # process is safe. nil (missing-doc) results are cached too.
+      @vendored_doc_cache = {}
+
       module_function
 
       def reek_analyse(paths)
@@ -123,8 +130,10 @@ module Snoot
       end
 
       def vendored_doc(smell_type)
-        path = File.join(DOCS_ROOT, "#{smell_type.name.gsub(DOC_FILENAME_PATTERN, '\1-\2')}.md")
-        File.exist?(path) ? File.read(path) : nil
+        @vendored_doc_cache.fetch(smell_type.name) do
+          path = File.join(DOCS_ROOT, "#{smell_type.name.gsub(DOC_FILENAME_PATTERN, '\1-\2')}.md")
+          @vendored_doc_cache[smell_type.name] = File.exist?(path) ? File.read(path) : nil
+        end
       end
 
       def significant_smells(smells)
