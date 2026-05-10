@@ -107,24 +107,26 @@ module Snoot
     def run_invoked(paths, pipeline: Pipeline.default)
       paths = default_paths if paths.empty?
       events = [RunInvoked.new(paths: paths)]
-      AnalyseRun.invoke(paths, orchestration: pipeline.orchestration) => { run:, events: analyse_events, smells: }
+      AnalyseRun.invoke(paths, orchestration: pipeline.orchestration) =>
+        { run:, events: analyse_events, matching_smells: }
       events.concat(analyse_events)
       emit_warnings(analyse_events, pipeline.stderr)
-      events.concat(events_for_outcome(run, smells, pipeline: pipeline))
+      events.concat(events_for_outcome(run, matching_smells, pipeline: pipeline))
       [run, events]
     end
 
-    def events_for_outcome(run, smells, pipeline:)
+    def events_for_outcome(run, matching_smells, pipeline:)
       case run.outcome
-      when :finding_rendered then [emit_report(run, smells, pipeline: pipeline)]
+      when :finding_rendered then [emit_report(run, matching_smells, pipeline: pipeline)]
       when :nothing_to_report then emit_nothing_to_report(pipeline.stdout)
       when :analysis_failed then emit_failure(run, pipeline.stderr)
       else []
       end
     end
 
-    def emit_report(run, smells, pipeline:)
-      RenderReport.invoke(run, smells: smells, orchestration: pipeline.orchestration) => { sections:, finding: }
+    def emit_report(run, matching_smells, pipeline:)
+      RenderReport.invoke(run, matching_smells: matching_smells, orchestration: pipeline.orchestration) =>
+        { sections:, finding: }
       pipeline.stdout.write(format_report(sections))
       ReportEmitted.new(run: run, finding: finding, sections: sections)
     end

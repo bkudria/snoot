@@ -42,16 +42,25 @@ module Snoot
 
     def analysis_failure(run, failure)
       failed = run.transition_to(:analysis_failed, failure: failure)
-      Result.new(run: failed, events: [AnalysisFailed.new(run: failed)], smells: Set[])
+      Result.new(run: failed, events: [AnalysisFailed.new(run: failed)], matching_smells: Set[])
     end
 
     def decide_outcome(run, sources)
-      smells = sources.smells
       top_overall = select_top_finding(sources.significant_union)
       doc_less_smell_type = doc_less_smell_type_of(top_overall, sources)
       selected = doc_less_smell_type ? select_top_finding(sources.candidates) : top_overall
       terminal = transition(run, selected)
-      Result.new(run: terminal, events: doc_less_events(terminal, doc_less_smell_type), smells: smells)
+      Result.new(
+        run: terminal,
+        events: doc_less_events(terminal, doc_less_smell_type),
+        matching_smells: matching_smells_for(selected, sources)
+      )
+    end
+
+    def matching_smells_for(selected, sources)
+      return Set[] unless selected.is_a?(Smell)
+
+      sources.smells.select { |smell| smell.smell_type == selected.smell_type }.to_set
     end
 
     def doc_less_smell_type_of(top, sources)

@@ -13,7 +13,9 @@ RSpec.describe Snoot::RenderReport do
   describe "rule-success.RenderReport" do
     let(:fe_smell) { build_smell(smell_type: build_smell_type(name: "FeatureEnvy")) }
     let(:fe_run) { build_run_with_finding(fe_smell) }
-    let(:fe_report) { capture_report { trigger_render_report(fe_run, smells: Set[fe_smell], orchestration: orch) } }
+    let(:fe_report) do
+      capture_report { trigger_render_report(fe_run, matching_smells: Set[fe_smell], orchestration: orch) }
+    end
     let(:sibling_smell) do
       build_smell(
         smell_type: build_smell_type(name: "FeatureEnvy"),
@@ -28,8 +30,8 @@ RSpec.describe Snoot::RenderReport do
       expect(fe_report.sections.keys).to eq(%i[doc instances])
     end
 
-    it "groups instances from the smells: kwarg" do
-      report = described_class.invoke(fe_run, smells: Set[fe_smell, sibling_smell], orchestration: orch)
+    it "groups instances from the matching_smells: kwarg" do
+      report = described_class.invoke(fe_run, matching_smells: Set[fe_smell, sibling_smell], orchestration: orch)
       expect(report.sections[:instances]).to include("lib/sibling.rb\n  Line 7: from kwarg")
     end
   end
@@ -51,14 +53,13 @@ RSpec.describe Snoot::RenderReport do
         smell_at(file: "lib/a.rb", line: 6, message: "Foo has no descriptive comment"),
         smell_at(file: "lib/a.rb", line: 12, message: "Bar has no descriptive comment"),
         smell_at(file: "lib/b.rb", line: 2, message: "Baz has no descriptive comment"),
-        smell_at(file: "lib/c.rb", line: 1, message: "Qux has no descriptive comment"),
-        smell_at(file: "lib/d.rb", line: 3, message: "irrelevant", type_name: "OtherSmell")
+        smell_at(file: "lib/c.rb", line: 1, message: "Qux has no descriptive comment")
       ]
     end
     let(:run) do
       Snoot::Run.new(paths: Set[build_path], outcome: :finding_rendered, selected_finding: smells.first)
     end
-    let(:report) { described_class.invoke(run, smells: smells, orchestration: doc_orch) }
+    let(:report) { described_class.invoke(run, matching_smells: smells, orchestration: doc_orch) }
 
     it "renders doc from vendored_doc(smell_type)" do
       expect(report.sections[:doc]).to eq("# Irresponsible Module\n\ndoc body")
@@ -82,11 +83,6 @@ RSpec.describe Snoot::RenderReport do
       expect(instances.index("lib/b.rb")).to be < instances.index("lib/c.rb")
     end
 
-    it "excludes smells of other types", :aggregate_failures do
-      expect(report.sections[:instances]).not_to include("lib/d.rb")
-      expect(report.sections[:instances]).not_to include("irrelevant")
-    end
-
     it "omits header and finding_context for Smell findings", :aggregate_failures do
       expect(report.sections).not_to have_key(:header)
       expect(report.sections).not_to have_key(:finding_context)
@@ -102,7 +98,7 @@ RSpec.describe Snoot::RenderReport do
       )
     end
     let(:run) { build_run_with_finding(hit) }
-    let(:report) { described_class.invoke(run, smells: Set[], orchestration: fake_orchestration) }
+    let(:report) { described_class.invoke(run, matching_smells: Set[], orchestration: fake_orchestration) }
 
     it "renders header as method, location, score" do
       expect(report.sections[:header]).to eq("High complexity in Foo#bar at lib/y.rb:5-30 (score: 12.5)")
@@ -134,7 +130,7 @@ RSpec.describe Snoot::RenderReport do
     end
     let(:cluster) { build_duplication_cluster(signature: "abc123", locations: locs) }
     let(:run) { build_run_with_finding(cluster) }
-    let(:report) { described_class.invoke(run, smells: Set[], orchestration: fake_orchestration) }
+    let(:report) { described_class.invoke(run, matching_smells: Set[], orchestration: fake_orchestration) }
 
     it "renders header as location count + signature" do
       expect(report.sections[:header]).to eq("Structural duplication: 2 locations (signature: abc123)")
