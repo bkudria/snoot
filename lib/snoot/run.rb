@@ -9,33 +9,26 @@ module Snoot
   Run = Data.define(:paths, :outcome, :selected_finding, :failure) do
     def initialize(paths:, outcome:, selected_finding: nil, failure: nil)
       super
-      validate_selected_finding!
-      validate_failure!
+      validate_presence_invariants!
     end
 
-    def validate_selected_finding!
-      if outcome == :finding_rendered
-        return if selected_finding
-
-        raise StateError, "selected_finding required for :finding_rendered"
+    def validate_presence_invariants!
+      Run::PRESENCE_INVARIANTS.each do |required_outcome, field_name|
+        enforce_presence_invariant!(field_name, required_outcome)
       end
-      return unless selected_finding
-
-      raise StateError, "selected_finding only permitted when outcome = :finding_rendered (got #{outcome.inspect})"
     end
-    private :validate_selected_finding!
+    private :validate_presence_invariants!
 
-    def validate_failure!
-      if outcome == :analysis_failed
-        return if failure
-
-        raise StateError, "failure required for :analysis_failed"
+    def enforce_presence_invariant!(field_name, required_outcome)
+      field_value = public_send(field_name)
+      if outcome == required_outcome
+        raise StateError, "#{field_name} required for :#{required_outcome}" unless field_value
+      elsif field_value
+        raise StateError,
+              "#{field_name} only permitted when outcome = :#{required_outcome} (got #{outcome.inspect})"
       end
-      return unless failure
-
-      raise StateError, "failure only permitted when outcome = :analysis_failed (got #{outcome.inspect})"
     end
-    private :validate_failure!
+    private :enforce_presence_invariant!
 
     def transition_to(target, selected_finding: nil, failure: nil)
       ensure_transition_allowed!(target)
@@ -49,6 +42,11 @@ module Snoot
     end
     private :ensure_transition_allowed!
   end
+
+  Run::PRESENCE_INVARIANTS = {
+    finding_rendered: :selected_finding,
+    analysis_failed: :failure
+  }.freeze
 
   Run::TRANSITIONS = {
     pending: %i[finding_rendered nothing_to_report analysis_failed].freeze
