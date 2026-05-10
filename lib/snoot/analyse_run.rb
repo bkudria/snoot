@@ -18,16 +18,12 @@ module Snoot
     # AnalysisFailed carries the terminal Run (with .failure populated).
     AnalysisFailed = Data.define(:run) do
       include Event
-
-      def name = :analysis_failed
     end
 
     # SkippedDocLessSmellWarned carries the terminal Run and the
     # offending smell_type that lacked a vendored doc.
     SkippedDocLessSmellWarned = Data.define(:run, :smell_type) do
       include Event
-
-      def name = :skipped_doc_less_smell_warned
     end
 
     module_function

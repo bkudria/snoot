@@ -68,7 +68,7 @@ module Snoot
 
     def emit_warnings(analyse_events, stderr)
       analyse_events.each do |event|
-        next unless event.name == :skipped_doc_less_smell_warned
+        next unless event.is_a?(AnalyseRun::SkippedDocLessSmellWarned)
 
         stderr.write("warning: skipping doc-less smell type '#{event.smell_type.name}'\n")
       end

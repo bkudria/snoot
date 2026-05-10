@@ -20,7 +20,7 @@ RSpec.describe Snoot::CLI do
 
     it "exposes RunInvoked(paths) when invoked" do
       events = capture_emitted_events { run_cli(paths) }
-      expect(events).to include(have_attributes(name: :run_invoked, paths: paths))
+      expect(events).to include(be_a(Snoot::CLI::RunInvoked).and(have_attributes(paths: paths)))
     end
 
     context "when a documented smell is rendered" do
@@ -31,7 +31,7 @@ RSpec.describe Snoot::CLI do
 
       it "emits ReportEmitted when the run terminates in finding_rendered", :aggregate_failures do
         events = capture_emitted_events { run_cli(paths) }
-        report_event = events.find { |e| e.name == :report_emitted }
+        report_event = events.find { |e| e.is_a?(Snoot::CLI::ReportEmitted) }
         expect(report_event).not_to be_nil
         expect(report_event.finding).to eq(smell)
         expect(report_event.sections.keys).to eq(%i[doc instances])
@@ -115,7 +115,7 @@ RSpec.describe Snoot::CLI do
     it "normalises an empty path set to {Path('.')} before RunInvoked fires", :aggregate_failures do
       run, events = run_cli(Set[])
       expect(run.paths).to eq(default_paths)
-      run_invoked = events.find { |e| e.name == :run_invoked }
+      run_invoked = events.find { |e| e.is_a?(Snoot::CLI::RunInvoked) }
       expect(run_invoked.paths).to eq(default_paths)
     end
   end

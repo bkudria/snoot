@@ -13,7 +13,6 @@ RSpec.describe Snoot::AnalyseRun::Event do
       ev = Snoot::AnalyseRun::AnalysisFailed.new(run: run)
       expect(ev).to be_a(Snoot::AnalyseRun::AnalysisFailed)
       expect(ev).to be_a(described_class)
-      expect(ev.name).to eq(:analysis_failed)
     end
   end
 
@@ -28,7 +27,6 @@ RSpec.describe Snoot::AnalyseRun::Event do
     it "SkippedDocLessSmellWarned is a member of the AnalyseRun::Event sum type", :aggregate_failures do
       expect(ev).to be_a(Snoot::AnalyseRun::SkippedDocLessSmellWarned)
       expect(ev).to be_a(described_class)
-      expect(ev.name).to eq(:skipped_doc_less_smell_warned)
     end
   end
 end

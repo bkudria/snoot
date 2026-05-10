@@ -28,7 +28,7 @@ RSpec.describe Snoot::AnalyseRun do
       # Spec: nested if-guards on top_finding_overall narrow to Smell variant
       # before accessing smell_type, then check vendored_doc(smell_type) = null.
       events = capture_emitted_events { invoke_analyse_run_with_doc_less_top_smell }
-      expect(events).to include(have_attributes(name: :skipped_doc_less_smell_warned))
+      expect(events).to include(be_a(Snoot::AnalyseRun::SkippedDocLessSmellWarned))
     end
 
     it "emits SkippedDocLessSmellWarned with the terminal Run as event.run" do
@@ -37,7 +37,7 @@ RSpec.describe Snoot::AnalyseRun do
       # state. Per Allium semantics, trigger emission parameters reference the
       # resulting state regardless of textual ordering.
       events = capture_emitted_events { invoke_analyse_run_with_doc_less_top_smell }
-      warning = events.find { |event| event.name == :skipped_doc_less_smell_warned }
+      warning = events.find { |event| event.is_a?(Snoot::AnalyseRun::SkippedDocLessSmellWarned) }
       expect(warning.run.outcome).not_to eq(:pending)
     end
 
@@ -143,7 +143,7 @@ RSpec.describe Snoot::AnalyseRun do
 
     it "still emits an :analysis_failed audit event referencing the failed run" do
       events = invoke_with(reek_raises: StandardError.new("boom")).events
-      expect(events.find { |e| e.name == :analysis_failed }&.run&.outcome).to eq(:analysis_failed)
+      expect(events.find { |e| e.is_a?(Snoot::AnalyseRun::AnalysisFailed) }&.run&.outcome).to eq(:analysis_failed)
     end
   end
 

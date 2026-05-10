@@ -10,7 +10,6 @@ RSpec.describe Snoot::CLI::Event do
       ev = Snoot::CLI::RunInvoked.new(paths: Set[])
       expect(ev).to be_a(Snoot::CLI::RunInvoked)
       expect(ev).to be_a(described_class)
-      expect(ev.name).to eq(:run_invoked)
     end
   end
 
@@ -24,7 +23,6 @@ RSpec.describe Snoot::CLI::Event do
     it "ReportEmitted is a member of the Event sum type", :aggregate_failures do
       expect(ev).to be_a(Snoot::CLI::ReportEmitted)
       expect(ev).to be_a(described_class)
-      expect(ev.name).to eq(:report_emitted)
     end
   end
 end
