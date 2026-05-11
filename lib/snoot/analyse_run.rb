@@ -21,7 +21,7 @@ module Snoot
       result = orchestration.analyse(paths)
       return analysis_failure(run, result) if result.is_a?(AnalyserFailure)
 
-      decide_outcome(run, SourcesView.new(sources: result, orchestration: orchestration))
+      decide_outcome(run, result, orchestration)
     end
 
     def analysis_failure(run, failure)
@@ -29,10 +29,10 @@ module Snoot
       Result.new(run: failed, events: [AnalysisFailed.new(run: failed)], smells: Set[])
     end
 
-    def decide_outcome(run, sources)
-      top_overall = select_top_finding(sources.significant_union)
-      doc_less_smell_type = doc_less_smell_type_of(top_overall, sources)
-      selected = doc_less_smell_type ? select_top_finding(sources.candidates) : top_overall
+    def decide_outcome(run, sources, orchestration)
+      top_overall = select_top_finding(significant_union(sources, orchestration))
+      doc_less_smell_type = doc_less_smell_type_of(top_overall, orchestration)
+      selected = doc_less_smell_type ? select_top_finding(candidates(sources, orchestration)) : top_overall
       terminal = transition(run, selected)
       Result.new(
         run: terminal,
@@ -41,11 +41,26 @@ module Snoot
       )
     end
 
-    def doc_less_smell_type_of(top, sources)
+    def significant_union(sources, orchestration)
+      orchestration.significant_smells(sources.smells) |
+        orchestration.significant_complexities(sources.complexities) |
+        orchestration.significant_duplications(sources.duplications)
+    end
+
+    def candidates(sources, orchestration)
+      documented = orchestration.significant_smells(sources.smells)
+                                .select { |smell| orchestration.vendored_doc(smell.smell_type) }
+                                .to_set
+      documented |
+        orchestration.significant_complexities(sources.complexities) |
+        orchestration.significant_duplications(sources.duplications)
+    end
+
+    def doc_less_smell_type_of(top, orchestration)
       return nil unless top.is_a?(Smell)
 
       smell_type = top.smell_type
-      return nil if sources.vendored_doc(smell_type)
+      return nil if orchestration.vendored_doc(smell_type)
 
       smell_type
     end

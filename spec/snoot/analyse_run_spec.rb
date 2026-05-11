@@ -100,8 +100,6 @@ RSpec.describe Snoot::AnalyseRun do
     end
 
     let(:documented_smell) { build_smell(smell_type: build_smell_type(name: "Documented")) }
-    let(:empty_sources) { Snoot::Sources.new(smells: Set[], complexities: Set[], duplications: Set[]) }
-    let(:empty_view) { Snoot::AnalyseRun::SourcesView.new(sources: empty_sources, orchestration: fake_orchestration) }
 
     it "drops smells filtered out by significance, yielding nothing_to_report" do
       orch = dropping_orchestration_class.new(smells: Set[documented_smell],
@@ -122,11 +120,6 @@ RSpec.describe Snoot::AnalyseRun do
       orch = dropping_orchestration_class.new(duplications: Set[cluster])
       run = invoke_analyse_run(Set[build_path], orchestration: orch)
       expect(run.outcome).to eq(:nothing_to_report)
-    end
-
-    it "SourcesView#significant_union and #candidates return Sets per snoot.allium:251-285", :aggregate_failures do
-      expect(empty_view.significant_union).to be_a(Set)
-      expect(empty_view.candidates).to be_a(Set)
     end
   end
 
