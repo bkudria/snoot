@@ -30,9 +30,9 @@ module Snoot
     end
 
     def decide_outcome(run, sources, orchestration)
-      top_overall = select_top_finding(significant_union(sources, orchestration))
-      doc_less_smell_type = doc_less_smell_type_of(top_overall, orchestration)
-      selected = doc_less_smell_type ? select_top_finding(candidates(sources, orchestration)) : top_overall
+      top_smell_overall = top_significant_smell(sources, orchestration)
+      doc_less_smell_type = doc_less_smell_type_of(top_smell_overall, orchestration)
+      selected = select_top_finding(candidates(sources, orchestration))
       terminal = transition(run, selected)
       Result.new(
         run: terminal,
@@ -41,10 +41,9 @@ module Snoot
       )
     end
 
-    def significant_union(sources, orchestration)
-      orchestration.significant_smells(sources.smells) |
-        orchestration.significant_complexities(sources.complexities) |
-        orchestration.significant_duplications(sources.duplications)
+    def top_significant_smell(sources, orchestration)
+      significant = orchestration.significant_smells(sources.smells)
+      top_smell(significant) if significant.any?
     end
 
     def candidates(sources, orchestration)
@@ -56,13 +55,11 @@ module Snoot
         orchestration.significant_duplications(sources.duplications)
     end
 
-    def doc_less_smell_type_of(top, orchestration)
-      return nil unless top.is_a?(Smell)
+    def doc_less_smell_type_of(smell, orchestration)
+      return nil unless smell
+      return nil if orchestration.vendored_doc(smell.smell_type)
 
-      smell_type = top.smell_type
-      return nil if orchestration.vendored_doc(smell_type)
-
-      smell_type
+      smell.smell_type
     end
 
     def transition(run, selected)

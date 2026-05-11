@@ -223,22 +223,22 @@ rule AnalyseRun {
             run.outcome = analysis_failed
             run.failure = result
         else if result.kind = Sources:
-            let smell_findings = result.smells
-            let complexity_findings = result.complexities
-            let duplication_findings = result.duplications
-
             -- Significance is the "warrants addressing" pre-filter: each
             -- analyser adapter discards its own noise (per-analyser
             -- numeric thresholds are the implementation's concern) before
             -- category selection runs. The doc-less filter for smells
             -- sits on top of significance, so only significant doc-less
-            -- smells reach SkippedDocLessSmellWarned. The
-            -- top_finding_overall is computed over the significant union
-            -- for the same reason: the warning is about a finding that
-            -- would otherwise have been actionable.
-            let significant_smell_findings = significant_smells(smell_findings)
-            let significant_complexity_findings = significant_complexities(complexity_findings)
-            let significant_duplication_findings = significant_duplications(duplication_findings)
+            -- smells reach SkippedDocLessSmellWarned. Doc-less detection
+            -- only matters for smells -- non-smell findings have no
+            -- vendored doc concept -- and because select_top_finding's
+            -- category priority puts Smell strictly above the other
+            -- variants, the top smell among significant smells is
+            -- exactly the would-be-top-finding whenever it would have
+            -- been a smell. Hence top_smell_overall is computed over the
+            -- significant smell set rather than the cross-category union.
+            let significant_smell_findings = significant_smells(result.smells)
+            let significant_complexity_findings = significant_complexities(result.complexities)
+            let significant_duplication_findings = significant_duplications(result.duplications)
 
             -- A reek smell is excluded from the candidate pool when no
             -- vendored doc exists for its type. If the would-have-been-
@@ -251,9 +251,7 @@ rule AnalyseRun {
             let candidate_findings =
                 documented_smell_findings + significant_complexity_findings + significant_duplication_findings
 
-            let top_finding_overall = select_top_finding(
-                significant_smell_findings + significant_complexity_findings + significant_duplication_findings
-            )
+            let top_smell_overall = top_smell(significant_smell_findings)
 
             -- select_top_finding orders findings by category priority
             -- first, then by an analyser-natural primary key, then by
@@ -278,17 +276,16 @@ rule AnalyseRun {
                 run.outcome = finding_rendered
                 run.selected_finding = selected
 
-            -- Stderr warning fires when the top finding overall (before
-            -- the doc-less filter) is a smell whose doc is missing. The
-            -- nested if-guards narrow top_finding_overall to a Smell
-            -- variant before accessing smell_type.
-            if top_finding_overall != null:
-                if top_finding_overall.kind = Smell:
-                    if vendored_doc(top_finding_overall.smell_type) = null:
-                        SkippedDocLessSmellWarned(
-                            run: run,
-                            smell_type: top_finding_overall.smell_type
-                        )
+            -- Stderr warning fires when the top significant smell has
+            -- no vendored doc. top_smell_overall is already Smell-or-
+            -- null, so a single null-check plus the doc check is enough
+            -- to gate the trigger; no variant narrowing is needed.
+            if top_smell_overall != null:
+                if vendored_doc(top_smell_overall.smell_type) = null:
+                    SkippedDocLessSmellWarned(
+                        run: run,
+                        smell_type: top_smell_overall.smell_type
+                    )
 }
 
 rule RenderReport {
