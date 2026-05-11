@@ -47,8 +47,8 @@ RSpec.describe "Invariant: SignificantFindingsOnly" do # rubocop:disable RSpec/D
       smells, complexities, duplications, _raise = inputs
       orch = default_significance_class.new(smells: smells, complexities: complexities,
                                             duplications: duplications, vendored_docs: real_reek_doc_map)
-      Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch) => { run:, matching_smells: }
-      [run, matching_smells]
+      Snoot::AnalyseRun.invoke(Set[build_path], orchestration: orch) => { run:, smells: }
+      [run, smells]
     end
 
     def significant_findings_for(run, smells)

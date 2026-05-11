@@ -7,24 +7,12 @@ module Snoot
   # value carrying the terminal Run, the audit events emitted along the way,
   # and the raw smell set the orchestration produced.
   module AnalyseRun
-    # Event is the marker module sum-typing the two audit records
-    # AnalyseRun emits: AnalysisFailed on the analysis_failed branch
-    # and SkippedDocLessSmellWarned when the top-overall finding is a
-    # doc-less Smell. Each variant carries only the fields it
-    # populates.
-    module Event
-    end
-
     # AnalysisFailed carries the terminal Run (with .failure populated).
-    AnalysisFailed = Data.define(:run) do
-      include Event
-    end
+    AnalysisFailed = Data.define(:run)
 
     # SkippedDocLessSmellWarned carries the terminal Run and the
     # offending smell_type that lacked a vendored doc.
-    SkippedDocLessSmellWarned = Data.define(:run, :smell_type) do
-      include Event
-    end
+    SkippedDocLessSmellWarned = Data.define(:run, :smell_type)
 
     module_function
 
@@ -38,7 +26,7 @@ module Snoot
 
     def analysis_failure(run, failure)
       failed = run.transition_to(:analysis_failed, failure: failure)
-      Result.new(run: failed, events: [AnalysisFailed.new(run: failed)], matching_smells: Set[])
+      Result.new(run: failed, events: [AnalysisFailed.new(run: failed)], smells: Set[])
     end
 
     def decide_outcome(run, sources)
@@ -49,14 +37,8 @@ module Snoot
       Result.new(
         run: terminal,
         events: doc_less_events(terminal, doc_less_smell_type),
-        matching_smells: matching_smells_for(selected, sources)
+        smells: sources.smells
       )
-    end
-
-    def matching_smells_for(selected, sources)
-      return Set[] unless selected.is_a?(Smell)
-
-      sources.smells.select { |smell| smell.smell_type == selected.smell_type }.to_set
     end
 
     def doc_less_smell_type_of(top, sources)

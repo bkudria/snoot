@@ -3,11 +3,10 @@
 module Snoot
   module AnalyseRun
     # Result is the value returned by AnalyseRun.invoke: the terminal Run,
-    # the audit events emitted along the way, and the smells whose
-    # smell_type matches the selected_finding's (forwarded to RenderReport
-    # so it can build the per-file Instances list). matching_smells is
-    # empty when the selected finding is not a Smell or no finding was
-    # selected.
-    Result = Data.define(:run, :events, :matching_smells)
+    # the audit events emitted along the way, and the smells the
+    # orchestration produced (forwarded to RenderReport, which filters
+    # by selected smell_type when building the per-file Instances list).
+    # smells is empty when analysis failed (no Sources were produced).
+    Result = Data.define(:run, :events, :smells)
   end
 end

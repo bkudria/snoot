@@ -50,73 +50,12 @@ RSpec.describe Snoot::AnalyseRun do
   end
 
   describe "result value" do
-    it "returns an AnalyseRun::Result with run, events, matching_smells accessors", :aggregate_failures do
+    it "returns an AnalyseRun::Result with run, events, smells accessors", :aggregate_failures do
       result = described_class.invoke(Set[build_path], orchestration: fake_orchestration)
       expect(result).to be_a(Snoot::AnalyseRun::Result)
       expect(result.run.outcome).to eq(:nothing_to_report)
       expect(result.events).to eq([])
-      expect(result.matching_smells).to eq(Set[])
-    end
-  end
-
-  describe "matching_smells field" do
-    let(:documented_smell) { build_smell(smell_type: build_smell_type(name: "Documented")) }
-    let(:sibling_smell) do
-      build_smell(
-        smell_type: build_smell_type(name: "Documented"),
-        location: build_location(path: build_path(raw: "lib/y.rb"), line_start: 5, line_end: 5)
-      )
-    end
-    let(:doc_orch) do
-      fake_orchestration(
-        smells: Set[documented_smell, sibling_smell],
-        vendored_docs: { "Documented" => "## doc" }
-      )
-    end
-
-    let(:off_type_smell) do
-      build_smell(
-        smell_type: build_smell_type(name: "OtherType"),
-        location: build_location(path: build_path(raw: "lib/other.rb"), line_start: 1, line_end: 1)
-      )
-    end
-    let(:mixed_orch) do
-      fake_orchestration(
-        smells: Set[documented_smell, sibling_smell, off_type_smell],
-        vendored_docs: { "Documented" => "## doc", "OtherType" => "## doc" }
-      )
-    end
-
-    it "returns the matching-type smells when finding_rendered", :aggregate_failures do
-      described_class.invoke(Set[build_path], orchestration: doc_orch) => { run:, matching_smells: }
-      expect(run.outcome).to eq(:finding_rendered)
-      expect(matching_smells).to eq(Set[documented_smell, sibling_smell])
-    end
-
-    it "narrows matching_smells to the selected_finding's smell_type", :aggregate_failures do
-      described_class.invoke(Set[build_path], orchestration: mixed_orch) => { run:, matching_smells: }
-      expect(run.selected_finding.smell_type.name).to eq("Documented")
-      expect(matching_smells).to eq(Set[documented_smell, sibling_smell])
-    end
-
-    it "returns an empty matching_smells set when nothing_to_report", :aggregate_failures do
-      described_class.invoke(Set[build_path], orchestration: fake_orchestration) => { run:, matching_smells: }
-      expect(run.outcome).to eq(:nothing_to_report)
-      expect(matching_smells).to eq(Set[])
-    end
-
-    it "returns an empty matching_smells set when analysis_failed", :aggregate_failures do
-      orch = fake_orchestration(reek_raises: StandardError.new("boom"))
-      described_class.invoke(Set[build_path], orchestration: orch) => { run:, matching_smells: }
-      expect(run.outcome).to eq(:analysis_failed)
-      expect(matching_smells).to eq(Set[])
-    end
-
-    it "returns an empty matching_smells set when selected_finding is non-Smell", :aggregate_failures do
-      orch = fake_orchestration(complexities: Set[build_complexity_hit(score: BigDecimal("100.0"))])
-      described_class.invoke(Set[build_path], orchestration: orch) => { run:, matching_smells: }
-      expect(run.selected_finding).to be_a(Snoot::ComplexityHit)
-      expect(matching_smells).to eq(Set[])
+      expect(result.smells).to eq(Set[])
     end
   end
 

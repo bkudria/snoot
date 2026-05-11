@@ -17,20 +17,21 @@ module Snoot
 
     module_function
 
-    def invoke(run, matching_smells:, orchestration:)
+    def invoke(run, smells:, orchestration:)
       finding = run.selected_finding
       sections = if finding.is_a?(Smell)
-                   smell_sections(matching_smells, finding, orchestration)
+                   smell_sections(smells, finding, orchestration)
                  else
                    non_smell_sections(finding)
                  end
       Report.new(run: run, finding: finding, sections: sections)
     end
 
-    def smell_sections(matching_smells, smell, orchestration)
+    def smell_sections(smells, smell, orchestration)
+      matching = smells.select { |s| s.smell_type == smell.smell_type }
       {
         doc: orchestration.vendored_doc(smell.smell_type),
-        instances: render_instances(matching_smells)
+        instances: render_instances(matching)
       }
     end
 
@@ -64,14 +65,14 @@ module Snoot
       }
     end
 
-    def render_instances(matching_smells)
-      groups = smell_groups_by_path(matching_smells)
+    def render_instances(smells)
+      groups = smell_groups_by_path(smells)
       "## Instances\n\n#{groups.map { |path, group| render_instance_group(path, group) }.join("\n\n")}"
     end
 
-    def smell_groups_by_path(matching_smells)
-      matching_smells.group_by { |smell| smell.location.path.raw }
-                     .sort_by { |path, group| [-group.size, path] }
+    def smell_groups_by_path(smells)
+      smells.group_by { |smell| smell.location.path.raw }
+            .sort_by { |path, group| [-group.size, path] }
     end
 
     def render_instance_group(path, smells)

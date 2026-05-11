@@ -5,7 +5,5 @@ module Snoot
   # Reek smell instance: its SmellType, the Location where it was
   # raised, and the Reek-supplied message. Smells are ranked by
   # frequency of their smell_type within a Run.
-  Smell = Data.define(:smell_type, :location, :message) do
-    include Finding
-  end
+  Smell = Data.define(:smell_type, :location, :message)
 end

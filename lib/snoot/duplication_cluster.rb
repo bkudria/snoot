@@ -6,8 +6,6 @@ module Snoot
   # signature shared across two or more Locations. Cluster size
   # (locations.size) is the ranking key.
   DuplicationCluster = Data.define(:signature, :locations) do
-    include Finding
-
     def size = locations.size
   end
 end

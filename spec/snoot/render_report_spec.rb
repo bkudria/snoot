@@ -14,7 +14,7 @@ RSpec.describe Snoot::RenderReport do
     let(:fe_smell) { build_smell(smell_type: build_smell_type(name: "FeatureEnvy")) }
     let(:fe_run) { build_run_with_finding(fe_smell) }
     let(:fe_report) do
-      capture_report { trigger_render_report(fe_run, matching_smells: Set[fe_smell], orchestration: orch) }
+      capture_report { trigger_render_report(fe_run, smells: Set[fe_smell], orchestration: orch) }
     end
     let(:sibling_smell) do
       build_smell(
@@ -30,8 +30,8 @@ RSpec.describe Snoot::RenderReport do
       expect(fe_report.sections.keys).to eq(%i[doc instances])
     end
 
-    it "groups instances from the matching_smells: kwarg" do
-      report = described_class.invoke(fe_run, matching_smells: Set[fe_smell, sibling_smell], orchestration: orch)
+    it "groups instances from the smells: kwarg" do
+      report = described_class.invoke(fe_run, smells: Set[fe_smell, sibling_smell], orchestration: orch)
       expect(report.sections[:instances]).to include("lib/sibling.rb\n  Line 7: from kwarg")
     end
   end
@@ -59,7 +59,7 @@ RSpec.describe Snoot::RenderReport do
     let(:run) do
       Snoot::Run.new(paths: Set[build_path], outcome: :finding_rendered, selected_finding: smells.first)
     end
-    let(:report) { described_class.invoke(run, matching_smells: smells, orchestration: doc_orch) }
+    let(:report) { described_class.invoke(run, smells: smells, orchestration: doc_orch) }
 
     it "renders doc from vendored_doc(smell_type)" do
       expect(report.sections[:doc]).to eq("# Irresponsible Module\n\ndoc body")
@@ -87,6 +87,13 @@ RSpec.describe Snoot::RenderReport do
       expect(report.sections).not_to have_key(:header)
       expect(report.sections).not_to have_key(:finding_context)
     end
+
+    it "filters out smells of other types before rendering instances", :aggregate_failures do
+      off_type = smell_at(file: "lib/other.rb", line: 99, message: "off-type", type_name: "OtherSmell")
+      report = described_class.invoke(run, smells: Set[*smells, off_type], orchestration: doc_orch)
+      expect(report.sections[:instances]).to include("lib/a.rb")
+      expect(report.sections[:instances]).not_to include("lib/other.rb")
+    end
   end
 
   describe "ComplexityHit rendering" do
@@ -98,7 +105,7 @@ RSpec.describe Snoot::RenderReport do
       )
     end
     let(:run) { build_run_with_finding(hit) }
-    let(:report) { described_class.invoke(run, matching_smells: Set[], orchestration: fake_orchestration) }
+    let(:report) { described_class.invoke(run, smells: Set[], orchestration: fake_orchestration) }
 
     it "renders header as method, location, score" do
       expect(report.sections[:header]).to eq("High complexity in Foo#bar at lib/y.rb:5-30 (score: 12.5)")
@@ -130,7 +137,7 @@ RSpec.describe Snoot::RenderReport do
     end
     let(:cluster) { build_duplication_cluster(signature: "abc123", locations: locs) }
     let(:run) { build_run_with_finding(cluster) }
-    let(:report) { described_class.invoke(run, matching_smells: Set[], orchestration: fake_orchestration) }
+    let(:report) { described_class.invoke(run, smells: Set[], orchestration: fake_orchestration) }
 
     it "renders header as location count + signature" do
       expect(report.sections[:header]).to eq("Structural duplication: 2 locations (signature: abc123)")
