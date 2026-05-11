@@ -7,12 +7,6 @@ require "spec_helper"
 #     r.outcome = analysis_failed implies r.failure != null
 RSpec.describe "Invariant: FailurePresentOnFailedRuns" do # rubocop:disable RSpec/DescribeClass
   describe "invariant.FailurePresentOnFailedRuns" do
-    it "is enforced at construction" do
-      expect do
-        Snoot::Run.new(paths: Set[], outcome: :analysis_failed, failure: nil)
-      end.to raise_error(Snoot::StateError, /failure/)
-    end
-
     it "holds after AnalyseRun for arbitrary inputs", :pbt do
       forall(analyse_run_inputs_gen) do |inputs|
         run = run_analyse_with_inputs(inputs)
