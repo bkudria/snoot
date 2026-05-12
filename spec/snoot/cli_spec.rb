@@ -3,8 +3,6 @@
 require "spec_helper"
 require "stringio"
 
-# Spec source: snoot.allium -- surface CLI
-#   provides: RunInvoked(paths)
 RSpec.describe Snoot::CLI do
   let(:orchestration) { fake_orchestration }
   let(:stdout) { null_io }

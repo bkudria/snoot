@@ -2,13 +2,6 @@
 
 require "spec_helper"
 
-# Spec source: snoot.allium -- invariant SignificantFindingsOnly
-#   for r in Runs:
-#     for s in Smells:
-#       r.selected_finding = s implies s ∈ significant_smells(analyse(r.paths).smells)
-#     for c in ComplexityHits: r.selected_finding = c implies c ∈ significant_complexities({c})
-#     for d in DuplicationClusters: r.selected_finding = d implies d ∈ significant_duplications({d})
-#
 # This complements SelectedFindingsAreRenderable (which guards vendored docs)
 # with the "warrants addressing" gate. Floors live in
 # AnalyserOrchestration::Default. The smell branch ranges over the smell set

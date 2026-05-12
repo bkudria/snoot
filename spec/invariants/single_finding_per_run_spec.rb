@@ -2,9 +2,6 @@
 
 require "spec_helper"
 
-# Spec source: snoot.allium -- invariant SingleFindingPerRun
-#   for r in Runs:
-#     r.outcome = finding_rendered implies r.selected_finding != null
 RSpec.describe "Invariant: SingleFindingPerRun" do # rubocop:disable RSpec/DescribeClass
   describe "invariant.SingleFindingPerRun" do
     it "holds after AnalyseRun for arbitrary inputs", :pbt do

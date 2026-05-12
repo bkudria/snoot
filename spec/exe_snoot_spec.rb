@@ -3,8 +3,6 @@
 require "spec_helper"
 require "open3"
 
-# Spec source: snoot.allium -- surface CLI (subprocess smoke test via exe/snoot).
-# Subject is the executable script, not a single class.
 RSpec.describe "exe/snoot" do # rubocop:disable RSpec/DescribeClass
   let(:exe) { File.expand_path("../exe/snoot", __dir__) }
   let(:smelly_source) do

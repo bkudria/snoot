@@ -3,10 +3,6 @@
 require "spec_helper"
 require "bigdecimal"
 
-# Spec source: snoot.allium -- rule RenderReport
-#   when:    run: Run.outcome becomes finding_rendered
-#   requires: run.selected_finding != null
-#   ensures: ReportEmitted(run, finding, sections: { header, finding_context, doc })
 RSpec.describe Snoot::RenderReport do
   let(:orch) { fake_orchestration(vendored_docs: { "FeatureEnvy" => "## doc" }) }
 

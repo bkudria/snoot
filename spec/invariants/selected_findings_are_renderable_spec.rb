@@ -2,11 +2,6 @@
 
 require "spec_helper"
 
-# Spec source: snoot.allium -- invariant SelectedFindingsAreRenderable
-#   for r in Runs:
-#     for s in Smells:
-#       (r.outcome = finding_rendered and r.selected_finding = s)
-#         implies vendored_doc(s.smell_type) != null
 RSpec.describe "Invariant: SelectedFindingsAreRenderable" do # rubocop:disable RSpec/DescribeClass
   describe "invariant.SelectedFindingsAreRenderable" do
     it "AnalyseRun's selection ensures any rendered Smell has a vendored doc" do

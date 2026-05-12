@@ -2,9 +2,6 @@
 
 require "spec_helper"
 
-# Spec source: snoot.allium -- invariant FailurePresentOnFailedRuns
-#   for r in Runs:
-#     r.outcome = analysis_failed implies r.failure != null
 RSpec.describe "Invariant: FailurePresentOnFailedRuns" do # rubocop:disable RSpec/DescribeClass
   describe "invariant.FailurePresentOnFailedRuns" do
     it "holds after AnalyseRun for arbitrary inputs", :pbt do

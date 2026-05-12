@@ -2,11 +2,6 @@
 
 require "spec_helper"
 
-# Spec source: snoot.allium -- rule AnalyseRun
-#   when:    RunInvoked(paths)
-#   ensures: Run.created with outcome in {finding_rendered, nothing_to_report,
-#            analysis_failed}; emits SkippedDocLessSmellWarned when the
-#            top-overall finding is a Smell whose vendored doc is missing.
 RSpec.describe Snoot::AnalyseRun do
   describe "rule-success.AnalyseRun" do
     it "creates a Run terminating in one of the three declared outcomes", :aggregate_failures do

@@ -2,8 +2,6 @@
 
 require "spec_helper"
 
-# Spec source: snoot.allium -- entity Run with transitions on outcome and
-# state-dependent field selected_finding (when outcome = finding_rendered).
 RSpec.describe Snoot::Run do
   describe "entity-fields.Run" do
     it "declares paths and outcome", :aggregate_failures do
