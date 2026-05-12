@@ -74,24 +74,22 @@ module Snoot
       [SkippedDocLessSmellWarned.new(run: run, smell_type: smell_type)]
     end
 
-    PICKERS = [
-      [Smell, :top_smell],
-      [DuplicationCluster, :top_duplication],
-      [ComplexityHit, :top_complexity]
-    ].freeze
-
     def select_top_finding(findings)
-      PICKERS.each do |klass, picker|
-        matches = findings.grep(klass)
-        return send(picker, matches) if matches.any?
-      end
+      smells = findings.grep(Smell)
+      return top_smell(smells) if smells.any?
+
+      duplications = findings.grep(DuplicationCluster)
+      return top_duplication(duplications) if duplications.any?
+
+      complexities = findings.grep(ComplexityHit)
+      return top_complexity(complexities) if complexities.any?
+
       nil
     end
 
     def top_smell(smells)
       counts = smells.group_by(&:smell_type).transform_values(&:size)
-      max = counts.values.max
-      smells.select { |smell| counts[smell.smell_type] == max }.min_by { |smell| smell_sort_key(smell) }
+      top_by(smells, metric: ->(smell) { counts[smell.smell_type] }, &method(:smell_sort_key))
     end
 
     def top_duplication(clusters)
@@ -103,8 +101,9 @@ module Snoot
     end
 
     def top_by(items, metric:, &sort_key)
-      max = items.map(&metric).max
-      items.select { |item| item.public_send(metric) == max }.min_by(&sort_key)
+      pick = metric.to_proc
+      max = items.map(&pick).max
+      items.select { |item| pick.call(item) == max }.min_by(&sort_key)
     end
 
     def smell_sort_key(smell)

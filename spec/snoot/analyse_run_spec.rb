@@ -118,6 +118,30 @@ RSpec.describe Snoot::AnalyseRun do
     end
   end
 
+  describe ".select_top_finding" do
+    let(:smell) { build_smell }
+    let(:duplication) { build_duplication_cluster }
+    let(:complexity) { build_complexity_hit }
+
+    it "prefers a Smell when smells, duplications, and complexities are all present" do
+      selected = described_class.select_top_finding(Set[smell, duplication, complexity])
+      expect(selected).to be_a(Snoot::Smell)
+    end
+
+    it "prefers a DuplicationCluster over a ComplexityHit when no smells are present" do
+      selected = described_class.select_top_finding(Set[duplication, complexity])
+      expect(selected).to be_a(Snoot::DuplicationCluster)
+    end
+
+    it "selects the ComplexityHit when it is the only finding type present" do
+      expect(described_class.select_top_finding(Set[complexity])).to be_a(Snoot::ComplexityHit)
+    end
+
+    it "returns nil when there are no candidates" do
+      expect(described_class.select_top_finding(Set[])).to be_nil
+    end
+  end
+
   describe "deterministic tie-break" do
     # Inputs are constructed in reverse-canonical order so the existing
     # `.find { ... == max }` semantics (insertion-first) would yield the wrong
