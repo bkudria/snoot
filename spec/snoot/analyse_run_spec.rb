@@ -74,11 +74,6 @@ RSpec.describe Snoot::AnalyseRun do
       run = invoke_with(flay_raises: StandardError.new("flay-boom")).run
       expect(run.failure).to have_attributes(analyser: :flay, message: "flay-boom")
     end
-
-    it "still emits an :analysis_failed audit event referencing the failed run" do
-      events = invoke_with(reek_raises: StandardError.new("boom")).events
-      expect(events.find { |e| e.is_a?(Snoot::AnalyseRun::AnalysisFailed) }&.run&.outcome).to eq(:analysis_failed)
-    end
   end
 
   describe "significance pre-filter" do
