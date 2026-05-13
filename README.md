@@ -8,6 +8,13 @@ The report is centred on an LLM coding agent as the reader: each run produces on
 
 Pre-1.0. Three analysers (Reek / Flog / Flay) are used, and `snoot <paths>` drives the full pipeline end-to-end: it reports a single finding to stdout, an acknowledgement when nothing is worth reporting, or a failure line on stderr. With no positional arguments, `snoot` scans the current directory. The exit code is `1` when a finding is rendered, `0` when there is nothing to report, and `2` when analysis fails.
 
+## Specification
+
+The behaviour is specified in [`snoot.allium`](snoot.allium) (the Allium
+behavioural contract); [`GOALS.md`](GOALS.md) records the design rationale.
+The spec, the implementation in `lib/`, and the tests in `spec/` are peer
+artifacts and are kept in sync — see [`CLAUDE.md`](CLAUDE.md).
+
 ## Install
 
 From a local checkout:
