@@ -60,10 +60,6 @@ module Snoot
       []
     end
 
-    def default_paths
-      DEFAULT_PATHS
-    end
-
     def emit_warnings(analyse_events, stderr)
       analyse_events.each do |event|
         next unless event.is_a?(AnalyseRun::SkippedDocLessSmellWarned)
@@ -103,7 +99,7 @@ module Snoot
     end
 
     def run_invoked(paths, pipeline: Pipeline.default)
-      paths = default_paths if paths.empty?
+      paths = DEFAULT_PATHS if paths.empty?
       events = [RunInvoked.new(paths: paths)]
       AnalyseRun.invoke(paths, orchestration: pipeline.orchestration) =>
         { run:, events: analyse_events, smells: }
