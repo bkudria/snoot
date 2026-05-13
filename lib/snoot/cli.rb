@@ -4,26 +4,24 @@ require "snoot/cli/event"
 require "snoot/cli/pipeline"
 
 module Snoot
-  # CLI is the surface from snoot.allium that exposes the gem. cli.rb
-  # owns the surface entry points: argv-shape entry (.run --
-  # UsageErrorExit), in-process entry (.run_invoked), the surface
-  # constants (banners, exit codes, the default path set), and the IO
-  # emitter helpers (emit_warnings, emit_failure,
-  # emit_nothing_to_report, format_report). The Event marker and its
-  # variants live in cli/event.rb; the Pipeline value lives in
-  # cli/pipeline.rb. .run consults BANNERS for --version/--help,
-  # rejects unknown flags with exit 64, and otherwise threads argv
-  # through .run_invoked, mapping the terminal outcome to an
-  # EXIT_CODES integer.
+  # The CLI surface. cli.rb owns the surface entry points: argv-shape
+  # entry (.run -- UsageErrorExit), in-process entry (.run_invoked), the
+  # surface constants (banners, exit codes, the default path set), and
+  # the IO emitter helpers (emit_warnings, emit_failure,
+  # emit_nothing_to_report, format_report). The event values (RunInvoked,
+  # ReportEmitted) live in cli/event.rb; the Pipeline value lives in
+  # cli/pipeline.rb. .run consults BANNERS for --version/--help, rejects
+  # unknown flags with exit 64, and otherwise threads argv through
+  # .run_invoked, mapping the terminal outcome to an EXIT_CODES integer.
   #
   # The two entry points return deliberately different shapes. .run is
   # the POSIX boundary: argv -> Integer, consumed by `exit
   # Snoot::CLI.run(ARGV)` in exe/snoot. .run_invoked is the in-process
-  # boundary: Set<Path> -> [Run, Array<Event>], used by tests and any
-  # library embedding that needs the full event list. Internally .run
-  # calls .run_invoked and projects Run#outcome through EXIT_CODES, so
-  # the integer is a lossy view of the Run; callers that need the
-  # Run, the events, or both must use .run_invoked.
+  # boundary: Set<Path> -> [Run, Array of event values], used by tests
+  # and any library embedding that needs the full event list. Internally
+  # .run calls .run_invoked and projects Run#outcome through EXIT_CODES,
+  # so the integer is a lossy view of the Run; callers that need the Run,
+  # the events, or both must use .run_invoked.
   module CLI
     NOTHING_TO_REPORT = "nothing to report -- no findings above snoot's significance floor\n"
     DEFAULT_PATHS = Set[Snoot::Path.new(raw: ".")].freeze

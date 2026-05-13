@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module Snoot
-  # Run is the entity from snoot.allium tracking one analysis pass: the
-  # input paths, the outcome (pending, finding_rendered,
-  # nothing_to_report, analysis_failed), and the selected_finding when
-  # one was chosen. Encodes the declared transitions and the two-sided
-  # presence invariants on selected_finding and failure.
+  # One analysis pass: the input paths, the outcome (pending,
+  # finding_rendered, nothing_to_report, analysis_failed), and the
+  # selected_finding when one was chosen. Enforces the transition rules
+  # and the presence invariants -- selected_finding iff finding_rendered,
+  # failure iff analysis_failed.
   Run = Data.define(:paths, :outcome, :selected_finding, :failure) do
     def initialize(paths:, outcome:, selected_finding: nil, failure: nil)
       super

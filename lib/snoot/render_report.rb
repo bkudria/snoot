@@ -1,14 +1,10 @@
 # frozen_string_literal: true
 
 module Snoot
-  # RenderReport is the rule from snoot.allium that, given a Run whose
-  # outcome is :finding_rendered, produces a Report. For Smell findings
-  # the Report has two sections (doc, instances) -- the doc comes from
-  # the orchestration's vendored_doc and instances enumerates every
-  # Smell of the selected type grouped by file, ordered by descending
-  # count then alphabetical path. For ComplexityHit and DuplicationCluster
-  # findings the three-section shape (header, finding_context, doc) is
-  # preserved.
+  # Given a finding_rendered Run, produces a Report. Smell findings get
+  # two sections (doc, instances); ComplexityHit and DuplicationCluster
+  # get three (header, finding_context, doc). Per-section content is
+  # built by the helpers below.
   module RenderReport
     # Report is the value returned by RenderReport.invoke: the source
     # Run, the selected Finding it was built from, and the ordered

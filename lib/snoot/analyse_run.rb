@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module Snoot
-  # AnalyseRun is the rule from snoot.allium that turns a pending Run into a
-  # terminal outcome by orchestrating the three analysers and selecting one
-  # finding (or none, or signalling failure). Returns an AnalyseRun::Result
-  # value carrying the terminal Run, the audit events emitted along the way,
-  # and the raw smell set the orchestration produced.
+  # Turns a pending Run into a terminal outcome: orchestrates the three
+  # analysers, then selects one finding (or none, or signals failure).
+  # `invoke` returns an AnalyseRun::Result carrying the terminal Run, the
+  # events emitted along the way, and the raw smell set the orchestration
+  # produced.
   module AnalyseRun
     # SkippedDocLessSmellWarned carries the terminal Run and the
     # offending smell_type that lacked a vendored doc.
