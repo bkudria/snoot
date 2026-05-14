@@ -139,6 +139,15 @@ RSpec.describe Snoot::CLI do
     end
   end
 
+  describe ".emit_warnings" do
+    it "ignores events that are not SkippedDocLessSmellWarned" do
+      stderr = StringIO.new
+      unrelated = Snoot::CLI::RunInvoked.new(paths: Set[])
+      described_class.emit_warnings([unrelated], stderr)
+      expect(stderr.string).to eq("")
+    end
+  end
+
   describe ".run" do
     let(:smelly_ruby) do
       <<~RUBY

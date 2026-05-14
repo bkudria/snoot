@@ -126,18 +126,24 @@ module Snoot
       # analyser and does not invoke the remaining ones. On full
       # success it returns a Sources bundling the three result sets.
       def analyse(paths)
-        outputs = {}
-        ANALYSER_PROBES.each do |tag, method|
-          outputs[tag] = send(method, paths)
-        rescue StandardError => error
-          return AnalyserFailure.new(analyser: tag, message: error.message)
-        end
+        outputs = collect_outputs(paths)
+        return outputs if outputs.is_a?(AnalyserFailure)
+
         Sources.new(
           smells: outputs[:reek], complexities: outputs[:flog], duplications: outputs[:flay]
         )
       end
 
-      private_class_method :reek_analyse, :reek_smells_for, :flog_analyse, :flay_analyse
+      def collect_outputs(paths)
+        ANALYSER_PROBES.each_with_object({}) do |(tag, method), outputs|
+          outputs[tag] = send(method, paths)
+        rescue StandardError => error
+          return AnalyserFailure.new(analyser: tag, message: error.message)
+        end
+      end
+
+      private_class_method :reek_analyse, :reek_smells_for, :flog_analyse, :flay_analyse,
+                           :collect_outputs
     end
   end
 end

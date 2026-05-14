@@ -74,16 +74,9 @@ module Snoot
     end
 
     def select_top_finding(findings)
-      smells = findings.grep(Smell)
-      return top_smell(smells) if smells.any?
-
-      duplications = findings.grep(DuplicationCluster)
-      return top_duplication(duplications) if duplications.any?
-
-      complexities = findings.grep(ComplexityHit)
-      return top_complexity(complexities) if complexities.any?
-
-      nil
+      top_smell(findings.grep(Smell)) ||
+        top_duplication(findings.grep(DuplicationCluster)) ||
+        top_complexity(findings.grep(ComplexityHit))
     end
 
     def top_smell(smells)
