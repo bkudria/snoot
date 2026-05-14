@@ -37,10 +37,9 @@ module Snoot
     EXIT_CODES = {
       finding_rendered: 1,
       nothing_to_report: 0,
-      analysis_failed: 2
+      analysis_failed: 2,
+      usage_error: 64
     }.freeze
-
-    USAGE_ERROR_EXIT_CODE = 64
 
     BANNERS = {
       %w[--version] => "snoot #{Snoot::VERSION}\n",
@@ -75,7 +74,7 @@ module Snoot
     def run(argv, pipeline: Pipeline.default)
       banner = lookup_banner(argv)
       return write_and_return(pipeline.stdout, banner, 0) if banner
-      return write_and_return(pipeline.stderr, USAGE, USAGE_ERROR_EXIT_CODE) if unknown_flag?(argv)
+      return write_and_return(pipeline.stderr, USAGE, EXIT_CODES.fetch(:usage_error)) if unknown_flag?(argv)
 
       run_pipeline(argv, pipeline: pipeline)
     end
