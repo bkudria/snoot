@@ -189,6 +189,11 @@ RSpec.describe Snoot::CLI do
       expect(stderr.string).to be_empty
     end
 
+    it "includes description, exit-code legend, and an example in --help output" do
+      run_argv(["--help"])
+      expect(stdout.string).to include("reek/flog/flay", "Exit codes:", "1   one finding rendered", "Example:")
+    end
+
     it "writes usage to stdout and returns 0 for -h", :aggregate_failures do
       code = run_argv(["-h"])
       expect(code).to eq(0)

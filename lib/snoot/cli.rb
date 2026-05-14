@@ -27,11 +27,22 @@ module Snoot
     DEFAULT_PATHS = Set[Snoot::Path.new(raw: ".")].freeze
 
     USAGE = <<~HELP
+      snoot - single-finding reek/flog/flay reporter
+
       Usage: snoot [paths...]
              snoot --version
              snoot --help
 
       With no path arguments, snoot scans the current directory.
+
+      Exit codes:
+        0   nothing to report
+        1   one finding rendered
+        2   analyser failure
+        64  usage error
+
+      Example:
+        snoot lib/
     HELP
 
     EXIT_CODES = {
