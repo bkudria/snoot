@@ -25,7 +25,8 @@ Gem::Specification.new do |spec|
     "exe/snoot",
     "snoot.allium",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ]
   spec.bindir        = "exe"
   spec.executables   = ["snoot"]
