@@ -25,7 +25,7 @@ module Snoot
 
     def smell_sections(smells, smell, orchestration)
       smell_type = smell.smell_type
-      matching = smells.select { |s| s.smell_type == smell_type }
+      matching = smells.select { |instance| instance.smell_type == smell_type }
       {
         doc: orchestration.vendored_doc(smell_type),
         instances: render_instances(matching)
