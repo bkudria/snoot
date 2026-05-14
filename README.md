@@ -15,7 +15,7 @@ behavioural contract); [`GOALS.md`](GOALS.md) records the design rationale.
 The spec, the implementation in `lib/`, and the tests in `spec/` are peer
 artifacts and are kept in sync — see [`CLAUDE.md`](CLAUDE.md).
 
-## Install
+## Installation
 
 From a local checkout:
 
@@ -23,12 +23,28 @@ From a local checkout:
     rake build
     gem install pkg/snoot-0.1.0.gem
 
+Once published to RubyGems, you will be able to install it directly with:
+
+    gem install snoot
+
+Or, from a Gemfile:
+
+    gem "snoot"
+
+## Usage
+
 After install, the `snoot` executable is available on PATH:
 
     snoot --version
     snoot --help
     snoot lib/foo.rb            # analyse a specific path
     snoot                       # scan the current directory
+
+`snoot` emits a single agent-targeted finding to stdout and exits with:
+
+- `0` — nothing worth reporting,
+- `1` — a finding was rendered,
+- `2` — analysis failed (failure line on stderr).
 
 ## License
 
