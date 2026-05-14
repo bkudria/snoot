@@ -23,3 +23,8 @@ vendor/bundle
 *.o
 *.a
 mkmf.log
+
+# Local environment / secrets
+.env
+.env.*
+!.env.example
