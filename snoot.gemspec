@@ -31,6 +31,9 @@ Gem::Specification.new do |spec|
   spec.executables   = ["snoot"]
   spec.require_paths = ["lib"]
 
+  spec.metadata["source_code_uri"]       = "https://github.com/bkudria/snoot"
+  spec.metadata["bug_tracker_uri"]       = "https://github.com/bkudria/snoot/issues"
+  spec.metadata["changelog_uri"]         = "https://github.com/bkudria/snoot/blob/main/CHANGELOG.md"
   spec.metadata["rubygems_mfa_required"] = "true"
 
   spec.add_dependency "bigdecimal", "~> 3.1"
