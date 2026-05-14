@@ -18,59 +18,12 @@ module Snoot
       result = orchestration.analyse(paths)
       return analysis_failure(run, result) if result.is_a?(AnalyserFailure)
 
-      decide_outcome(run, result, orchestration)
+      Decision.new(orchestration: orchestration, sources: result).resolve(run)
     end
 
     def analysis_failure(run, failure)
       failed = run.transition_to(:analysis_failed, failure: failure)
       Result.new(run: failed, events: [], smells: Set[])
-    end
-
-    def decide_outcome(run, sources, orchestration)
-      top_smell_overall = top_significant_smell(sources, orchestration)
-      doc_less_smell_type = doc_less_smell_type_of(top_smell_overall, orchestration)
-      selected = select_top_finding(candidates(sources, orchestration))
-      terminal = transition(run, selected)
-      Result.new(
-        run: terminal,
-        events: doc_less_events(terminal, doc_less_smell_type),
-        smells: sources.smells
-      )
-    end
-
-    def top_significant_smell(sources, orchestration)
-      significant = orchestration.significant_smells(sources.smells)
-      top_smell(significant) if significant.any?
-    end
-
-    def candidates(sources, orchestration)
-      documented = orchestration.significant_smells(sources.smells)
-                                .select { |smell| orchestration.vendored_doc(smell.smell_type) }
-                                .to_set
-      documented |
-        orchestration.significant_complexities(sources.complexities) |
-        orchestration.significant_duplications(sources.duplications)
-    end
-
-    def doc_less_smell_type_of(smell, orchestration)
-      return nil unless smell
-
-      smell_type = smell.smell_type
-      return nil if orchestration.vendored_doc(smell_type)
-
-      smell_type
-    end
-
-    def transition(run, selected)
-      return run.transition_to(:nothing_to_report) if selected.nil?
-
-      run.transition_to(:finding_rendered, selected_finding: selected)
-    end
-
-    def doc_less_events(run, smell_type)
-      return [] unless smell_type
-
-      [SkippedDocLessSmellWarned.new(run: run, smell_type: smell_type)]
     end
 
     def select_top_finding(findings)
