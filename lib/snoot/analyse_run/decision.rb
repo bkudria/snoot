@@ -12,12 +12,13 @@ module Snoot
       end
 
       def resolve(run)
-        terminal = transition(run, selected_candidate)
-        Result.new(
-          run: terminal,
-          events: doc_less_events(terminal),
-          smells: @sources.smells
-        )
+        selected = selected_candidate
+        terminal = if selected
+                     run.transition_to(:finding_rendered, selected_finding: selected)
+                   else
+                     run.transition_to(:nothing_to_report)
+                   end
+        Result.new(run: terminal, events: doc_less_events(terminal), smells: @sources.smells)
       end
 
       private
@@ -48,12 +49,6 @@ module Snoot
         return nil if @orchestration.vendored_doc(smell_type)
 
         smell_type
-      end
-
-      def transition(run, selected)
-        return run.transition_to(:nothing_to_report) if selected.nil?
-
-        run.transition_to(:finding_rendered, selected_finding: selected)
       end
 
       def doc_less_events(run)
