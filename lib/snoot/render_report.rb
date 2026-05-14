@@ -24,9 +24,10 @@ module Snoot
     end
 
     def smell_sections(smells, smell, orchestration)
-      matching = smells.select { |s| s.smell_type == smell.smell_type }
+      smell_type = smell.smell_type
+      matching = smells.select { |s| s.smell_type == smell_type }
       {
-        doc: orchestration.vendored_doc(smell.smell_type),
+        doc: orchestration.vendored_doc(smell_type),
         instances: render_instances(matching)
       }
     end
@@ -41,9 +42,10 @@ module Snoot
     def complexity_hit_sections(hit)
       loc = hit.location.description
       score = hit.score.to_s("F")
+      name = hit.method_name
       {
-        header: "High complexity in #{hit.method_name} at #{loc} (score: #{score})",
-        finding_context: "#{loc}\n\nMethod: #{hit.method_name}\nScore: #{score}",
+        header: "High complexity in #{name} at #{loc} (score: #{score})",
+        finding_context: "#{loc}\n\nMethod: #{name}\nScore: #{score}",
         doc: "High complexity hits indicate a method or class doing too much. " \
              "Consider extracting helpers, simplifying conditionals, or " \
              "splitting the responsibility across smaller units."
@@ -51,9 +53,10 @@ module Snoot
     end
 
     def duplication_cluster_sections(cluster)
-      rendered_locations = cluster.locations.map(&:description)
+      locations = cluster.locations
+      rendered_locations = locations.map(&:description)
       {
-        header: "Structural duplication: #{cluster.locations.size} locations (signature: #{cluster.signature})",
+        header: "Structural duplication: #{locations.size} locations (signature: #{cluster.signature})",
         finding_context: "Locations:\n#{rendered_locations.join("\n")}",
         doc: "Structural duplication suggests an extracted abstraction is missing. " \
              "Consider whether the duplicated shape belongs to a single helper, " \

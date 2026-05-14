@@ -22,12 +22,13 @@ module Snoot
     private
 
     def enforce_field_when!(field_name, outcome:)
+      actual = self.outcome
       field_value = public_send(field_name)
-      if self.outcome == outcome
+      if actual == outcome
         raise StateError, "#{field_name} required for :#{outcome}" unless field_value
       elsif field_value
         raise StateError,
-              "#{field_name} only permitted when outcome = :#{outcome} (got #{self.outcome.inspect})"
+              "#{field_name} only permitted when outcome = :#{outcome} (got #{actual.inspect})"
       end
     end
   end

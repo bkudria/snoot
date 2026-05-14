@@ -102,9 +102,10 @@ module Snoot
       end
 
       def vendored_doc(smell_type)
-        @vendored_doc_cache.fetch(smell_type.name) do
-          path = File.join(DOCS_ROOT, "#{smell_type.name.gsub(DOC_FILENAME_PATTERN, '\1-\2')}.md")
-          @vendored_doc_cache[smell_type.name] = File.exist?(path) ? File.read(path) : nil
+        name = smell_type.name
+        @vendored_doc_cache.fetch(name) do
+          path = File.join(DOCS_ROOT, "#{name.gsub(DOC_FILENAME_PATTERN, '\1-\2')}.md")
+          @vendored_doc_cache[name] = File.exist?(path) ? File.read(path) : nil
         end
       end
 

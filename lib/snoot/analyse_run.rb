@@ -54,9 +54,11 @@ module Snoot
 
     def doc_less_smell_type_of(smell, orchestration)
       return nil unless smell
-      return nil if orchestration.vendored_doc(smell.smell_type)
 
-      smell.smell_type
+      smell_type = smell.smell_type
+      return nil if orchestration.vendored_doc(smell_type)
+
+      smell_type
     end
 
     def transition(run, selected)
