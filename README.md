@@ -46,6 +46,12 @@ After install, the `snoot` executable is available on PATH:
 - `1` — a finding was rendered,
 - `2` — analysis failed (failure line on stderr).
 
+## Privacy
+
+`snoot` runs entirely locally. It analyses source on disk with the bundled
+`reek`, `flog`, and `flay` libraries and writes its single finding to stdout —
+no source code, findings, or telemetry are sent over the network.
+
 ## License
 
 snoot is MIT-licensed; see [`LICENSE`](LICENSE).
