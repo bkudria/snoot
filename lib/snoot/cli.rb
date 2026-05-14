@@ -10,8 +10,8 @@ module Snoot
   # the IO emitter helpers (emit_warnings, emit_failure,
   # emit_nothing_to_report, format_report). The event values (RunInvoked,
   # ReportEmitted) live in cli/event.rb; the Pipeline value lives in
-  # cli/pipeline.rb. .run consults BANNERS for --version/--help, rejects
-  # unknown flags with exit 64, and otherwise threads argv through
+  # cli/pipeline.rb. .run consults BANNERS for --version, --help, and -h,
+  # rejects unknown flags with exit 64, and otherwise threads argv through
   # .run_invoked, mapping the terminal outcome to an EXIT_CODES integer.
   #
   # The two entry points return deliberately different shapes. .run is
@@ -43,8 +43,8 @@ module Snoot
     USAGE_ERROR_EXIT_CODE = 64
 
     BANNERS = {
-      ["--version"] => "snoot #{Snoot::VERSION}\n",
-      ["--help"] => USAGE
+      %w[--version] => "snoot #{Snoot::VERSION}\n",
+      %w[-h --help] => USAGE
     }.freeze
 
     module_function
@@ -73,11 +73,17 @@ module Snoot
     end
 
     def run(argv, pipeline: Pipeline.default)
-      banner = BANNERS[argv]
+      banner = lookup_banner(argv)
       return write_and_return(pipeline.stdout, banner, 0) if banner
       return write_and_return(pipeline.stderr, USAGE, USAGE_ERROR_EXIT_CODE) if unknown_flag?(argv)
 
       run_pipeline(argv, pipeline: pipeline)
+    end
+
+    def lookup_banner(argv)
+      return nil unless argv.length == 1
+
+      BANNERS.find { |flags, _| flags.include?(argv.first) }&.last
     end
 
     def write_and_return(io, message, code)
