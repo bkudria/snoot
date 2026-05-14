@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest a new behaviour or capability for snoot.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve? What is the use case?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What you would like snoot to do, and how you imagine using it.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you have tried or thought about, and why they fall short.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, examples, related findings, or anything else useful.
+    validations:
+      required: false
