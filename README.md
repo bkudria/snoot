@@ -17,6 +17,8 @@ artifacts and are kept in sync — see [`CLAUDE.md`](CLAUDE.md).
 
 ## Installation
 
+Requires Ruby 4.0 or later.
+
 From a local checkout:
 
     bundle install
