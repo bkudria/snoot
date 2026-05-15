@@ -19,19 +19,7 @@ artifacts and are kept in sync — see [`CLAUDE.md`](CLAUDE.md).
 
 Requires Ruby 4.0 or later.
 
-From a local checkout:
-
-    bundle install
-    rake build
-    gem install pkg/snoot-0.1.0.gem
-
-Once published to RubyGems, you will be able to install it directly with:
-
     gem install snoot
-
-Or, from a Gemfile:
-
-    gem "snoot"
 
 ## Usage
 

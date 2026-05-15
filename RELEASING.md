@@ -23,20 +23,30 @@ This document describes how to cut a release of the `snoot` gem.
    - Add a fresh empty `[Unreleased]` section above it.
    - Update the version-comparison links at the bottom of the file.
 
-4. **Verify the suite is green**:
+4. **Re-sync vendored reek docs** so the gem ships docs matching the
+   bundled reek version:
+
+   ```sh
+   bundle exec rake docs:sync
+   git status data/reek_docs/
+   ```
+
+   Stage any resulting changes; they belong in the release commit.
+
+5. **Verify the suite is green**:
 
    ```sh
    bundle exec rspec
    bundle exec rubocop
    ```
 
-5. **Commit the bump** (Conventional Commits, see [CONTRIBUTING.md](CONTRIBUTING.md)):
+6. **Commit the bump** (Conventional Commits, see [CONTRIBUTING.md](CONTRIBUTING.md)):
 
    ```sh
    git commit -m "chore(release): v<new-version>"
    ```
 
-6. **Publish** using the Bundler-provided rake task:
+7. **Publish** using the Bundler-provided rake task:
 
    ```sh
    bundle exec rake release
@@ -48,5 +58,5 @@ This document describes how to cut a release of the `snoot` gem.
    - build the gem, and
    - push the gem to RubyGems.
 
-7. **Verify** that the new version appears on [rubygems.org/gems/snoot](https://rubygems.org/gems/snoot)
+8. **Verify** that the new version appears on [rubygems.org/gems/snoot](https://rubygems.org/gems/snoot)
    and that the tag is present on GitHub.
