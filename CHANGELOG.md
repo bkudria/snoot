@@ -7,4 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/bkudria/snoot/compare/HEAD...HEAD
+## [0.1.0] - 2026-05-14
+
+### Added
+
+- Initial release.
+- `snoot` CLI that orchestrates reek, flog, and flay over a given path
+  set (or the current directory when no paths are given) and emits a
+  single agent-targeted finding to stdout.
+
+[Unreleased]: https://github.com/bkudria/snoot/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/bkudria/snoot/releases/tag/v0.1.0
