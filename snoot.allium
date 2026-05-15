@@ -62,11 +62,11 @@ value SmellType {
 -- Analyser Result
 ------------------------------------------------------------
 
--- The two-shaped outcome of AnalyserOrchestration#analyse. AnalysisResult is
+-- The two-shaped outcome of AnalyserOrchestration#analyse. AnalyserResult is
 -- a sum-type entity so the rule body can narrow on `kind`. Both variants
 -- are short-lived: an instance is created by analyse() and consumed within
 -- a single AnalyseRun execution; neither persists beyond the rule.
-entity AnalysisResult {
+entity AnalyserResult {
     kind: Sources | AnalyserFailure
 }
 
@@ -74,7 +74,7 @@ entity AnalysisResult {
 -- AnalyserOrchestration#analyse. Carries the per-analyser finding sets
 -- so AnalyseRun can derive significance and candidate views without
 -- re-invoking the analysers.
-variant Sources : AnalysisResult {
+variant Sources : AnalyserResult {
     smells: Set<Smell>
     complexities: Set<ComplexityHit>
     duplications: Set<DuplicationCluster>
@@ -86,7 +86,7 @@ variant Sources : AnalysisResult {
 -- carried on stderr. Only the first failed analyser in canonical order
 -- (Reek -> Flog -> Flay) is recorded; the orchestration aborts on first
 -- failure and does not invoke subsequent analysers.
-variant AnalyserFailure : AnalysisResult {
+variant AnalyserFailure : AnalyserResult {
     analyser: Reek | Flog | Flay
     message: String
 }
@@ -136,7 +136,7 @@ contract AnalyserOrchestration {
     -- respects @invariant Determinism: for the same path set, the same
     -- outcome (including which analyser fails first, if any, and its
     -- message) is produced within a single CLI invocation.
-    analyse: (paths: Set<Path>) -> AnalysisResult
+    analyse: (paths: Set<Path>) -> AnalyserResult
 
     @invariant Determinism
         -- Each signature is pure within a single CLI invocation: the same
