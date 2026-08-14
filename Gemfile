@@ -12,5 +12,5 @@ end
 group :test do
   gem "prop_check", "~> 1.0"
   gem "rspec", "~> 3.13"
-  gem "simplecov", "~> 0.22", require: false
+  gem "simplecov", "~> 1.1", require: false
 end
