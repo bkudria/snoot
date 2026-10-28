@@ -9,3 +9,8 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    groups:
+      # init and analyze refuse to run at different versions.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
