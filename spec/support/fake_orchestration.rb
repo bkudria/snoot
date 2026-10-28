@@ -3,7 +3,7 @@
 module Snoot
   module Spec
     class FakeOrchestration
-      # rubocop:disable Metrics/ParameterLists
+      # rubocop:disable-next Metrics/ParameterLists
       def initialize(smells: Set[], complexities: Set[], duplications: Set[],
                      vendored_docs: {},
                      reek_raises: nil, flog_raises: nil, flay_raises: nil)
@@ -15,7 +15,6 @@ module Snoot
         @flog_raises = flog_raises
         @flay_raises = flay_raises
       end
-      # rubocop:enable Metrics/ParameterLists
 
       def vendored_doc(smell_type)
         @vendored_docs[smell_type.name]
