@@ -492,15 +492,23 @@ surface CLI {
         -- An invocation whose argv the CLI rejects is not an accepted
         -- invocation: RunInvoked does not fire, no Run is created, and
         -- TerminatesInOneOutcome does not apply. The CLI exits 64 (POSIX
-        -- EX_USAGE). Two kinds of argv are rejected:
-        --   - an unknown flag or malformed switch: stderr carries the
-        --     usage banner;
+        -- EX_USAGE). An argument beginning with '-' is an option unless
+        -- it follows a '--' argument, which ends options and is itself
+        -- consumed. A help or version option anywhere in argv wins: the
+        -- CLI prints that banner to stdout and exits 0, ignoring the rest.
+        -- Otherwise two kinds of argv are rejected:
+        --   - an unknown option: stderr carries one 'snoot: unknown
+        --     option: <arg>' line per unknown option;
         --   - a path argument naming nothing on disk: the whole
         --     invocation is rejected even when other paths exist, and
         --     stderr carries one 'snoot: no such file or directory:
-        --     <path>' line per missing path and nothing else. Analysing
-        --     only the paths that exist, or some fallback location,
-        --     would report on a scope the operator did not ask for.
+        --     <path>' line per missing path. Analysing only the paths
+        --     that exist, or some fallback location, would report on a
+        --     scope the operator did not ask for.
+        -- Every problem is reported in one invocation: the unknown-option
+        -- lines, then the missing-path lines, then -- only when an
+        -- unknown option was present -- a single "Try 'snoot --help' for
+        -- usage." line. Stderr carries nothing else.
         -- Exit code 64 is reserved for this pre-domain failure mode so an
         -- operator (or CI) can distinguish a usage error from
         -- finding_rendered, both of which would otherwise share an exit

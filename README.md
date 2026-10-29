@@ -29,6 +29,7 @@ After install, the `snoot` executable is available on PATH:
     snoot --help
     snoot lib/foo.rb            # analyse a specific path
     snoot                       # scan the current directory
+    snoot -- -odd-name.rb       # arguments after -- are always paths
 
 `snoot` emits a single agent-targeted finding to stdout and exits with:
 

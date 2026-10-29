@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "snoot/cli/argv"
 require "snoot/cli/event"
 require "snoot/cli/pipeline"
 require "snoot/cli/usage"
@@ -11,10 +12,11 @@ module Snoot
   # the IO emitter helpers (emit_warnings, emit_failure,
   # emit_nothing_to_report, format_report). The event values (RunInvoked,
   # ReportEmitted) live in cli/event.rb; the Pipeline value lives in
-  # cli/pipeline.rb; the USAGE banner lives in cli/usage.rb. .run consults
-  # BANNERS for --version, --help, and -h, rejects unknown flags with exit
-  # 64, and otherwise threads argv through .run_invoked, mapping the
-  # terminal outcome to an EXIT_CODES integer.
+  # cli/pipeline.rb; the USAGE banner lives in cli/usage.rb; cli/argv.rb
+  # splits argv into options and paths. .run prints a BANNERS entry when
+  # any option names one, rejects unknown options and missing paths with
+  # exit 64, and otherwise threads the paths through .run_invoked,
+  # mapping the terminal outcome to an EXIT_CODES integer.
   #
   # The two entry points return deliberately different shapes. .run is
   # the POSIX boundary: argv -> Integer, consumed by `exit
@@ -67,32 +69,37 @@ module Snoot
     end
 
     def run(argv, pipeline: Pipeline.default)
-      banner = lookup_banner(argv)
+      parsed = Argv.parse(argv)
+      banner = lookup_banner(parsed.options)
       return write_and_return(pipeline.stdout, banner, 0) if banner
-      return usage_error(pipeline, USAGE) if unknown_flag?(argv)
 
-      missing = missing_paths(argv)
-      return usage_error(pipeline, missing_paths_message(missing)) if missing.any?
+      rejection = rejection_message(parsed.options, missing_paths(parsed.paths))
+      return usage_error(pipeline, rejection) unless rejection.empty?
 
-      run_pipeline(argv, pipeline: pipeline)
+      run_pipeline(parsed.paths, pipeline: pipeline)
+    end
+
+    def lookup_banner(options)
+      options.each do |option|
+        banner = BANNERS.find { |flags, _| flags.include?(option) }&.last
+        return banner if banner
+      end
+      nil
+    end
+
+    def rejection_message(unknown_options, missing)
+      lines = unknown_options.map { |option| "snoot: unknown option: #{option}\n" }
+      lines.concat(missing.map { |raw| "snoot: no such file or directory: #{raw}\n" })
+      lines << "Try 'snoot --help' for usage.\n" if unknown_options.any?
+      lines.join
     end
 
     def usage_error(pipeline, message)
       write_and_return(pipeline.stderr, message, EXIT_CODES.fetch(:usage_error))
     end
 
-    def missing_paths(argv)
-      argv.reject { |raw| File.exist?(raw) }
-    end
-
-    def missing_paths_message(missing)
-      missing.map { |raw| "snoot: no such file or directory: #{raw}\n" }.join
-    end
-
-    def lookup_banner(argv)
-      return nil unless argv.length == 1
-
-      BANNERS.find { |flags, _| flags.include?(argv.first) }&.last
+    def missing_paths(raws)
+      raws.reject { |raw| File.exist?(raw) }
     end
 
     def write_and_return(io, message, code)
@@ -100,17 +107,13 @@ module Snoot
       code
     end
 
-    def unknown_flag?(argv)
-      argv.any? { |arg| arg.start_with?("-") }
-    end
-
-    def run_pipeline(argv, pipeline:)
-      run, _events = run_invoked(build_paths(argv), pipeline: pipeline)
+    def run_pipeline(raws, pipeline:)
+      run, _events = run_invoked(build_paths(raws), pipeline: pipeline)
       EXIT_CODES.fetch(run.outcome)
     end
 
-    def build_paths(argv)
-      argv.each_with_object(Set[]) { |raw, set| set << Path.new(raw: raw) }
+    def build_paths(raws)
+      raws.each_with_object(Set[]) { |raw, set| set << Path.new(raw: raw) }
     end
 
     def run_invoked(paths, pipeline: Pipeline.default)

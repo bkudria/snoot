@@ -5,11 +5,13 @@ module Snoot
     USAGE = <<~HELP.freeze
       snoot - single-finding reek/flog/flay reporter
 
-      Usage: snoot [paths...]
+      Usage: snoot [--] [paths...]
              snoot --version
              snoot --help
 
-      With no path arguments, snoot scans the current directory.
+      With no path arguments, snoot scans the current directory. Arguments
+      after -- are always paths. --help and --version print and exit 0
+      whatever else is given.
 
       How snoot picks the finding:
         One finding per run; a smell finding lists every instance of its type

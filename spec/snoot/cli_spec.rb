@@ -199,7 +199,8 @@ RSpec.describe Snoot::CLI do
 
     it "includes description, exit-code legend, and an example in --help output" do
       run_argv(["--help"])
-      expect(stdout.string).to include("reek/flog/flay", "Exit codes:", "1   one finding rendered",
+      expect(stdout.string).to include("reek/flog/flay", "snoot [--] [paths...]", "Exit codes:",
+                                       "1   one finding rendered",
                                        "64  usage error (unknown flag or missing path)", "Example:")
     end
 
@@ -222,18 +223,51 @@ RSpec.describe Snoot::CLI do
       expect(stderr.string).to be_empty
     end
 
-    it "writes usage to stderr and returns 64 for an unknown flag", :aggregate_failures do
-      code = run_argv(["--unknown-flag"])
-      expect(code).to eq(64)
-      expect(stderr.string).to include("Usage: snoot")
-      expect(stdout.string).to be_empty
+    def run_without_analysis(argv)
+      run_argv(argv, orchestration: fake_orchestration(reek_raises: StandardError.new("analysis ran")))
+    end
+
+    def try_help
+      "Try 'snoot --help' for usage.\n"
+    end
+
+    context "with an unknown option" do
+      it "exits 64 naming the option, then a --help hint, without analysing" do
+        expect([run_without_analysis(["--bogus"]), stdout.string, stderr.string])
+          .to eq([64, "", "snoot: unknown option: --bogus\n#{try_help}"])
+      end
+
+      it "reports unknown options, then missing paths, then the hint, in one run" do
+        run_without_analysis(["nope", "--bogus"])
+        expect(stderr.string)
+          .to eq("snoot: unknown option: --bogus\nsnoot: no such file or directory: nope\n#{try_help}")
+      end
+
+      it "treats a lone '-' as an unknown option" do
+        run_without_analysis(["-"])
+        expect(stderr.string).to eq("snoot: unknown option: -\n#{try_help}")
+      end
+    end
+
+    context "with a banner option among other arguments" do
+      it "prints help to stdout and exits 0 when --help comes with a path" do
+        expect([run_without_analysis(["--help", "nope"]), stdout.string, stderr.string])
+          .to eq([0, Snoot::CLI::USAGE, ""])
+      end
+
+      it "prints the version to stdout and exits 0 when --version follows a path" do
+        expect([run_without_analysis(["nope", "--version"]), stdout.string, stderr.string])
+          .to eq([0, "snoot #{Snoot::VERSION}\n", ""])
+      end
+    end
+
+    it "treats every argument after -- as a path" do
+      with_seeded_cwd("-dash.rb", smelly_ruby) do
+        expect(run_argv(["--", "-dash.rb"])).to eq(1)
+      end
     end
 
     context "with a path that does not exist" do
-      def run_without_analysis(argv)
-        run_argv(argv, orchestration: fake_orchestration(reek_raises: StandardError.new("analysis ran")))
-      end
-
       it "exits 64 naming the missing path on stderr, without analysing", :aggregate_failures do
         code = run_without_analysis(["does-not-exist"])
         expect([code, stdout.string]).to eq([64, ""])

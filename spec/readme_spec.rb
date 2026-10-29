@@ -18,6 +18,10 @@ RSpec.describe "README.md" do # rubocop:disable RSpec/DescribeClass
     expect(readme).to include("every instance of its type", "Running reek, flog or flay directly")
   end
 
+  it "shows -- ending options before a dash-named path" do
+    expect(readme).to include("snoot -- -odd-name.rb")
+  end
+
   it "lists the usage-error exit code" do
     expect(readme).to include("- `64` — usage error (unknown flag or missing path")
   end
