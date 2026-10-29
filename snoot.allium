@@ -294,16 +294,18 @@ rule RenderReport {
 
     -- Section composition is variant-conditional:
     --
-    -- For Smell findings the report is two sections:
-    --   - doc:       vendored_doc(smell_type) (always non-null here, per the
-    --                SelectedFindingsAreRenderable invariant)
+    -- For Smell findings the report is three sections:
+    --   - header:    one-line summary naming the smell type and counting its
+    --                instances and the files they span
     --   - instances: every Smell from the analysed sources whose smell_type
     --                matches the selected_finding's smell_type, grouped by
     --                file, with files ordered by descending instance count
-    --                and alphabetical tie-break. The header / finding_context
-    --                sections are absent because the doc + instances pair
-    --                is sufficient context for an agent acting on a
-    --                multi-instance smell type.
+    --                and alphabetical tie-break
+    --   - doc:       vendored_doc(smell_type), unmodified (always non-null
+    --                here, per the SelectedFindingsAreRenderable invariant)
+    -- The header and instances lead so a reader that truncates the report
+    -- from the top still sees what was found and where; the vendored doc,
+    -- often long, follows as reference.
     --
     -- For ComplexityHit and DuplicationCluster findings the report is the
     -- three-section structure (header, finding_context, doc):
@@ -319,7 +321,7 @@ rule RenderReport {
             ReportEmitted(
                 run: run,
                 finding: run.selected_finding,
-                sections: { doc, instances }
+                sections: { header, instances, doc }
             )
         else:
             ReportEmitted(
@@ -330,7 +332,9 @@ rule RenderReport {
 
     @guarantee SmellReportShape
         -- For Smell findings, a rendered report contains, in order:
-        --   1. Doc       -- the vendored markdown for the selected smell type
+        --   1. Header    -- one-line summary: the smell type's name in words,
+        --                  the number of matching instances, and the number
+        --                  of files they span (analyser-implicit)
         --   2. Instances -- '## Instances' heading followed by per-file
         --                  groupings of every Smell from the analysed sources
         --                  matching the selected smell_type. Each file group
@@ -338,6 +342,8 @@ rule RenderReport {
         --                  indented 'Line N: <message>' lines. File groups
         --                  are ordered by descending instance count, with
         --                  alphabetical path as the tie-break.
+        --   3. Doc       -- the vendored markdown for the selected smell
+        --                  type, unmodified
 
     @guarantee NonSmellReportShape
         -- For ComplexityHit and DuplicationCluster findings, a rendered
@@ -351,10 +357,10 @@ rule RenderReport {
 
     @guarantee AnalyserProvenanceImplicit
         -- The report does not label the originating analyser. The shape of
-        -- the report (doc + instances for Smell vs header + finding_context
-        -- + doc for non-Smell) and the finding's wording (smell name vs
-        -- complexity language vs duplication enumeration) are sufficient
-        -- for the agent to infer provenance.
+        -- the report (header + instances + doc for Smell vs header +
+        -- finding_context + doc for non-Smell) and the finding's wording
+        -- (smell name vs complexity language vs duplication enumeration)
+        -- are sufficient for the agent to infer provenance.
 
     @guidance
         -- Section ordering within each variant shape is structural.

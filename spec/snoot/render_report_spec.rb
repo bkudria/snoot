@@ -20,10 +20,10 @@ RSpec.describe Snoot::RenderReport do
       )
     end
 
-    it "emits ReportEmitted for a Smell as { doc, instances }", :aggregate_failures do
+    it "emits ReportEmitted for a Smell as { header, instances, doc }", :aggregate_failures do
       expect(fe_report.run).to eq(fe_run)
       expect(fe_report.finding).to eq(fe_run.selected_finding)
-      expect(fe_report.sections.keys).to eq(%i[doc instances])
+      expect(fe_report.sections.keys).to eq(%i[header instances doc])
     end
 
     it "groups instances from the smells: kwarg" do
@@ -79,8 +79,17 @@ RSpec.describe Snoot::RenderReport do
       expect(instances.index("lib/b.rb")).to be < instances.index("lib/c.rb")
     end
 
-    it "omits header and finding_context for Smell findings", :aggregate_failures do
-      expect(report.sections).not_to have_key(:header)
+    it "renders a one-line header naming the smell type with instance and file counts" do
+      expect(report.sections[:header]).to eq("Irresponsible module: 4 instances across 3 files")
+    end
+
+    it "uses singular nouns in the header for a single instance in a single file" do
+      single = Set[smells.first]
+      report = described_class.invoke(run, smells: single, orchestration: doc_orch)
+      expect(report.sections[:header]).to eq("Irresponsible module: 1 instance across 1 file")
+    end
+
+    it "omits finding_context for Smell findings" do
       expect(report.sections).not_to have_key(:finding_context)
     end
 
