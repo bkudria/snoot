@@ -2,6 +2,7 @@
 
 require "snoot/cli/event"
 require "snoot/cli/pipeline"
+require "snoot/cli/usage"
 
 module Snoot
   # The CLI surface. cli.rb owns the surface entry points: argv-shape
@@ -10,9 +11,10 @@ module Snoot
   # the IO emitter helpers (emit_warnings, emit_failure,
   # emit_nothing_to_report, format_report). The event values (RunInvoked,
   # ReportEmitted) live in cli/event.rb; the Pipeline value lives in
-  # cli/pipeline.rb. .run consults BANNERS for --version, --help, and -h,
-  # rejects unknown flags with exit 64, and otherwise threads argv through
-  # .run_invoked, mapping the terminal outcome to an EXIT_CODES integer.
+  # cli/pipeline.rb; the USAGE banner lives in cli/usage.rb. .run consults
+  # BANNERS for --version, --help, and -h, rejects unknown flags with exit
+  # 64, and otherwise threads argv through .run_invoked, mapping the
+  # terminal outcome to an EXIT_CODES integer.
   #
   # The two entry points return deliberately different shapes. .run is
   # the POSIX boundary: argv -> Integer, consumed by `exit
@@ -25,25 +27,6 @@ module Snoot
   module CLI
     NOTHING_TO_REPORT = "nothing to report -- no findings above snoot's significance floor"
     DEFAULT_PATHS = Set[Snoot::Path.new(raw: ".")].freeze
-
-    USAGE = <<~HELP
-      snoot - single-finding reek/flog/flay reporter
-
-      Usage: snoot [paths...]
-             snoot --version
-             snoot --help
-
-      With no path arguments, snoot scans the current directory.
-
-      Exit codes:
-        0   nothing to report
-        1   one finding rendered
-        2   analyser failure
-        64  usage error
-
-      Example:
-        snoot lib/
-    HELP
 
     EXIT_CODES = {
       finding_rendered: 1,

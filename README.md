@@ -34,7 +34,35 @@ After install, the `snoot` executable is available on PATH:
 
 - `0` — nothing worth reporting,
 - `1` — a finding was rendered,
-- `2` — analysis failed (failure line on stderr).
+- `2` — analysis failed (failure line on stderr),
+- `64` — usage error (unknown flag; usage on stderr).
+
+## How snoot picks a finding
+
+Each run reports one finding. Fix it, then run `snoot` again to see the
+next one; the report's "Also significant" line counts what is still
+waiting.
+
+Only findings above snoot's significance cutoffs are candidates --
+cutoffs: smell types need 2+ instances; complexity hits need score 25+; duplication clusters have no cutoff.
+Duplication still passes through flay's own mass threshold (16).
+
+Among the candidates, smells outrank duplication clusters, which outrank
+complexity hits. Within a category the largest wins:
+
+- smells: the smell type with the most instances; ties break by smell
+  type name, then path, then line;
+- duplication clusters: the most locations; ties break by signature,
+  then first path, then first line;
+- complexity hits: the highest score; ties break by path, then line.
+
+Smell types with no bundled reek documentation are skipped. When the
+skipped type would have been the top finding, snoot prints a warning on
+stderr.
+
+Reek reads `.reek.yml` from the current directory or its nearest
+ancestor, falling back to `~/.reek.yml`; it configures reek's detectors
+and `exclude_paths`. flog and flay do not read it.
 
 ## Privacy
 
