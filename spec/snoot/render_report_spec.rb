@@ -156,6 +156,10 @@ RSpec.describe Snoot::RenderReport do
     it "cuts code longer than 160 characters" do
       expect(instances_for([1, "x" * 200])).to eq("  Line 1: Foo#bar refers to 'opts'\n    1 | #{'x' * 159}…")
     end
+
+    it "replaces control characters in code so they can't drive a terminal" do
+      expect(instances_for([1, "a\e[2Jb\u009bc\td"])).to end_with("    1 | a\uFFFD[2Jb\uFFFDc\td")
+    end
   end
 
   describe "ComplexityHit rendering" do

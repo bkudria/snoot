@@ -8,6 +8,7 @@ module Snoot
     module SourceExcerpt
       MAX_LINES = 5
       MAX_WIDTH = 160
+      CONTROL_CHARACTERS = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/
 
       module_function
 
@@ -21,11 +22,17 @@ module Snoot
       end
 
       def code_line(line, width)
-        "    #{line.number.to_s.rjust(width)} | #{clip(line.text.strip)}"
+        "    #{line.number.to_s.rjust(width)} | #{clip(neutralize(line.text.strip))}"
       end
 
       def more_line(hidden)
         "    … #{hidden.size} more: #{hidden.map(&:number).join(', ')}"
+      end
+
+      # Source text comes from the scanned files, so escape sequences in it
+      # would otherwise reach whatever terminal displays the report.
+      def neutralize(text)
+        text.gsub(CONTROL_CHARACTERS, "\uFFFD")
       end
 
       def clip(text)

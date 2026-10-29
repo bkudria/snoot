@@ -397,7 +397,8 @@ rule RenderReport {
         --                  N, M: <message>' when several lines are flagged),
         --                  followed by up to five 4-space-indented
         --                  'N | <code>' lines carrying the flagged lines'
-        --                  text (stripped, cut to 160 characters) and, past
+        --                  text (stripped, control characters replaced
+        --                  with U+FFFD, cut to 160 characters) and, past
         --                  five, one '… K more: <line numbers>' line. A
         --                  line with no readable text has no code line.
         --                  File groups are ordered by descending instance
