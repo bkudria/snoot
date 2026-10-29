@@ -27,6 +27,8 @@ Allium-concept directories for everything else.
   string, e.g. `"AnalyserOrchestration::Default"`).
 - `spec/invariants/` — Allium invariant specs (`RSpec.describe` an invariant
   string, e.g. `"Invariant: SingleFindingPerRun"`).
+- `spec/rakelib/` — specs for development tooling in `rakelib/` (e.g.
+  `ReleasePrep`). Kept out of `lib/` so it doesn't ship in the gem.
 - `spec/support/` — shared helpers (factories, fakes, tempfile/IO scaffolding).
 - `spec/*_spec.rb` — top-level specs that aren't a class (e.g.
   `exe_snoot_spec.rb`, `version_spec.rb`).
