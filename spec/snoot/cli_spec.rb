@@ -202,6 +202,13 @@ RSpec.describe Snoot::CLI do
       expect(stdout.string).to include("reek/flog/flay", "Exit codes:", "1   one finding rendered", "Example:")
     end
 
+    it "explains how snoot picks the finding in --help output" do
+      cutoffs = Snoot::RenderReport.describe_cutoffs(Snoot::AnalyserOrchestration::Default.significance_cutoffs)
+      run_argv(["--help"])
+      expect(stdout.string).to include("How snoot picks the finding:", "rerun snoot", "Smells outrank duplication",
+                                       "Ties break by name", cutoffs, ".reek.yml")
+    end
+
     it "writes usage to stdout and returns 0 for -h", :aggregate_failures do
       code = run_argv(["-h"])
       expect(code).to eq(0)
