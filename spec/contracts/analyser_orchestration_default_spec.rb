@@ -189,6 +189,36 @@ RSpec.describe "AnalyserOrchestration::Default" do
     end
   end
 
+  describe "flog/flay path expansion" do
+    let(:duplicated_source) do
+      body = <<~RUBY
+        def heavy(a, b, c, d, e)
+          x = a + b + c
+          y = d * e - a
+          z = (x * y) / (a + 1)
+          [x, y, z].each { |v| puts v.inspect }
+          { x: x, y: y, z: z, sum: x + y + z }
+        end
+      RUBY
+      "class Alpha\n#{body}end\n\nclass Beta\n#{body}end\n"
+    end
+
+    def analyse_missing_path_in_seeded_cwd
+      with_seeded_cwd("seeded.rb", duplicated_source) do
+        original_stderr = $stderr
+        $stderr = StringIO.new
+        return adapter.analyse(Set[Snoot::Path.new(raw: "does-not-exist")])
+      ensure
+        $stderr = original_stderr
+      end
+    end
+
+    it "does not fall back to the current directory when no given path exists" do
+      sources = analyse_missing_path_in_seeded_cwd
+      expect([sources.complexities, sources.duplications]).to eq([Set[], Set[]])
+    end
+  end
+
   describe "significant_smells" do
     let(:envy) { build_smell(smell_type: build_smell_type(name: "FeatureEnvy")) }
     let(:tmm_pair) do
@@ -259,7 +289,7 @@ RSpec.describe "AnalyserOrchestration::Default" do
         end
       RUBY
     end
-    let(:paths) { Set[build_path] }
+    let(:paths) { Set[Snoot::Path.new(raw: __FILE__)] }
 
     def with_temp_path(src)
       Tempfile.create(["good", ".rb"]) do |io|

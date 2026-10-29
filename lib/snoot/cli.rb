@@ -69,9 +69,24 @@ module Snoot
     def run(argv, pipeline: Pipeline.default)
       banner = lookup_banner(argv)
       return write_and_return(pipeline.stdout, banner, 0) if banner
-      return write_and_return(pipeline.stderr, USAGE, EXIT_CODES.fetch(:usage_error)) if unknown_flag?(argv)
+      return usage_error(pipeline, USAGE) if unknown_flag?(argv)
+
+      missing = missing_paths(argv)
+      return usage_error(pipeline, missing_paths_message(missing)) if missing.any?
 
       run_pipeline(argv, pipeline: pipeline)
+    end
+
+    def usage_error(pipeline, message)
+      write_and_return(pipeline.stderr, message, EXIT_CODES.fetch(:usage_error))
+    end
+
+    def missing_paths(argv)
+      argv.reject { |raw| File.exist?(raw) }
+    end
+
+    def missing_paths_message(missing)
+      missing.map { |raw| "snoot: no such file or directory: #{raw}\n" }.join
     end
 
     def lookup_banner(argv)

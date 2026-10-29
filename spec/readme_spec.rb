@@ -19,6 +19,6 @@ RSpec.describe "README.md" do # rubocop:disable RSpec/DescribeClass
   end
 
   it "lists the usage-error exit code" do
-    expect(readme).to include("- `64` —")
+    expect(readme).to include("- `64` — usage error (unknown flag or missing path")
   end
 end

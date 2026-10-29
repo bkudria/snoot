@@ -199,7 +199,8 @@ RSpec.describe Snoot::CLI do
 
     it "includes description, exit-code legend, and an example in --help output" do
       run_argv(["--help"])
-      expect(stdout.string).to include("reek/flog/flay", "Exit codes:", "1   one finding rendered", "Example:")
+      expect(stdout.string).to include("reek/flog/flay", "Exit codes:", "1   one finding rendered",
+                                       "64  usage error (unknown flag or missing path)", "Example:")
     end
 
     it "explains how snoot picks the finding in --help output" do
@@ -226,6 +227,26 @@ RSpec.describe Snoot::CLI do
       expect(code).to eq(64)
       expect(stderr.string).to include("Usage: snoot")
       expect(stdout.string).to be_empty
+    end
+
+    context "with a path that does not exist" do
+      def run_without_analysis(argv)
+        run_argv(argv, orchestration: fake_orchestration(reek_raises: StandardError.new("analysis ran")))
+      end
+
+      it "exits 64 naming the missing path on stderr, without analysing", :aggregate_failures do
+        code = run_without_analysis(["does-not-exist"])
+        expect([code, stdout.string]).to eq([64, ""])
+        expect(stderr.string).to eq("snoot: no such file or directory: does-not-exist\n")
+      end
+
+      it "rejects the whole invocation and names every missing path" do
+        with_ruby_tempfile(smell_free_ruby) do |path|
+          expect([run_without_analysis([path, "nope-a", "nope-b"]), stderr.string]).to eq(
+            [64, "snoot: no such file or directory: nope-a\nsnoot: no such file or directory: nope-b\n"]
+          )
+        end
+      end
     end
 
     def default_nothing_to_report
@@ -264,7 +285,7 @@ RSpec.describe Snoot::CLI do
 
     it "exits 2 with stderr message when analysis fails", :aggregate_failures do
       orchestration = fake_orchestration(reek_raises: StandardError.new("boom"))
-      code = run_argv(["lib/foo.rb"], orchestration: orchestration)
+      code = run_argv(["lib"], orchestration: orchestration)
       expect(code).to eq(2)
       expect(stderr.string).to include("analysis failed (reek):", "boom")
       expect(stdout.string).to be_empty
