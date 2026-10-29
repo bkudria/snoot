@@ -26,6 +26,14 @@ RSpec.describe Snoot::Spec::FakeOrchestration do
     end
   end
 
+  describe "#significance_cutoffs" do
+    it "reports no cutoffs by default, matching its identity filters" do
+      expect(described_class.new.significance_cutoffs).to eq(
+        Snoot::SignificanceCutoffs.new(smell_type_instances: nil, complexity_score: nil, duplication_locations: nil)
+      )
+    end
+  end
+
   describe "#analyse" do
     let(:smell) { build_smell }
     let(:complexity) { build_complexity_hit }

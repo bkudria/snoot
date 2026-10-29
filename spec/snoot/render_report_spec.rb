@@ -20,14 +20,15 @@ RSpec.describe Snoot::RenderReport do
       )
     end
 
-    it "emits ReportEmitted for a Smell as { header, instances, doc }", :aggregate_failures do
+    it "emits ReportEmitted for a Smell as { header, remaining, instances, doc }", :aggregate_failures do
       expect(fe_report.run).to eq(fe_run)
       expect(fe_report.finding).to eq(fe_run.selected_finding)
-      expect(fe_report.sections.keys).to eq(%i[header instances doc])
+      expect(fe_report.sections.keys).to eq(%i[header remaining instances doc])
     end
 
     it "groups instances from the smells: kwarg" do
-      report = described_class.invoke(fe_run, smells: Set[fe_smell, sibling_smell], orchestration: orch)
+      report = described_class.invoke(fe_run, smells: Set[fe_smell, sibling_smell], remaining: build_remaining,
+                                              orchestration: orch)
       expect(report.sections[:instances]).to include("lib/sibling.rb\n  Line 7: from kwarg")
     end
   end
@@ -55,7 +56,7 @@ RSpec.describe Snoot::RenderReport do
     let(:run) do
       Snoot::Run.new(paths: Set[build_path], outcome: :finding_rendered, selected_finding: smells.first)
     end
-    let(:report) { described_class.invoke(run, smells: smells, orchestration: doc_orch) }
+    let(:report) { described_class.invoke(run, smells: smells, remaining: build_remaining, orchestration: doc_orch) }
 
     it "renders doc from vendored_doc(smell_type)" do
       expect(report.sections[:doc]).to eq("# Irresponsible Module\n\ndoc body")
@@ -85,7 +86,7 @@ RSpec.describe Snoot::RenderReport do
 
     it "uses singular nouns in the header for a single instance in a single file" do
       single = Set[smells.first]
-      report = described_class.invoke(run, smells: single, orchestration: doc_orch)
+      report = described_class.invoke(run, smells: single, remaining: build_remaining, orchestration: doc_orch)
       expect(report.sections[:header]).to eq("Irresponsible module: 1 instance across 1 file")
     end
 
@@ -95,7 +96,8 @@ RSpec.describe Snoot::RenderReport do
 
     it "filters out smells of other types before rendering instances", :aggregate_failures do
       off_type = smell_at(file: "lib/other.rb", line: 99, message: "off-type", type_name: "OtherSmell")
-      report = described_class.invoke(run, smells: Set[*smells, off_type], orchestration: doc_orch)
+      report = described_class.invoke(run, smells: Set[*smells, off_type], remaining: build_remaining,
+                                           orchestration: doc_orch)
       expect(report.sections[:instances]).to include("lib/a.rb")
       expect(report.sections[:instances]).not_to include("lib/other.rb")
     end
@@ -110,7 +112,9 @@ RSpec.describe Snoot::RenderReport do
       )
     end
     let(:run) { build_run_with_finding(hit) }
-    let(:report) { described_class.invoke(run, smells: Set[], orchestration: fake_orchestration) }
+    let(:report) do
+      described_class.invoke(run, smells: Set[], remaining: build_remaining, orchestration: fake_orchestration)
+    end
 
     it "renders header as method, location, score" do
       expect(report.sections[:header]).to eq("High complexity in Foo#bar at lib/y.rb:5-30 (score: 12.5)")
@@ -128,8 +132,8 @@ RSpec.describe Snoot::RenderReport do
       )
     end
 
-    it "emits exactly the three sections header, finding_context, doc" do
-      expect(report.sections.keys).to eq(%i[header finding_context doc])
+    it "emits exactly the four sections header, remaining, finding_context, doc" do
+      expect(report.sections.keys).to eq(%i[header remaining finding_context doc])
     end
   end
 
@@ -142,7 +146,9 @@ RSpec.describe Snoot::RenderReport do
     end
     let(:cluster) { build_duplication_cluster(signature: "abc123", locations: locs) }
     let(:run) { build_run_with_finding(cluster) }
-    let(:report) { described_class.invoke(run, smells: Set[], orchestration: fake_orchestration) }
+    let(:report) do
+      described_class.invoke(run, smells: Set[], remaining: build_remaining, orchestration: fake_orchestration)
+    end
 
     it "renders header as location count + signature" do
       expect(report.sections[:header]).to eq("Structural duplication: 2 locations (signature: abc123)")
@@ -162,8 +168,46 @@ RSpec.describe Snoot::RenderReport do
       )
     end
 
-    it "emits exactly the three sections header, finding_context, doc" do
-      expect(report.sections.keys).to eq(%i[header finding_context doc])
+    it "emits exactly the four sections header, remaining, finding_context, doc" do
+      expect(report.sections.keys).to eq(%i[header remaining finding_context doc])
+    end
+  end
+
+  describe "remaining section" do
+    def partial_cutoffs
+      "(cutoffs: smell types have no cutoff; complexity hits need score 12.5+; duplication clusters need 3+ locations)"
+    end
+
+    let(:hit) { build_complexity_hit }
+    let(:run) { build_run_with_finding(hit) }
+    let(:cutoffs_orch) do
+      fake_orchestration(
+        significance_cutoffs: build_cutoffs(smell_type_instances: 2, complexity_score: BigDecimal("25"))
+      )
+    end
+
+    def remaining_line(remaining, orchestration: cutoffs_orch)
+      described_class.invoke(run, smells: Set[], remaining: remaining, orchestration: orchestration)
+                     .sections[:remaining]
+    end
+
+    it "counts each category and states the cutoffs on one line" do
+      expect(remaining_line(build_remaining(smell_types: 2, duplication_clusters: 3, complexity_hits: 4))).to eq(
+        "Also significant: 2 smell types, 3 duplication clusters, 4 complexity hits " \
+        "(cutoffs: smell types need 2+ instances; complexity hits need score 25+; " \
+        "duplication clusters have no cutoff)"
+      )
+    end
+
+    it "uses singular nouns for counts of one and shows zero counts" do
+      expect(remaining_line(build_remaining(smell_types: 1, duplication_clusters: 0, complexity_hits: 1)))
+        .to start_with("Also significant: 1 smell type, 0 duplication clusters, 1 complexity hit (")
+    end
+
+    it "states a cutoff for every category the orchestration gates, and none otherwise" do
+      cutoffs = build_cutoffs(complexity_score: BigDecimal("12.5"), duplication_locations: 3)
+      expect(remaining_line(build_remaining, orchestration: fake_orchestration(significance_cutoffs: cutoffs)))
+        .to end_with(partial_cutoffs)
     end
   end
 end

@@ -12,19 +12,27 @@ module Snoot
       end
 
       def resolve(run)
-        selected = selected_candidate
+        pool = candidates
+        selected = AnalyseRun.select_top_finding(pool)
         terminal = if selected
                      run.transition_to(:finding_rendered, selected_finding: selected)
                    else
                      run.transition_to(:nothing_to_report)
                    end
-        Result.new(run: terminal, events: doc_less_events(terminal), smells: @sources.smells)
+        Result.new(run: terminal, events: doc_less_events(terminal), smells: @sources.smells,
+                   remaining: remaining(pool, selected))
       end
 
       private
 
-      def selected_candidate
-        AnalyseRun.select_top_finding(candidates)
+      def remaining(pool, selected)
+        others = pool - [selected]
+        selected_type = selected.smell_type if selected.is_a?(Smell)
+        RemainingFindings.new(
+          smell_types: (others.grep(Smell).map(&:smell_type).uniq - [selected_type]).size,
+          duplication_clusters: others.grep(DuplicationCluster).size,
+          complexity_hits: others.grep(ComplexityHit).size
+        )
       end
 
       def candidates

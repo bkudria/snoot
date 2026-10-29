@@ -5,12 +5,15 @@ module Snoot
     class FakeOrchestration
       # rubocop:disable-next Metrics/ParameterLists
       def initialize(smells: Set[], complexities: Set[], duplications: Set[],
-                     vendored_docs: {},
+                     vendored_docs: {}, significance_cutoffs: nil,
                      reek_raises: nil, flog_raises: nil, flay_raises: nil)
         @smells = smells
         @complexities = complexities
         @duplications = duplications
         @vendored_docs = vendored_docs
+        @significance_cutoffs = significance_cutoffs ||
+                                Snoot::SignificanceCutoffs.new(smell_type_instances: nil, complexity_score: nil,
+                                                               duplication_locations: nil)
         @reek_raises = reek_raises
         @flog_raises = flog_raises
         @flay_raises = flay_raises
@@ -23,6 +26,8 @@ module Snoot
       def significant_smells(smells) = smells
       def significant_complexities(complexities) = complexities
       def significant_duplications(duplications) = duplications
+
+      attr_reader :significance_cutoffs
 
       def analyse(_paths)
         return Snoot::AnalyserFailure.new(analyser: :reek, message: @reek_raises.message) if @reek_raises

@@ -2,9 +2,9 @@
 
 module Snoot
   # Given a finding_rendered Run, produces a Report. Smell findings get
-  # header, instances and doc; ComplexityHit and DuplicationCluster get
-  # header, finding_context and doc. Per-section content is built by the
-  # helpers below.
+  # header, remaining, instances and doc; ComplexityHit and
+  # DuplicationCluster get header, remaining, finding_context and doc.
+  # Per-section content is built by the helpers below.
   module RenderReport
     # Report is the value returned by RenderReport.invoke: the source
     # Run, the selected Finding it was built from, and the ordered
@@ -13,14 +13,42 @@ module Snoot
 
     module_function
 
-    def invoke(run, smells:, orchestration:)
+    def invoke(run, smells:, remaining:, orchestration:)
       finding = run.selected_finding
       sections = if finding.is_a?(Smell)
                    smell_sections(smells, finding, orchestration)
                  else
                    non_smell_sections(finding)
                  end
-      Report.new(run: run, finding: finding, sections: sections)
+      header, *rest = sections.to_a
+      remaining_line = render_remaining(remaining, orchestration.significance_cutoffs)
+      Report.new(run: run, finding: finding, sections: [header, [:remaining, remaining_line], *rest].to_h)
+    end
+
+    def render_remaining(remaining, cutoffs)
+      counts = [
+        count_of(remaining.smell_types, "smell type"),
+        count_of(remaining.duplication_clusters, "duplication cluster"),
+        count_of(remaining.complexity_hits, "complexity hit")
+      ]
+      "Also significant: #{counts.join(', ')} (#{describe_cutoffs(cutoffs)})"
+    end
+
+    def describe_cutoffs(cutoffs)
+      clauses = [
+        cutoff_clause("smell types", cutoffs.smell_type_instances&.then { |floor| "#{floor}+ instances" }),
+        cutoff_clause("complexity hits", cutoffs.complexity_score&.then { |floor| "score #{format_score(floor)}+" }),
+        cutoff_clause("duplication clusters", cutoffs.duplication_locations&.then { |floor| "#{floor}+ locations" })
+      ]
+      "cutoffs: #{clauses.join('; ')}"
+    end
+
+    def cutoff_clause(category, requirement)
+      requirement ? "#{category} need #{requirement}" : "#{category} have no cutoff"
+    end
+
+    def format_score(score)
+      score.frac.zero? ? score.to_i.to_s : score.to_s("F")
     end
 
     def smell_sections(smells, smell, orchestration)

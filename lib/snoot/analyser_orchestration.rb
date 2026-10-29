@@ -2,12 +2,13 @@
 
 module Snoot
   # The duck-typed orchestration contract the CLI demands -- any object
-  # responding to these five methods qualifies (no base class to inherit):
+  # responding to these six methods qualifies (no base class to inherit):
   #
   #   vendored_doc(smell_type) -> String?
   #   significant_smells(smells) -> Set<Smell>
   #   significant_complexities(complexities) -> Set<ComplexityHit>
   #   significant_duplications(duplications) -> Set<DuplicationCluster>
+  #   significance_cutoffs -> SignificanceCutoffs
   #   analyse(paths) -> Sources | AnalyserFailure
   #
   # Each call is pure within a single CLI invocation (see snoot.allium's

@@ -65,6 +65,14 @@ module Snoot
         build_smell(smell_type: build_smell_type(name: "Documented"))
       end
 
+      def build_remaining(smell_types: 0, duplication_clusters: 0, complexity_hits: 0)
+        Snoot::RemainingFindings.new(smell_types:, duplication_clusters:, complexity_hits:)
+      end
+
+      def build_cutoffs(smell_type_instances: nil, complexity_score: nil, duplication_locations: nil)
+        Snoot::SignificanceCutoffs.new(smell_type_instances:, complexity_score:, duplication_locations:)
+      end
+
       def fake_orchestration(**)
         Snoot::Spec::FakeOrchestration.new(**)
       end

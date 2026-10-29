@@ -23,7 +23,7 @@ module Snoot
 
     def analysis_failure(run, failure)
       failed = run.transition_to(:analysis_failed, failure: failure)
-      Result.new(run: failed, events: [], smells: Set[])
+      Result.new(run: failed, events: [], smells: Set[], remaining: nil)
     end
 
     def select_top_finding(findings)
