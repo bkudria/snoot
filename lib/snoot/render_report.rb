@@ -2,9 +2,9 @@
 
 module Snoot
   # Given a finding_rendered Run, produces a Report. Smell findings get
-  # header, remaining, instances and doc; ComplexityHit and
+  # header, remaining, instances, tuning and doc; ComplexityHit and
   # DuplicationCluster get header, remaining, finding_context and doc.
-  # Per-section content is built by the helpers below.
+  # SmellSections builds the Smell sections; the helpers below build the rest.
   module RenderReport
     # Report is the value returned by RenderReport.invoke: the source
     # Run, the selected Finding it was built from, and the ordered
@@ -16,7 +16,7 @@ module Snoot
     def invoke(run, smells:, remaining:, orchestration:)
       finding = run.selected_finding
       sections = if finding.is_a?(Smell)
-                   smell_sections(smells, finding, orchestration)
+                   SmellSections.build(smells, finding, orchestration)
                  else
                    non_smell_sections(finding)
                  end
@@ -31,7 +31,13 @@ module Snoot
         count_of(remaining.duplication_clusters, "duplication cluster"),
         count_of(remaining.complexity_hits, "complexity hit")
       ]
-      "Also significant: #{counts.join(', ')} (#{describe_cutoffs(cutoffs)})"
+      below_cutoff = describe_below_cutoff(remaining.below_cutoff_smell_types)
+      "Also significant: #{counts.join(', ')}; #{below_cutoff} (#{describe_cutoffs(cutoffs)})"
+    end
+
+    def describe_below_cutoff(smell_types)
+      summary = "#{count_of(smell_types.size, 'smell type')} below cutoff"
+      smell_types.empty? ? summary : "#{summary}: #{smell_types.map(&:name).join(', ')}"
     end
 
     def describe_cutoffs(cutoffs)
@@ -49,26 +55,6 @@ module Snoot
 
     def format_score(score)
       score.frac.zero? ? score.to_i.to_s : score.to_s("F")
-    end
-
-    def smell_sections(smells, smell, orchestration)
-      smell_type = smell.smell_type
-      matching = smells.select { |instance| instance.smell_type == smell_type }
-      {
-        header: smell_header(smell_type, matching),
-        instances: render_instances(matching),
-        doc: orchestration.vendored_doc(smell_type)
-      }
-    end
-
-    def smell_header(smell_type, smells)
-      instances = count_of(smells.size, :instance)
-      files = count_of(smells.map { |smell| smell.location.path.raw }.uniq.size, :file)
-      "#{humanize(smell_type.name)}: #{instances} across #{files}"
-    end
-
-    def humanize(pascal_case)
-      pascal_case.gsub(/([a-z])([A-Z])/) { "#{Regexp.last_match(1)} #{Regexp.last_match(2).downcase}" }
     end
 
     def count_of(count, noun)
@@ -105,21 +91,6 @@ module Snoot
              "Consider whether the duplicated shape belongs to a single helper, " \
              "module, or value type."
       }
-    end
-
-    def render_instances(smells)
-      groups = smell_groups_by_path(smells)
-      "## Instances\n\n#{groups.map { |path, group| render_instance_group(path, group) }.join("\n\n")}"
-    end
-
-    def smell_groups_by_path(smells)
-      smells.group_by { |smell| smell.location.path.raw }
-            .sort_by { |path, group| [-group.size, path] }
-    end
-
-    def render_instance_group(path, smells)
-      lines = smells.map { |smell| "  Line #{smell.location.line_start}: #{smell.message}" }
-      "#{path}\n#{lines.join("\n")}"
     end
   end
 end

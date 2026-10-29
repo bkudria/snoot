@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that applied (`Also significant: 4 smell types, 0 duplication
   clusters, 0 complexity hits (cutoffs: …)`). The nothing-to-report
   line states the cutoffs too.
+- The "Also significant" and nothing-to-report lines name the smell
+  types still below the cutoff (`; 1 smell type below cutoff:
+  TooManyStatements`), so a type shows up before it counts.
+- Smell reports carry a fix-first tuning section between the instances
+  and reek's doc: fix and rerun, or configure the detector in
+  `.reek.yml` under `detectors:`, keyed by the smell type's name.
 
 ### Changed
 

@@ -70,6 +70,12 @@ Reek reads `.reek.yml` from the current directory or its nearest
 ancestor, falling back to `~/.reek.yml`; it configures reek's detectors
 and `exclude_paths`. flog and flay do not read it.
 
+The "Also significant" line and the "nothing to report" line both name
+the smell types below the cutoff, so a type shows up before it counts.
+After its instances, a smell report says how to configure that smell's
+detector: under `detectors:` in `.reek.yml`, keyed by the smell type's
+name.
+
 ## Privacy
 
 `snoot` runs entirely locally. It analyses source on disk with the bundled

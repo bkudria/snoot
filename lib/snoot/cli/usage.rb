@@ -23,6 +23,8 @@ module Snoot
         #{RenderReport.describe_cutoffs(AnalyserOrchestration::Default.significance_cutoffs)};
         flay's own mass threshold (16) still applies.
         .reek.yml (searched from the current directory upward, then ~) configures reek only.
+        The output names smell types still below the cutoff, so a type shows before it counts.
+        A smell report says how to set that detector's options under detectors: in .reek.yml.
 
       Exit codes:
         0   nothing to report

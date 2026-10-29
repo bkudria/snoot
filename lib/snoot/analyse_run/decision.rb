@@ -31,8 +31,15 @@ module Snoot
         RemainingFindings.new(
           smell_types: (others.grep(Smell).map(&:smell_type).uniq - [selected_type]).size,
           duplication_clusters: others.grep(DuplicationCluster).size,
-          complexity_hits: others.grep(ComplexityHit).size
+          complexity_hits: others.grep(ComplexityHit).size,
+          below_cutoff_smell_types: below_cutoff_smell_types
         )
+      end
+
+      def below_cutoff_smell_types
+        smells = @sources.smells
+        significant = @orchestration.significant_smells(smells).map(&:smell_type)
+        (smells.map(&:smell_type).uniq - significant).sort_by(&:name)
       end
 
       def candidates

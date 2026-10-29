@@ -23,6 +23,7 @@ module Snoot
   SignificanceCutoffs = Data.define(:smell_type_instances, :complexity_score, :duplication_locations)
 
   # Per-category counts of significant, renderable findings a run left
-  # unreported. Smells count by smell type.
-  RemainingFindings = Data.define(:smell_types, :duplication_clusters, :complexity_hits)
+  # unreported, plus the smell types still below the significance cutoff.
+  # Smells count by smell type.
+  RemainingFindings = Data.define(:smell_types, :duplication_clusters, :complexity_hits, :below_cutoff_smell_types)
 end

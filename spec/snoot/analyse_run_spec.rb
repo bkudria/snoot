@@ -71,15 +71,29 @@ RSpec.describe Snoot::AnalyseRun do
     it "counts candidates the selected finding left unreported, by category, excluding doc-less smells" do
       result = described_class.invoke(Set[build_path], orchestration: orchestration)
       expect(result.remaining).to eq(
-        Snoot::RemainingFindings.new(smell_types: 1, duplication_clusters: 1, complexity_hits: 2)
+        build_remaining(smell_types: 1, duplication_clusters: 1, complexity_hits: 2)
       )
     end
 
     it "reports zero counts when nothing was found" do
       result = described_class.invoke(Set[build_path], orchestration: fake_orchestration)
       expect(result.remaining).to eq(
-        Snoot::RemainingFindings.new(smell_types: 0, duplication_clusters: 0, complexity_hits: 0)
+        build_remaining
       )
+    end
+
+    def alpha_only_orchestration
+      orch = fake_orchestration(
+        smells: Set[smell_of("Zeta", 1), smell_of("Alpha", 2), smell_of("Alpha", 3), smell_of("Beta", 4)]
+      )
+      allow(orch).to receive(:significant_smells) { |smells| smells.select { |s| s.smell_type.name == "Alpha" } }
+      orch
+    end
+
+    it "names, in name order, the smell types with no instance passing the significance filter" do
+      floored = alpha_only_orchestration
+      result = described_class.invoke(Set[build_path], orchestration: floored)
+      expect(result.remaining.below_cutoff_smell_types.map(&:name)).to eq(%w[Beta Zeta])
     end
 
     it "is nil when analysis failed" do

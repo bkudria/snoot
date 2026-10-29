@@ -18,6 +18,10 @@ RSpec.describe "README.md" do # rubocop:disable RSpec/DescribeClass
     expect(readme).to include("every instance of its type", "Running reek, flog or flay directly")
   end
 
+  it "says the report names below-cutoff smell types and where detector settings go" do
+    expect(readme).to include("below the cutoff", "under `detectors:`")
+  end
+
   it "shows -- ending options before a dash-named path" do
     expect(readme).to include("snoot -- -odd-name.rb")
   end

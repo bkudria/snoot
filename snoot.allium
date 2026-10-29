@@ -69,11 +69,15 @@ value SignificanceCutoffs {
 
 -- How many significant, renderable findings a run left unreported,
 -- per category. Smells count by smell type, since one report covers
--- every instance of its type.
+-- every instance of its type. below_cutoff_smell_types names, in name
+-- order, every smell type present in the analysed sources with no
+-- instance passing significant_smells, so an agent sees a smell type
+-- accumulating before it reaches the cutoff.
 value RemainingFindings {
     smell_types: Integer
     duplication_clusters: Integer
     complexity_hits: Integer
+    below_cutoff_smell_types: List<SmellType>
 }
 
 ------------------------------------------------------------
@@ -319,11 +323,12 @@ rule RenderReport {
     --
     -- Every report's second section is remaining: one line counting the
     -- candidate findings of each category other than the selected one
-    -- (a RemainingFindings), followed by significance_cutoffs(). It is
-    -- a count, not a second finding: nothing about the unreported
-    -- findings beyond their number is rendered.
+    -- and naming the below-cutoff smell types (a RemainingFindings),
+    -- followed by significance_cutoffs(). It is a count, not a second
+    -- finding: candidates are rendered as numbers only, and below-cutoff
+    -- smell types by name only.
     --
-    -- For Smell findings the report is four sections:
+    -- For Smell findings the report is five sections:
     --   - header:    one-line summary naming the smell type and counting its
     --                instances and the files they span
     --   - remaining: as above
@@ -331,14 +336,18 @@ rule RenderReport {
     --                matches the selected_finding's smell_type, grouped by
     --                file, with files ordered by descending instance count
     --                and alphabetical tie-break
+    --   - tuning:    fix-first guidance naming where the smell type's
+    --                detector is configured (.reek.yml, under detectors:)
     --   - doc:       vendored_doc(smell_type), unmodified (always non-null
     --                here, per the SelectedFindingsAreRenderable invariant)
     -- The header and instances lead so a reader that truncates the report
     -- from the top still sees what was found and where; the vendored doc,
-    -- often long, follows as reference.
+    -- often long, follows as reference. Its sample configuration omits
+    -- the detectors: key a .reek.yml needs, which the tuning section
+    -- supplies; the tuning prose is static implementation policy.
     --
-    -- For ComplexityHit and DuplicationCluster findings the report is the
-    -- four-section structure (header, remaining, finding_context, doc):
+    -- For ComplexityHit and DuplicationCluster findings the report is
+    -- a four-section structure (header, remaining, finding_context, doc):
     --   - ComplexityHit:      hand-written generic prose for high complexity
     --   - DuplicationCluster: hand-written generic prose for high duplication
     -- The exact prose is static implementation policy of the gem (one
@@ -351,7 +360,7 @@ rule RenderReport {
             ReportEmitted(
                 run: run,
                 finding: run.selected_finding,
-                sections: { header, remaining, instances, doc }
+                sections: { header, remaining, instances, tuning, doc }
             )
         else:
             ReportEmitted(
@@ -366,7 +375,9 @@ rule RenderReport {
         --                  the number of matching instances, and the number
         --                  of files they span (analyser-implicit)
         --   2. Remaining -- 'Also significant: ' then the RemainingFindings
-        --                  counts by category, then the cutoffs in
+        --                  counts by category, then '; N smell types below
+        --                  cutoff' with ': ' and the comma-separated type
+        --                  names when N > 0, then the cutoffs in
         --                  parentheses, on one line
         --   3. Instances -- '## Instances' heading followed by per-file
         --                  groupings of every Smell from the analysed sources
@@ -375,7 +386,10 @@ rule RenderReport {
         --                  indented 'Line N: <message>' lines. File groups
         --                  are ordered by descending instance count, with
         --                  alphabetical path as the tie-break.
-        --   4. Doc       -- the vendored markdown for the selected smell
+        --   4. Tuning    -- fix every instance and rerun; otherwise configure
+        --                  the detector in .reek.yml as a detectors: block
+        --                  keyed by the smell type's name
+        --   5. Doc       -- the vendored markdown for the selected smell
         --                  type, unmodified
 
     @guarantee NonSmellReportShape
@@ -529,7 +543,9 @@ surface CLI {
         --                        rule's @guarantee blocks)
         --   nothing_to_report -> stdout = single-line acknowledgement:
         --                        'nothing to report -- no findings above
-        --                        snoot's significance floor' followed by
+        --                        snoot's significance floor', then the
+        --                        below-cutoff smell types as in the
+        --                        Remaining section, then
         --                        significance_cutoffs() in parentheses
         --   analysis_failed   -> stdout = empty
         -- Stderr carries warnings (missing vendored docs) at all outcomes.
