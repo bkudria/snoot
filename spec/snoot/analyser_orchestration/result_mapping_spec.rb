@@ -34,6 +34,22 @@ RSpec.describe Snoot::AnalyserOrchestration::ResultMapping do
     it "joins warning.context and warning.message into the message" do
       expect(smell.message).to eq("Foo#bar envies another object")
     end
+
+    def unordered_warning
+      double(smell_type: "FeatureEnvy", source: "lib/foo.rb", lines: [3, 1, 2, 1], context: "C", message: "m")
+    end
+
+    it "lists every flagged line once, ascending, with its text from the file lines" do
+      smell = described_class.smell_from_reek_warning(unordered_warning, %w[one two three])
+      expect(smell.source_lines).to eq(
+        [[1, "one"], [2, "two"], [3, "three"]].map { |number, text| Snoot::SourceLine.new(number:, text:) }
+      )
+    end
+
+    it "leaves each flagged line's text nil when no file lines are given" do
+      smell = described_class.smell_from_reek_warning(unordered_warning)
+      expect(smell.source_lines.map(&:text)).to eq([nil, nil, nil])
+    end
   end
 
   describe ".complexity_hit_from_flog_entry" do

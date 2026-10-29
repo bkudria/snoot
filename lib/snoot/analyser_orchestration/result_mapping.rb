@@ -12,17 +12,18 @@ module Snoot
     module ResultMapping
       module_function
 
-      def smell_from_reek_warning(warning)
+      def smell_from_reek_warning(warning, file_lines = nil)
         lines = warning.lines
         Smell.new(
           smell_type: SmellType.new(name: warning.smell_type),
-          location: Location.new(
-            path: Path.new(raw: warning.source),
-            line_start: lines.first,
-            line_end: lines.last
-          ),
-          message: "#{warning.context} #{warning.message}"
+          location: Location.new(path: Path.new(raw: warning.source), line_start: lines.first, line_end: lines.last),
+          message: "#{warning.context} #{warning.message}",
+          source_lines: source_lines_for(lines, file_lines)
         )
+      end
+
+      def source_lines_for(numbers, file_lines)
+        numbers.uniq.sort.map { |number| SourceLine.new(number:, text: file_lines&.[](number - 1)) }
       end
 
       # Flog stores method locations as "file:line" or "file:line-line_max".

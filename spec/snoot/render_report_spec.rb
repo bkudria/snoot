@@ -35,7 +35,7 @@ RSpec.describe Snoot::RenderReport do
 
   describe "Smell rendering" do
     def smell_at(file:, line:, message:, type_name: "IrresponsibleModule")
-      Snoot::Smell.new(
+      build_smell(
         smell_type: build_smell_type(name: type_name),
         location: build_location(path: build_path(raw: file), line_start: line, line_end: line),
         message: message
@@ -121,6 +121,40 @@ RSpec.describe Snoot::RenderReport do
                                            orchestration: doc_orch)
       expect(report.sections[:instances]).to include("lib/a.rb")
       expect(report.sections[:instances]).not_to include("lib/other.rb")
+    end
+  end
+
+  describe "Smell source excerpts" do
+    def instances_for(*numbered_texts, message: "Foo#bar refers to 'opts'")
+      source_lines = numbered_texts.map { |number, text| Snoot::SourceLine.new(number:, text:) }
+      smell = build_smell(smell_type: build_smell_type(name: "FeatureEnvy"), message: message,
+                          location: build_location(path: build_path(raw: "lib/a.rb")), source_lines: source_lines)
+      run = build_run_with_finding(smell)
+      described_class.invoke(run, smells: Set[smell], remaining: build_remaining, orchestration: orch)
+                     .sections[:instances].delete_prefix("## Instances\n\nlib/a.rb\n")
+    end
+
+    it "lists every flagged line, then each line's stripped code" do
+      expect(instances_for([12, "  opts.on(\"-v\")  "], [15, "opts.separator \"\""])).to eq(
+        "  Lines 12, 15: Foo#bar refers to 'opts'\n    12 | opts.on(\"-v\")\n    15 | opts.separator \"\""
+      )
+    end
+
+    it "right-aligns line numbers to the widest one" do
+      expect(instances_for([9, "a"], [10, "b"])).to end_with("\n     9 | a\n    10 | b")
+    end
+
+    it "shows no code line for a flagged line with no text" do
+      expect(instances_for([3, nil], [4, "b"])).to eq("  Lines 3, 4: Foo#bar refers to 'opts'\n    4 | b")
+    end
+
+    it "shows at most five code lines, then lists the rest by number" do
+      expect(instances_for(*(1..7).map { |n| [n, "c#{n}"] }))
+        .to end_with("    5 | c5\n    … 2 more: 6, 7")
+    end
+
+    it "cuts code longer than 160 characters" do
+      expect(instances_for([1, "x" * 200])).to eq("  Line 1: Foo#bar refers to 'opts'\n    1 | #{'x' * 159}…")
     end
   end
 

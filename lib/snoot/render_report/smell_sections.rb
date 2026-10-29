@@ -51,8 +51,14 @@ module Snoot
       end
 
       def instance_group(path, smells)
-        lines = smells.map { |smell| "  Line #{smell.location.line_start}: #{smell.message}" }
-        "#{path}\n#{lines.join("\n")}"
+        "#{path}\n#{smells.map { |smell| instance(smell) }.join("\n")}"
+      end
+
+      def instance(smell)
+        source_lines = smell.source_lines
+        numbers = source_lines.map(&:number)
+        label = numbers.one? ? "Line" : "Lines"
+        ["  #{label} #{numbers.join(', ')}: #{smell.message}", *SourceExcerpt.lines(source_lines)].join("\n")
       end
     end
   end
