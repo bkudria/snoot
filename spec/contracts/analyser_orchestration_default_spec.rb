@@ -241,6 +241,16 @@ RSpec.describe "AnalyserOrchestration::Default" do
     end
   end
 
+  describe "significance_cutoffs" do
+    it "reports the floors the significance pre-filters apply" do
+      expect(adapter.significance_cutoffs).to eq(
+        Snoot::SignificanceCutoffs.new(
+          smell_type_instances: 2, complexity_score: BigDecimal("25"), duplication_locations: nil
+        )
+      )
+    end
+  end
+
   describe "Default analyse" do
     let(:smell_free_src) do
       <<~RUBY

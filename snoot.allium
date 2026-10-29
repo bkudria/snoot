@@ -58,6 +58,24 @@ value SmellType {
     name: String
 }
 
+-- The numeric cutoffs an orchestration's significance pre-filters apply,
+-- reported so the report can state them. A null field means that
+-- category has no cutoff: every finding of that kind is significant.
+value SignificanceCutoffs {
+    smell_type_instances: Integer?
+    complexity_score: Decimal?
+    duplication_locations: Integer?
+}
+
+-- How many significant, renderable findings a run left unreported,
+-- per category. Smells count by smell type, since one report covers
+-- every instance of its type.
+value RemainingFindings {
+    smell_types: Integer
+    duplication_clusters: Integer
+    complexity_hits: Integer
+}
+
 ------------------------------------------------------------
 -- Analyser Result
 ------------------------------------------------------------
@@ -127,6 +145,11 @@ contract AnalyserOrchestration {
     significant_smells: (smells: Set<Smell>) -> Set<Smell>
     significant_complexities: (complexities: Set<ComplexityHit>) -> Set<ComplexityHit>
     significant_duplications: (duplications: Set<DuplicationCluster>) -> Set<DuplicationCluster>
+
+    -- significance_cutoffs reports the thresholds the three pre-filters
+    -- above apply. The values remain implementation policy; the contract
+    -- requires only that they describe the pre-filters faithfully.
+    significance_cutoffs: () -> SignificanceCutoffs
 
     -- analyse runs the three analysers in canonical order (Reek -> Flog
     -- -> Flay), capturing each output as it succeeds. On the first
@@ -294,9 +317,16 @@ rule RenderReport {
 
     -- Section composition is variant-conditional:
     --
-    -- For Smell findings the report is three sections:
+    -- Every report's second section is remaining: one line counting the
+    -- candidate findings of each category other than the selected one
+    -- (a RemainingFindings), followed by significance_cutoffs(). It is
+    -- a count, not a second finding: nothing about the unreported
+    -- findings beyond their number is rendered.
+    --
+    -- For Smell findings the report is four sections:
     --   - header:    one-line summary naming the smell type and counting its
     --                instances and the files they span
+    --   - remaining: as above
     --   - instances: every Smell from the analysed sources whose smell_type
     --                matches the selected_finding's smell_type, grouped by
     --                file, with files ordered by descending instance count
@@ -308,7 +338,7 @@ rule RenderReport {
     -- often long, follows as reference.
     --
     -- For ComplexityHit and DuplicationCluster findings the report is the
-    -- three-section structure (header, finding_context, doc):
+    -- four-section structure (header, remaining, finding_context, doc):
     --   - ComplexityHit:      hand-written generic prose for high complexity
     --   - DuplicationCluster: hand-written generic prose for high duplication
     -- The exact prose is static implementation policy of the gem (one
@@ -321,13 +351,13 @@ rule RenderReport {
             ReportEmitted(
                 run: run,
                 finding: run.selected_finding,
-                sections: { header, instances, doc }
+                sections: { header, remaining, instances, doc }
             )
         else:
             ReportEmitted(
                 run: run,
                 finding: run.selected_finding,
-                sections: { header, finding_context, doc }
+                sections: { header, remaining, finding_context, doc }
             )
 
     @guarantee SmellReportShape
@@ -335,14 +365,17 @@ rule RenderReport {
         --   1. Header    -- one-line summary: the smell type's name in words,
         --                  the number of matching instances, and the number
         --                  of files they span (analyser-implicit)
-        --   2. Instances -- '## Instances' heading followed by per-file
+        --   2. Remaining -- 'Also significant: ' then the RemainingFindings
+        --                  counts by category, then the cutoffs in
+        --                  parentheses, on one line
+        --   3. Instances -- '## Instances' heading followed by per-file
         --                  groupings of every Smell from the analysed sources
         --                  matching the selected smell_type. Each file group
         --                  is the raw path on its own line, then 2-space-
         --                  indented 'Line N: <message>' lines. File groups
         --                  are ordered by descending instance count, with
         --                  alphabetical path as the tie-break.
-        --   3. Doc       -- the vendored markdown for the selected smell
+        --   4. Doc       -- the vendored markdown for the selected smell
         --                  type, unmodified
 
     @guarantee NonSmellReportShape
@@ -350,15 +383,16 @@ rule RenderReport {
         -- report contains, in order:
         --   1. Header         -- one-line summary (analyser-implicit, finding
         --                        name, location)
-        --   2. FindingContext -- file path(s), line range(s), the analyser's
+        --   2. Remaining      -- as in SmellReportShape
+        --   3. FindingContext -- file path(s), line range(s), the analyser's
         --                        message; for DuplicationCluster, all cluster
         --                        locations are enumerated
-        --   3. Doc            -- one inlined hand-written prose constant
+        --   4. Doc            -- one inlined hand-written prose constant
 
     @guarantee AnalyserProvenanceImplicit
         -- The report does not label the originating analyser. The shape of
-        -- the report (header + instances + doc for Smell vs header +
-        -- finding_context + doc for non-Smell) and the finding's wording
+        -- the report (instances for Smell vs finding_context for
+        -- non-Smell) and the finding's wording
         -- (smell name vs complexity language vs duplication enumeration)
         -- are sufficient for the agent to infer provenance.
 
@@ -379,7 +413,8 @@ rule RenderReport {
 ------------------------------------------------------------
 
 -- A rendered run references exactly one finding. There is no concept of a
--- top-tier of multiple findings in this spec.
+-- top-tier of multiple findings in this spec; the report's remaining
+-- section counts other candidates without rendering them.
 invariant SingleFindingPerRun {
     for r in Runs:
         r.outcome = finding_rendered implies r.selected_finding != null
@@ -476,9 +511,10 @@ surface CLI {
         --   finding_rendered  -> stdout = formatted report (variant-
         --                        specific shape, see the RenderReport
         --                        rule's @guarantee blocks)
-        --   nothing_to_report -> stdout = single-line acknowledgement
-        --                        (see the NothingToReport resolution at
-        --                        the bottom for the exact format)
+        --   nothing_to_report -> stdout = single-line acknowledgement:
+        --                        'nothing to report -- no findings above
+        --                        snoot's significance floor' followed by
+        --                        significance_cutoffs() in parentheses
         --   analysis_failed   -> stdout = empty
         -- Stderr carries warnings (missing vendored docs) at all outcomes.
         -- On outcome = analysis_failed, stderr additionally carries the

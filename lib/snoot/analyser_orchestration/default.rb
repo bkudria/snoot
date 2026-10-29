@@ -24,9 +24,9 @@ module Snoot
     # (16). Stateless: implemented as a module of module functions, used
     # as the orchestration value directly (no `.new`).
     #
-    # Default's public surface is exactly the five contracted methods
+    # Default's public surface is exactly the six contracted methods
     # (vendored_doc, significant_smells, significant_complexities,
-    # significant_duplications, analyse). The per-analyser drivers
+    # significant_duplications, significance_cutoffs, analyse). The per-analyser drivers
     # (reek_analyse, flog_analyse, flay_analyse) and the per-pathname
     # helper (reek_smells_for) are private; their behaviour is observed
     # through analyse. Pure third-party-output translation is delegated
@@ -119,6 +119,14 @@ module Snoot
       end
 
       def significant_duplications(duplications) = duplications
+
+      def significance_cutoffs
+        SignificanceCutoffs.new(
+          smell_type_instances: SMELL_TYPE_INSTANCE_FLOOR,
+          complexity_score: COMPLEXITY_SCORE_FLOOR,
+          duplication_locations: nil
+        )
+      end
 
       # analyse runs the three analysers in canonical order (Reek ->
       # Flog -> Flay), capturing each result as it succeeds. On the
