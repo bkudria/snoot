@@ -77,11 +77,37 @@ RSpec.describe Snoot::AnalyserOrchestration::ResultMapping do
       expect(entry.score).to eq(BigDecimal("12.5"))
     end
 
-    it "accepts 'file:line-line_max' (uses line for both start and end)" do
-      hit = described_class.complexity_hit_from_flog_entry(
-        class_method: "Foo#bar", score: 5, raw_location: "lib/foo.rb:42-50"
+    def spanning_hit(**)
+      described_class.complexity_hit_from_flog_entry(
+        class_method: "Foo#bar", score: 5, raw_location: "lib/foo.rb:42-44", **
       )
-      expect(hit.location.line_start).to eq(42).and eq(hit.location.line_end)
+    end
+
+    def contributions(*pairs)
+      pairs.map { |operation, score| Snoot::ScoreContribution.new(operation:, score: BigDecimal(score.to_s)) }
+    end
+
+    it "spans 'file:line-line_max' from line to line_max" do
+      expect(spanning_hit.location).to have_attributes(line_start: 42, line_end: 44)
+    end
+
+    it "carries every line of the span with the file's text" do
+      file_lines = Array.new(41, "") + ["def bar", "  1", "end"]
+      expect(spanning_hit(file_lines:).source_lines.map(&:to_h)).to eq(
+        [{ number: 42, text: "def bar" }, { number: 43, text: "  1" }, { number: 44, text: "end" }]
+      )
+    end
+
+    it "leaves source text nil when the file wasn't read" do
+      expect(spanning_hit.source_lines.map(&:text)).to eq([nil, nil, nil])
+    end
+
+    it "groups flog's per-operation scores the way flog's formula does, each descending" do
+      calls = { assignment: 2.0, branch: 1.5, block_call: 3.0, each: 1.0, magic_number: 2.5 }
+      expect(spanning_hit(calls:).breakdown.to_h).to eq(
+        assignments: contributions(["assignment", 2.0]), branching: contributions(["block_call", 3.0], ["branch", 1.5]),
+        calls: contributions(["magic_number", 2.5], ["each", 1.0])
+      )
     end
 
     it "returns nil when raw_location is missing" do

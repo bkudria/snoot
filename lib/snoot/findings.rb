@@ -11,8 +11,8 @@ module Snoot
   Smell = Data.define(:smell_type, :location, :message, :source_lines)
 
   # A single high-complexity method reported by Flog; score (BigDecimal)
-  # is the ranking key.
-  ComplexityHit = Data.define(:location, :method_name, :score)
+  # is the ranking key. source_lines holds every line of the method.
+  ComplexityHit = Data.define(:location, :method_name, :score, :breakdown, :source_lines)
 
   # A structural-duplication cluster reported by Flay: a signature
   # shared across two or more Locations. Cluster size (locations.size)

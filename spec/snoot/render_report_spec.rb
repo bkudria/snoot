@@ -4,6 +4,11 @@ require "spec_helper"
 require "bigdecimal"
 
 RSpec.describe Snoot::RenderReport do
+  def complexity_context(hit)
+    described_class.invoke(build_run_with_finding(hit), smells: Set[], remaining: build_remaining,
+                                                        orchestration: fake_orchestration).sections[:finding_context]
+  end
+
   let(:orch) { fake_orchestration(vendored_docs: { "FeatureEnvy" => "## doc" }) }
 
   describe "rule-success.RenderReport" do
@@ -179,8 +184,25 @@ RSpec.describe Snoot::RenderReport do
       expect(report.sections[:header]).to eq("High complexity in Foo#bar at lib/y.rb:5-30 (score: 12.5)")
     end
 
-    it "renders finding_context as location, method, score" do
-      expect(report.sections[:finding_context]).to eq("lib/y.rb:5-30\n\nMethod: Foo#bar\nScore: 12.5")
+    def empty_breakdown_context
+      <<~TEXT.chomp
+        lib/y.rb:5-30
+
+        Method: Foo#bar
+        Score: 12.5 = √(A² + B² + C²)
+          Calls and other (C) 0.0
+          Branching (B)       0.0
+          Assignments (A)     0.0
+      TEXT
+    end
+
+    it "renders finding_context as location, method, score and its breakdown" do
+      expect(report.sections[:finding_context]).to eq(empty_breakdown_context)
+    end
+
+    it "rounds the score to two decimals" do
+      hit = build_complexity_hit(score: BigDecimal("40.7522"))
+      expect(complexity_context(hit)).to include("Score: 40.75 = ")
     end
 
     it "renders doc as the high-complexity prose" do
@@ -193,6 +215,56 @@ RSpec.describe Snoot::RenderReport do
 
     it "emits exactly the four sections header, remaining, finding_context, doc" do
       expect(report.sections.keys).to eq(%i[header remaining finding_context doc])
+    end
+  end
+
+  describe "ComplexityHit breakdown and code" do
+    def contributions(*pairs)
+      pairs.map { |operation, score| Snoot::ScoreContribution.new(operation:, score: BigDecimal(score.to_s)) }
+    end
+
+    def code_lines(first, texts)
+      texts.each_with_index.map { |text, offset| Snoot::SourceLine.new(number: first + offset, text:) }
+    end
+
+    def context_lines(**)
+      complexity_context(build_complexity_hit(**)).lines(chomp: true).drop(4)
+    end
+
+    def mixed_breakdown
+      build_complexity_breakdown(
+        assignments: contributions(["assignment", 10.3]),
+        branching: contributions(["branch", 12.7], ["block_call", 3.1]),
+        calls: contributions(["+", 6.4], ["size", 4.1], [">", 2.6], ["to_s", 2.4], ["map", 2.1])
+      )
+    end
+
+    it "lists the dimensions by descending total with their top four operations" do
+      expect(context_lines(breakdown: mixed_breakdown)).to eq(
+        ["  Calls and other (C) 17.6  (+ 6.4, size 4.1, > 2.6, to_s 2.4, …)",
+         "  Branching (B)       15.8  (branch 12.7, block_call 3.1)",
+         "  Assignments (A)     10.3  (assignment 10.3)"]
+      )
+    end
+
+    it "follows the breakdown with the method's code, keeping nesting but not common indentation" do
+      source_lines = code_lines(9, ["  def bar", "    if x", "", "      y  ", "    end", "  end"])
+      expect(context_lines(source_lines:).drop(3)).to eq(
+        ["", "     9 | def bar", "    10 |   if x", "    11 |", "    12 |     y", "    13 |   end", "    14 | end"]
+      )
+    end
+
+    it "shows at most fifty code lines, then the range of the rest" do
+      source_lines = code_lines(1, (1..53).map { |n| "c#{n}" })
+      expect(context_lines(source_lines:).last(2)).to eq(["    50 | c50", "    … 3 more lines (51–53)"])
+    end
+
+    it "shows no code when the method's source couldn't be read" do
+      expect(context_lines(source_lines: code_lines(1, [nil, nil])).size).to eq(3)
+    end
+
+    it "replaces control characters in the method's code" do
+      expect(context_lines(source_lines: code_lines(1, ["x = \"\e[2J\""])).last).to eq("    1 | x = \"\uFFFD[2J\"")
     end
   end
 

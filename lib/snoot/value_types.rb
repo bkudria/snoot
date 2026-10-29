@@ -18,6 +18,15 @@ module Snoot
   # source file could not be read.
   SourceLine = Data.define(:number, :text)
 
+  # One operation's share of a flog score: "branch", "assignment", or a
+  # called method's name.
+  ScoreContribution = Data.define(:operation, :score)
+
+  # A flog score split into the dimensions its formula combines,
+  # score = sqrt(A**2 + B**2 + C**2). Each is a list of ScoreContribution,
+  # highest first.
+  ComplexityBreakdown = Data.define(:assignments, :branching, :calls)
+
   # A Reek smell category, named (e.g. "IrresponsibleModule"). Groups
   # Smells for ranking; keys vendored-doc lookup.
   SmellType = Data.define(:name)

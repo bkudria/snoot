@@ -22,8 +22,13 @@ module Snoot
         Snoot::Smell.new(smell_type:, location:, message:, source_lines:)
       end
 
-      def build_complexity_hit(location: build_location, method_name: "Foo#bar", score: BigDecimal("12.5"))
-        Snoot::ComplexityHit.new(location: location, method_name: method_name, score: score)
+      def build_complexity_hit(location: build_location, method_name: "Foo#bar", score: BigDecimal("12.5"),
+                               breakdown: build_complexity_breakdown, source_lines: [])
+        Snoot::ComplexityHit.new(location:, method_name:, score:, breakdown:, source_lines:)
+      end
+
+      def build_complexity_breakdown(assignments: [], branching: [], calls: [])
+        Snoot::ComplexityBreakdown.new(assignments:, branching:, calls:)
       end
 
       def build_duplication_cluster(signature: "abc123", locations: Set[build_location])

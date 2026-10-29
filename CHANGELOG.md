@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Complexity reports show the method's full line span (`sample.rb:4-24`
+  instead of `4-4`), round the score to two decimals, split it into
+  flog's three dimensions (assignments, branching, and calls and other)
+  with each one's top operations, and show the method's code: up to 50
+  lines, common indentation removed.
 - Smell instances list every line reek flagged (`Lines 12, 15: …`)
   instead of only the first, each followed by its source code
   (`12 | x.foo(bar)`), so the agent sees the code without opening the
