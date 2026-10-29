@@ -2,9 +2,9 @@
 
 module Snoot
   # Given a finding_rendered Run, produces a Report. Smell findings get
-  # two sections (doc, instances); ComplexityHit and DuplicationCluster
-  # get three (header, finding_context, doc). Per-section content is
-  # built by the helpers below.
+  # header, instances and doc; ComplexityHit and DuplicationCluster get
+  # header, finding_context and doc. Per-section content is built by the
+  # helpers below.
   module RenderReport
     # Report is the value returned by RenderReport.invoke: the source
     # Run, the selected Finding it was built from, and the ordered
@@ -27,9 +27,24 @@ module Snoot
       smell_type = smell.smell_type
       matching = smells.select { |instance| instance.smell_type == smell_type }
       {
-        doc: orchestration.vendored_doc(smell_type),
-        instances: render_instances(matching)
+        header: smell_header(smell_type, matching),
+        instances: render_instances(matching),
+        doc: orchestration.vendored_doc(smell_type)
       }
+    end
+
+    def smell_header(smell_type, smells)
+      instances = count_of(smells.size, :instance)
+      files = count_of(smells.map { |smell| smell.location.path.raw }.uniq.size, :file)
+      "#{humanize(smell_type.name)}: #{instances} across #{files}"
+    end
+
+    def humanize(pascal_case)
+      pascal_case.gsub(/([a-z])([A-Z])/) { "#{Regexp.last_match(1)} #{Regexp.last_match(2).downcase}" }
+    end
+
+    def count_of(count, noun)
+      count == 1 ? "1 #{noun}" : "#{count} #{noun}s"
     end
 
     def non_smell_sections(finding)

@@ -32,7 +32,7 @@ RSpec.describe Snoot::CLI do
         report_event = events.find { |e| e.is_a?(Snoot::CLI::ReportEmitted) }
         expect(report_event).not_to be_nil
         expect(report_event.finding).to eq(smell)
-        expect(report_event.sections.keys).to eq(%i[doc instances])
+        expect(report_event.sections.keys).to eq(%i[header instances doc])
       end
     end
   end
@@ -53,10 +53,11 @@ RSpec.describe Snoot::CLI do
         fake_orchestration(smells: Set[rendered_smell], vendored_docs: { "Documented" => "## doc" })
       end
 
-      it "writes the doc + Instances report to stdout on finding_rendered (Smell)", :aggregate_failures do
+      it "writes the header, Instances and doc report to stdout on finding_rendered (Smell)", :aggregate_failures do
         run_cli
-        expect(stdout.string).to start_with("## doc\n\n").and(end_with("\n"))
-        expect(stdout.string).to include("## Instances\n\n", "lib/x.rb\n  Line 10: envies")
+        expect(stdout.string).to eq(
+          "Documented: 1 instance across 1 file\n\n## Instances\n\nlib/x.rb\n  Line 10: envies\n\n## doc\n"
+        )
         expect(stderr.string).to be_empty
       end
     end
