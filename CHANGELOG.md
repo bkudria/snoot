@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instance of its type, and that running reek, flog or flay directly
   lists a different set.
 
+### Changed
+
+- A rejected option is named on stderr (`snoot: unknown option:
+  <arg>`, then `Try 'snoot --help' for usage.`) instead of the full
+  usage text. Unknown options and missing paths are reported together.
+- `--help` and `--version` print and exit 0 wherever they appear in
+  argv, and `--` ends options so later arguments are always paths.
+
 ### Fixed
 
 - A path argument that doesn't exist is rejected with exit 64 and a
