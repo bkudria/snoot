@@ -1,0 +1,37 @@
+name: Changelog
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  entry:
+    name: Changelog entry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a CHANGELOG entry for feat, fix, and breaking PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Squash merges use the PR title as the commit subject, so the title
+          # is what release:prepare later reads.
+          TITLE: ${{ github.event.pull_request.title }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
+        run: |
+          if ! [[ "$TITLE" =~ ^(feat|fix)(\(.*\))?!?: || "$TITLE" =~ ^[a-z]+(\(.*\))?!: ]]; then
+            echo "Not a feat, fix, or breaking PR; no entry needed."
+            exit 0
+          fi
+          if [ "$SKIP" = true ]; then
+            echo "no-changelog label set; skipping."
+            exit 0
+          fi
+          if gh pr diff "$NUMBER" --repo "$GITHUB_REPOSITORY" --name-only | grep -qx CHANGELOG.md; then
+            exit 0
+          fi
+          echo "::error::Add an entry under [Unreleased] in CHANGELOG.md, or label the PR no-changelog."
+          exit 1
