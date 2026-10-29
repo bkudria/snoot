@@ -32,12 +32,15 @@ RSpec.describe Snoot::CLI do
         report_event = events.find { |e| e.is_a?(Snoot::CLI::ReportEmitted) }
         expect(report_event).not_to be_nil
         expect(report_event.finding).to eq(smell)
-        expect(report_event.sections.keys).to eq(%i[header instances doc])
+        expect(report_event.sections.keys).to eq(%i[header remaining instances doc])
       end
     end
   end
 
   describe "surface-guarantee.StdoutMutuallyExclusive" do
+    def no_cutoffs
+      "(cutoffs: smell types have no cutoff; complexity hits have no cutoff; duplication clusters have no cutoff)"
+    end
     let(:stdout) { StringIO.new }
     let(:stderr) { StringIO.new }
 
@@ -53,18 +56,22 @@ RSpec.describe Snoot::CLI do
         fake_orchestration(smells: Set[rendered_smell], vendored_docs: { "Documented" => "## doc" })
       end
 
+      def expected_report
+        "Documented: 1 instance across 1 file\n\n" \
+          "Also significant: 0 smell types, 0 duplication clusters, 0 complexity hits #{no_cutoffs}\n\n" \
+          "## Instances\n\nlib/x.rb\n  Line 10: envies\n\n## doc\n"
+      end
+
       it "writes the header, Instances and doc report to stdout on finding_rendered (Smell)", :aggregate_failures do
         run_cli
-        expect(stdout.string).to eq(
-          "Documented: 1 instance across 1 file\n\n## Instances\n\nlib/x.rb\n  Line 10: envies\n\n## doc\n"
-        )
+        expect(stdout.string).to eq(expected_report)
         expect(stderr.string).to be_empty
       end
     end
 
     it "writes the enriched 'nothing to report' line to stdout on nothing_to_report", :aggregate_failures do
       run_cli
-      expect(stdout.string).to eq("nothing to report -- no findings above snoot's significance floor\n")
+      expect(stdout.string).to eq("nothing to report -- no findings above snoot's significance floor #{no_cutoffs}\n")
       expect(stderr.string).to eq("")
     end
 
@@ -75,7 +82,7 @@ RSpec.describe Snoot::CLI do
       it "writes a missing-vendored-doc warning to stderr (SkippedDocLessSmellWarned)", :aggregate_failures do
         run_cli
         expect(stderr.string).to eq("warning: skipping doc-less smell type 'Undocumented'\n")
-        expect(stdout.string).to eq("nothing to report -- no findings above snoot's significance floor\n")
+        expect(stdout.string).to eq("nothing to report -- no findings above snoot's significance floor #{no_cutoffs}\n")
       end
     end
 
@@ -209,11 +216,17 @@ RSpec.describe Snoot::CLI do
       expect(stdout.string).to be_empty
     end
 
+    def default_nothing_to_report
+      "nothing to report -- no findings above snoot's significance floor " \
+        "(cutoffs: smell types need 2+ instances; complexity hits need score 25+; " \
+        "duplication clusters have no cutoff)\n"
+    end
+
     it "passes a single Ruby file path through the pipeline (nothing_to_report)", :aggregate_failures do
       with_ruby_tempfile(smell_free_ruby) do |path|
         code = run_argv([path])
         expect(code).to eq(0)
-        expect([stdout.string, stderr.string]).to eq([Snoot::CLI::NOTHING_TO_REPORT, ""])
+        expect([stdout.string, stderr.string]).to eq([default_nothing_to_report, ""])
       end
     end
 
@@ -221,7 +234,7 @@ RSpec.describe Snoot::CLI do
       with_ruby_tempfile(smelly_ruby) do |path|
         code = run_argv([path])
         expect(code).to eq(1)
-        expect(stdout.string).to include("## Instances\n\n", path)
+        expect(stdout.string).to include("Also significant: ", "## Instances\n\n", path)
       end
     end
 

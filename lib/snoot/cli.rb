@@ -23,7 +23,7 @@ module Snoot
   # so the integer is a lossy view of the Run; callers that need the Run,
   # the events, or both must use .run_invoked.
   module CLI
-    NOTHING_TO_REPORT = "nothing to report -- no findings above snoot's significance floor\n"
+    NOTHING_TO_REPORT = "nothing to report -- no findings above snoot's significance floor"
     DEFAULT_PATHS = Set[Snoot::Path.new(raw: ".")].freeze
 
     USAGE = <<~HELP
@@ -59,8 +59,9 @@ module Snoot
 
     module_function
 
-    def emit_nothing_to_report(stdout)
-      stdout.write(NOTHING_TO_REPORT)
+    def emit_nothing_to_report(pipeline)
+      cutoffs = RenderReport.describe_cutoffs(pipeline.orchestration.significance_cutoffs)
+      pipeline.stdout.write("#{NOTHING_TO_REPORT} (#{cutoffs})\n")
       []
     end
 
@@ -121,24 +122,24 @@ module Snoot
 
     def collect_events(paths, pipeline)
       AnalyseRun.invoke(paths, orchestration: pipeline.orchestration) =>
-        { run:, events: analyse_events, smells: }
+        { run:, events: analyse_events, smells:, remaining: }
       emit_warnings(analyse_events, pipeline.stderr)
       events = [RunInvoked.new(paths: paths), *analyse_events,
-                *events_for_outcome(run, smells, pipeline: pipeline)]
+                *events_for_outcome(run, smells, remaining, pipeline: pipeline)]
       [run, events]
     end
 
-    def events_for_outcome(run, smells, pipeline:)
+    def events_for_outcome(run, smells, remaining, pipeline:)
       case run.outcome
-      when :finding_rendered then [emit_report(run, smells, pipeline: pipeline)]
-      when :nothing_to_report then emit_nothing_to_report(pipeline.stdout)
+      when :finding_rendered then [emit_report(run, smells, remaining, pipeline: pipeline)]
+      when :nothing_to_report then emit_nothing_to_report(pipeline)
       when :analysis_failed then emit_failure(run, pipeline.stderr)
       else []
       end
     end
 
-    def emit_report(run, smells, pipeline:)
-      RenderReport.invoke(run, smells: smells, orchestration: pipeline.orchestration) =>
+    def emit_report(run, smells, remaining, pipeline:)
+      RenderReport.invoke(run, smells: smells, remaining: remaining, orchestration: pipeline.orchestration) =>
         { sections:, finding: }
       pipeline.stdout.write(format_report(sections))
       ReportEmitted.new(run: run, finding: finding, sections: sections)

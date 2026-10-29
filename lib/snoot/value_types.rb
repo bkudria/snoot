@@ -17,4 +17,12 @@ module Snoot
   # A Reek smell category, named (e.g. "IrresponsibleModule"). Groups
   # Smells for ranking; keys vendored-doc lookup.
   SmellType = Data.define(:name)
+
+  # The thresholds an orchestration's significance pre-filters apply. A
+  # nil field means that category has no cutoff.
+  SignificanceCutoffs = Data.define(:smell_type_instances, :complexity_score, :duplication_locations)
+
+  # Per-category counts of significant, renderable findings a run left
+  # unreported. Smells count by smell type.
+  RemainingFindings = Data.define(:smell_types, :duplication_clusters, :complexity_hits)
 end

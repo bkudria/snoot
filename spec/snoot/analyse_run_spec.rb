@@ -54,6 +54,41 @@ RSpec.describe Snoot::AnalyseRun do
     end
   end
 
+  describe "remaining findings" do
+    def smell_of(type_name, line)
+      build_smell(smell_type: build_smell_type(name: type_name), location: build_location(line_start: line))
+    end
+
+    let(:orchestration) do
+      fake_orchestration(
+        smells: Set[smell_of("Alpha", 1), smell_of("Alpha", 2), smell_of("Beta", 3), smell_of("NoDoc", 4)],
+        complexities: Set[build_complexity_hit(method_name: "A#a"), build_complexity_hit(method_name: "A#b")],
+        duplications: Set[build_duplication_cluster(signature: "d1")],
+        vendored_docs: { "Alpha" => "doc", "Beta" => "doc" }
+      )
+    end
+
+    it "counts candidates the selected finding left unreported, by category, excluding doc-less smells" do
+      result = described_class.invoke(Set[build_path], orchestration: orchestration)
+      expect(result.remaining).to eq(
+        Snoot::RemainingFindings.new(smell_types: 1, duplication_clusters: 1, complexity_hits: 2)
+      )
+    end
+
+    it "reports zero counts when nothing was found" do
+      result = described_class.invoke(Set[build_path], orchestration: fake_orchestration)
+      expect(result.remaining).to eq(
+        Snoot::RemainingFindings.new(smell_types: 0, duplication_clusters: 0, complexity_hits: 0)
+      )
+    end
+
+    it "is nil when analysis failed" do
+      result = described_class.invoke(Set[build_path],
+                                      orchestration: fake_orchestration(reek_raises: StandardError.new("x")))
+      expect(result.remaining).to be_nil
+    end
+  end
+
   describe "rule-failure.AnalyseRun -- analyser raises" do
     def invoke_with(**raises)
       described_class.invoke(Set[build_path], orchestration: fake_orchestration(**raises))
