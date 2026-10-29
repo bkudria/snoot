@@ -15,8 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `snoot --help` and the README say a smell finding lists every
   instance of its type, and that running reek, flog or flay directly
   lists a different set.
+- Every report's second line counts the significant findings snoot
+  isn't showing, per category, and states the significance cutoffs
+  that applied (`Also significant: 4 smell types, 0 duplication
+  clusters, 0 complexity hits (cutoffs: …)`). The nothing-to-report
+  line states the cutoffs too.
 
 ### Changed
+
+- Smell reports lead with a one-line header naming the smell type
+  with its instance and file counts, followed by the instances and
+  then reek's doc. Previously the doc came first and the instances
+  last.
 
 - A rejected option is named on stderr (`snoot: unknown option:
   <arg>`, then `Try 'snoot --help' for usage.`) instead of the full
