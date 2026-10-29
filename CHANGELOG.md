@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `snoot --help` and the README explain how snoot picks its one
   finding: category priority, ranking and tie-breaks, significance
   cutoffs, `.reek.yml` scope, and the fix-and-rerun loop.
+- `snoot --help` and the README say a smell finding lists every
+  instance of its type, and that running reek, flog or flay directly
+  lists a different set.
 
 ## [0.1.0] - 2026-05-14
 
