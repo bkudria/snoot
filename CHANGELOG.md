@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instance of its type, and that running reek, flog or flay directly
   lists a different set.
 
+### Fixed
+
+- A path argument that doesn't exist is rejected with exit 64 and a
+  `snoot: no such file or directory: <path>` line on stderr. Previously
+  flog and flay silently scanned the current directory instead.
+
 ## [0.1.0] - 2026-05-14
 
 ### Added

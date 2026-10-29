@@ -81,7 +81,7 @@ module Snoot
       end
 
       def flog_analyse(paths)
-        files = PathExpander.new(paths.map(&:raw), "**/*.{rb,rake}").process
+        files = expand_paths(paths, "**/*.{rb,rake}")
         flog = Flog.new
         flog.flog(*files)
         flog.totals.filter_map do |class_method, score|
@@ -93,12 +93,20 @@ module Snoot
       end
 
       def flay_analyse(paths)
-        files = PathExpander.new(paths.map(&:raw), "**/*.rb").process
+        files = expand_paths(paths, "**/*.rb")
         flay = Flay.new
         flay.process(*files)
         flay.analyze.each_with_object(Set[]) do |item, clusters|
           clusters << ResultMapping.duplication_cluster_from_flay_item(item)
         end
+      end
+
+      # PathExpander#process is avoided: it drops arguments that don't
+      # exist and then scans "." when none remain, so flog and flay would
+      # analyse a directory nobody named.
+      def expand_paths(paths, glob)
+        raws = paths.map(&:raw)
+        PathExpander.new(raws, glob).expand_dirs_to_files(*raws).uniq
       end
 
       def vendored_doc(smell_type)

@@ -35,7 +35,7 @@ After install, the `snoot` executable is available on PATH:
 - `0` — nothing worth reporting,
 - `1` — a finding was rendered,
 - `2` — analysis failed (failure line on stderr),
-- `64` — usage error (unknown flag; usage on stderr).
+- `64` — usage error (unknown flag or missing path; details on stderr).
 
 ## How snoot picks a finding
 

@@ -26,7 +26,7 @@ module Snoot
         0   nothing to report
         1   one finding rendered
         2   analyser failure
-        64  usage error
+        64  usage error (unknown flag or missing path)
 
       Example:
         snoot lib/
