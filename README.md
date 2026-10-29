@@ -39,9 +39,14 @@ After install, the `snoot` executable is available on PATH:
 
 ## How snoot picks a finding
 
-Each run reports one finding. Fix it, then run `snoot` again to see the
-next one; the report's "Also significant" line counts what is still
-waiting.
+Each run reports one finding. A smell finding lists
+every instance of its type across the scanned files, so one run is a
+batch of same-type fixes. Fix them, then run `snoot` again to see the next finding; the
+report's "Also significant" line counts what is still waiting.
+
+Running reek, flog or flay directly skips the cutoffs and the doc-less
+skip described below, so it lists a different set from the one snoot
+draws its finding from.
 
 Only findings above snoot's significance cutoffs are candidates --
 cutoffs: smell types need 2+ instances; complexity hits need score 25+; duplication clusters have no cutoff.

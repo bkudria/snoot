@@ -12,7 +12,9 @@ module Snoot
       With no path arguments, snoot scans the current directory.
 
       How snoot picks the finding:
-        One finding per run. Fix it, then rerun snoot to see the next one.
+        One finding per run; a smell finding lists every instance of its type
+        across the scanned files. Fix them, then rerun snoot to see the next one.
+        Running reek, flog or flay directly skips these rules and lists a different set.
         Smells outrank duplication, and duplication outranks complexity.
         Within a category the largest wins: most instances, most locations, or highest score.
         Ties break by name, then path, then line.

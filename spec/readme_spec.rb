@@ -14,6 +14,10 @@ RSpec.describe "README.md" do # rubocop:disable RSpec/DescribeClass
     expect(readme).to include(cutoffs)
   end
 
+  it "says a smell finding covers every instance and raw analysers list a different set" do
+    expect(readme).to include("every instance of its type", "Running reek, flog or flay directly")
+  end
+
   it "lists the usage-error exit code" do
     expect(readme).to include("- `64` —")
   end

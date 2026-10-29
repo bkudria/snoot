@@ -209,6 +209,11 @@ RSpec.describe Snoot::CLI do
                                        "Ties break by name", cutoffs, ".reek.yml")
     end
 
+    it "says a smell finding covers every instance and raw analysers list a different set in --help" do
+      run_argv(["--help"])
+      expect(stdout.string).to include("every instance of its type", "Running reek, flog or flay directly")
+    end
+
     it "writes usage to stdout and returns 0 for -h", :aggregate_failures do
       code = run_argv(["-h"])
       expect(code).to eq(0)
