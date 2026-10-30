@@ -38,4 +38,8 @@ RSpec.describe "README.md" do # rubocop:disable RSpec/DescribeClass
     expect(readme).to include("## Output for scripts", "snoot-status: finding_rendered category=smell",
                               "snoot-status: internal_error error=")
   end
+
+  it "tells a gate which exit codes mean snoot could not judge the code" do
+    expect(readme).to include("`2`, `64` and `70` mean snoot could not judge the code")
+  end
 end
