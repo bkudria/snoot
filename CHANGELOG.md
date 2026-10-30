@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The README says reek, flog and flay can write their own diagnostics
+  to stderr (skipped files, timeouts), which snoot passes through
+  unchanged.
 - Every report's doc opens with a `## Reference` heading, so an agent
   can find where the reference material starts, or cut it there.
 - flay skips files matched by `.flayignore` in the current directory,

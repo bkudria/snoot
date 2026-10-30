@@ -34,6 +34,10 @@ RSpec.describe "README.md" do # rubocop:disable RSpec/DescribeClass
     expect(readme).to include("- `64` — usage error (unknown flag or missing path")
   end
 
+  it "says reek, flog and flay may write their own diagnostics to stderr" do
+    expect(readme).to include("reek, flog and flay can write their own diagnostics to stderr")
+  end
+
   it "lists the internal-error exit code" do
     expect(readme).to include("- `70` — internal error")
   end
