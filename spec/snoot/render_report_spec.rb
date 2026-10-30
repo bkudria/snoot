@@ -68,8 +68,8 @@ RSpec.describe Snoot::RenderReport do
     end
     let(:report) { described_class.invoke(run, smells: smells, remaining: build_remaining, orchestration: doc_orch) }
 
-    it "renders doc from vendored_doc(smell_type)" do
-      expect(report.sections[:doc]).to eq("# Irresponsible Module\n\ndoc body")
+    it "renders doc as a ## Reference heading, then vendored_doc(smell_type) unmodified" do
+      expect(report.sections[:doc]).to eq("## Reference\n\n# Irresponsible Module\n\ndoc body")
     end
 
     it "renders an Instances section starting with the heading" do
@@ -210,9 +210,9 @@ RSpec.describe Snoot::RenderReport do
       expect(complexity_context(hit)).to include("Score: 40.75 = ")
     end
 
-    it "renders doc as the high-complexity prose" do
+    it "renders doc as a ## Reference heading, then the high-complexity prose" do
       expect(report.sections[:doc]).to eq(
-        "High complexity hits indicate a method or class doing too much. " \
+        "## Reference\n\nHigh complexity hits indicate a method or class doing too much. " \
         "Consider extracting helpers, simplifying conditionals, or " \
         "splitting the responsibility across smaller units."
       )
@@ -304,9 +304,9 @@ RSpec.describe Snoot::RenderReport do
       expect(report.sections[:finding_context]).to eq("Locations:\nlib/a.rb:1-8\nlib/b.rb:4-11")
     end
 
-    it "renders doc as the high-duplication prose" do
+    it "renders doc as a ## Reference heading, then the high-duplication prose" do
       expect(report.sections[:doc]).to eq(
-        "Structural duplication suggests an extracted abstraction is missing. " \
+        "## Reference\n\nStructural duplication suggests an extracted abstraction is missing. " \
         "Consider whether the duplicated shape belongs to a single helper, " \
         "module, or value type."
       )

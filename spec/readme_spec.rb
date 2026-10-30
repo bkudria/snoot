@@ -43,6 +43,10 @@ RSpec.describe "README.md" do # rubocop:disable RSpec/DescribeClass
                               "snoot-status: internal_error error=")
   end
 
+  it "says every report's doc opens with a ## Reference heading an agent can cut at" do
+    expect(readme).to include("opens with a `## Reference` heading")
+  end
+
   it "tells a gate which exit codes mean snoot could not judge the code" do
     expect(readme).to include("`2`, `64` and `70` mean snoot could not judge the code")
   end

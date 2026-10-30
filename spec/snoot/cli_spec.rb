@@ -69,7 +69,7 @@ RSpec.describe Snoot::CLI do
         "Documented: 1 instance across 1 file\n\n" \
           "Also significant: 0 smell types, 0 duplication clusters, 0 complexity hits; " \
           "0 smell types below cutoff #{no_cutoffs}\n\n" \
-          "## Instances\n\nlib/x.rb\n  Line 10: envies\n\n#{documented_tuning}\n\n## doc\n" \
+          "## Instances\n\nlib/x.rb\n  Line 10: envies\n\n#{documented_tuning}\n\n## Reference\n\n## doc\n" \
           "snoot-status: finding_rendered category=smell type=Documented remaining=0\n"
       end
 

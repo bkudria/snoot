@@ -22,8 +22,10 @@ exactly one issue, without sweeping or follow-up tool calls.
 
 - An agent receives one finding per run, with sufficient inlined
   context to act without follow-up tool calls.
-- The report is parseable by structural landmarks (header, finding
-  context, doc), not by analyser name.
+- The report is parseable by structural landmarks, not by analyser
+  name: a fixed section order, the header on the first line, and the
+  `## Instances` and `## Reference` headings that open a smell's
+  instances and every report's doc.
 - "Nothing to report" is a first-class run outcome, not an empty
   report.
 - Analyser failures are surfaced as a distinct outcome, not as a
