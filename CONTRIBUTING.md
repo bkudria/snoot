@@ -34,8 +34,9 @@ this using the PR title. Label a PR `no-changelog` to opt out.
    change bumps the minor version and anything else bumps the patch.
    Press Enter to accept, or type a different version. Pass a version to
    skip the prompt: `bundle exec rake "release:prepare[0.3.0]"`.
-2. It sets `VERSION`, moves the `[Unreleased]` entries under a dated
-   heading, commits `chore(release): vX.Y.Z`, and creates the `vX.Y.Z` tag.
+2. It sets `VERSION` (and snoot's own entry in `Gemfile.lock`), moves the
+   `[Unreleased]` entries under a dated heading, commits
+   `chore(release): vX.Y.Z`, and creates the `vX.Y.Z` tag.
 3. Push both: `git push origin main vX.Y.Z`.
 4. The Release workflow checks that the tag matches `VERSION`, is on
    `main`, and has a changelog section, then runs the suite. Approve the
