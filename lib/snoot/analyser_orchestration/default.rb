@@ -1,13 +1,6 @@
 # frozen_string_literal: true
 
 require "bigdecimal"
-require "flay"
-require "flog"
-require "path_expander"
-require "reek"
-require "reek/cli/options"
-require "reek/configuration/app_configuration"
-require "reek/source/source_locator"
 
 module Snoot
   module AnalyserOrchestration
@@ -26,35 +19,24 @@ module Snoot
     #
     # Default's public surface is exactly the six contracted methods
     # (vendored_doc, significant_smells, significant_complexities,
-    # significant_duplications, significance_cutoffs, analyse). The per-analyser drivers
-    # (reek_analyse, flog_analyse, flay_analyse) and the per-pathname
-    # helper (reek_smells_for) are private; their behaviour is observed
-    # through analyse. Pure third-party-output translation is delegated
-    # to the sibling module ResultMapping.
-    #
-    # Per-analyser directory expansion mirrors each tool's own CLI
-    # default rather than imposing a snoot-wide glob, so a directory
-    # Path resolves exactly as that tool would resolve it on the command
-    # line. Reek defers to `Reek::Source::SourceLocator` (which also
-    # honours `.reek.yml exclude_paths`); Flog uses `**/*.{rb,rake}` to
-    # match `Flog::CLI` and, like it, has no way to exclude files; Flay
-    # uses `**/*.rb` and drops files matched by the current directory's
-    # `.flayignore`, as `Flay.run` does (Flay's CLI additionally appends
-    # extensions advertised by installed Flay plugins, which snoot does
-    # not load).
+    # significant_duplications, significance_cutoffs, analyse). The
+    # sibling module AnalyserRuns runs the analysers and returns their
+    # raw output; Default's private map steps translate it, delegating
+    # the pure per-item translation to the sibling module ResultMapping.
     module Default
       DOCS_ROOT = File.expand_path("../../../data/reek_docs", __dir__).freeze
       DOC_FILENAME_PATTERN = /([a-z])([A-Z])/
-      FLAY_IGNORE = ".flayignore"
 
       SMELL_TYPE_INSTANCE_FLOOR = 2
       COMPLEXITY_SCORE_FLOOR = BigDecimal("25")
 
-      ANALYSER_PROBES = [
-        %i[reek reek_analyse],
-        %i[flog flog_analyse],
-        %i[flay flay_analyse]
-      ].freeze
+      # Each analyser's AnalyserRuns method, keyed by tag, paired with the
+      # map step that translates its raw output.
+      ANALYSERS = {
+        reek: :smells_from_reek,
+        flog: :complexities_from_flog,
+        flay: :duplications_from_flay
+      }.freeze
 
       # Memoises vendored_doc results by smell_type.name. The corpus is
       # fixed at gem build time (DOCS_ROOT, pinned to bundled reek) and
@@ -65,17 +47,13 @@ module Snoot
 
       module_function
 
-      def reek_analyse(paths)
-        config = Reek::Configuration::AppConfiguration.from_default_path
-        Reek::Source::SourceLocator.new(paths.map(&:raw), configuration: config).sources
-                                   .flat_map { |pathname| reek_smells_for(pathname, config) }
-                                   .to_set
+      def smells_from_reek(warnings_by_file)
+        warnings_by_file.flat_map { |pathname, warnings| smells_for(pathname, warnings) }.to_set
       end
 
-      def reek_smells_for(pathname, config)
-        examiner = Reek::Examiner.new(pathname, configuration: config)
+      def smells_for(pathname, warnings)
         file_lines = read_source_lines(pathname)
-        examiner.smells.filter_map do |warning|
+        warnings.filter_map do |warning|
           next unless warning.lines&.any?
 
           ResultMapping.smell_from_reek_warning(warning, file_lines)
@@ -88,10 +66,7 @@ module Snoot
         nil
       end
 
-      def flog_analyse(paths)
-        files = expand_paths(paths, "**/*.{rb,rake}")
-        flog = Flog.new
-        flog.flog(*files)
+      def complexities_from_flog(flog)
         file_lines = Hash.new { |cache, file| cache[file] = read_source_lines(file) }
         flog.totals.filter_map { |method, score| complexity_hit_for(flog, method, score, file_lines) }.to_set
       end
@@ -104,24 +79,11 @@ module Snoot
         )
       end
 
-      def flay_analyse(paths)
-        files = expand_paths(paths, "**/*.rb", ignore: FLAY_IGNORE)
-        flay = Flay.new
-        flay.process(*files)
+      def duplications_from_flay((flay, items))
         file_lines = Hash.new { |cache, file| cache[file] = read_source_lines(file) }
-        flay.analyze.to_set do |item|
+        items.to_set do |item|
           ResultMapping.duplication_cluster_from_flay_item(item, nodes: flay.hashes[item.structural_hash], file_lines:)
         end
-      end
-
-      # PathExpander#process is avoided: it drops arguments that don't
-      # exist and then scans "." when none remain, so flog and flay would
-      # analyse a directory nobody named.
-      def expand_paths(paths, glob, ignore: nil)
-        raws = paths.map(&:raw)
-        expander = PathExpander.new(raws, glob)
-        files = expander.expand_dirs_to_files(*raws).uniq
-        ignore ? expander.filter_files(files, ignore) : files
       end
 
       def vendored_doc(smell_type)
@@ -153,8 +115,8 @@ module Snoot
 
       # analyse runs the three analysers in canonical order (Reek ->
       # Flog -> Flay), capturing each result as it succeeds. On the
-      # first failure it returns an AnalyserFailure tagged with that
-      # analyser and does not invoke the remaining ones. On full
+      # first analyser failure it returns an AnalyserFailure tagged with
+      # that analyser and does not invoke the remaining ones. On full
       # success it returns a Sources bundling the three result sets.
       def analyse(paths)
         outputs = collect_outputs(paths)
@@ -166,15 +128,24 @@ module Snoot
       end
 
       def collect_outputs(paths)
-        ANALYSER_PROBES.each_with_object({}) do |(tag, method), outputs|
-          outputs[tag] = send(method, paths)
-        rescue StandardError => error
-          return AnalyserFailure.new(analyser: tag, message: FailureMessage.for(error))
+        ANALYSERS.each_with_object({}) do |(tag, map), outputs|
+          output = run_analyser(tag, paths)
+          return output if output.is_a?(AnalyserFailure)
+
+          outputs[tag] = send(map, output)
         end
       end
 
-      private_class_method :reek_analyse, :reek_smells_for, :flog_analyse, :complexity_hit_for, :flay_analyse,
-                           :collect_outputs
+      # Only the analyser's own run is an analyser failure; an error while
+      # mapping its output is a bug in snoot, so it propagates.
+      def run_analyser(tag, paths)
+        AnalyserRuns.public_send(tag, paths)
+      rescue StandardError => error
+        AnalyserFailure.new(analyser: tag, message: FailureMessage.for(error))
+      end
+
+      private_class_method :smells_from_reek, :smells_for, :complexities_from_flog, :complexity_hit_for,
+                           :duplications_from_flay, :collect_outputs, :run_analyser
     end
   end
 end

@@ -76,6 +76,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A bug in snoot while translating reek, flog or flay output exits 70
+  as an internal error, with the error class and backtrace on stderr.
+  Previously it was reported as that analyser failing (exit 2), as if
+  the analysed code or the analyser were at fault.
 - An analysis-failure message names the line and reason when a source
   file can't be parsed or read (`… syntax error in the source file.
   (lib/a.rb:2:9: error: unexpected token tINTEGER)`), and always fits on
