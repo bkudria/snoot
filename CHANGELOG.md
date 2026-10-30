@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-30
+
 ### Added
 
 - The README says reek, flog and flay can write their own diagnostics
@@ -101,5 +103,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   set (or the current directory when no paths are given) and emits a
   single agent-targeted finding to stdout.
 
-[Unreleased]: https://github.com/bkudria/snoot/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/bkudria/snoot/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/bkudria/snoot/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/bkudria/snoot/releases/tag/v0.1.0
