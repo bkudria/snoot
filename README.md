@@ -61,6 +61,10 @@ code or `tail -n 1` of stdout:
 
     snoot lib | tail -n 1
 
+Exit `1` means a finding is waiting;
+`2`, `64` and `70` mean snoot could not judge the code, so a gate
+should read them as neither clean nor a finding.
+
 ## How snoot picks a finding
 
 Each run reports one finding. A smell finding lists

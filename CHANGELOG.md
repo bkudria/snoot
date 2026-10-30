@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   type=FeatureEnvy remaining=4`, `snoot-status: nothing_to_report`,
   `snoot-status: analysis_failed analyser=reek`). On an analysis
   failure it is the only stdout output. `--help` and the README
-  describe the format.
+  describe the format, and the README says which exit codes mean
+  snoot could not judge the code.
 - `snoot --help` and the README explain how snoot picks its one
   finding: category priority, ranking and tie-breaks, significance
   cutoffs, `.reek.yml` scope, and the fix-and-rerun loop.

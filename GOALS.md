@@ -14,6 +14,9 @@ exactly one issue, without sweeping or follow-up tool calls.
   the finding it describes.
 - **Secondary:** a developer skimming the same report at a terminal.
   The format is identical; the design centre is the agent.
+- **Also:** a script or gate (rake task, CI step, agent loop) that
+  reads only the exit code and the last stdout line, the status line.
+  The report above that line is not written for scripts.
 
 ## What success looks like
 
@@ -30,7 +33,8 @@ exactly one issue, without sweeping or follow-up tool calls.
 
 snoot is deliberately narrow. It is not:
 
-- a CI gate (no exit-code-by-severity policy is part of the goal)
+- a severity policy: snoot reports one outcome per run; which
+  outcomes fail a build is the operator's decision
 - a diff-aware linter
 - a JSON or MCP surface
 - a pre-commit hook
