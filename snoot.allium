@@ -59,6 +59,23 @@ value SourceLine {
     text: String?
 }
 
+-- One operation's share of a flog score (e.g. "branch", "assignment",
+-- or a called method's name such as "each").
+value ScoreContribution {
+    operation: String
+    score: Decimal
+}
+
+-- A flog score split into the three dimensions its formula combines:
+-- score = sqrt(A^2 + B^2 + C^2), where A sums the assignments, B the
+-- branching contributions and C every other contribution. Each list is
+-- ordered by descending score.
+value ComplexityBreakdown {
+    assignments: List<ScoreContribution>
+    branching: List<ScoreContribution>
+    calls: List<ScoreContribution>
+}
+
 -- A reek smell type identifier (e.g. "FeatureEnvy", "TooManyMethods"). The
 -- set of valid values is owned by reek.
 value SmellType {
@@ -171,7 +188,11 @@ contract AnalyserOrchestration {
     -- outcome (including which analyser fails first, if any, and its
     -- message) is produced within a single CLI invocation. Each Smell's
     -- source_lines holds every line reek flagged for it, unique and
-    -- ascending, with that line's text from the analysed file.
+    -- ascending, with that line's text from the analysed file. Each
+    -- ComplexityHit's location spans the method from its first line to
+    -- its last, its source_lines hold every line of that span with the
+    -- file's text, and its breakdown groups flog's per-operation scores
+    -- the way flog's score formula does.
     analyse: (paths: Set<Path>) -> AnalyserResult
 
     @invariant Determinism
@@ -205,6 +226,8 @@ variant ComplexityHit : Finding {
     location: Location
     method_name: String?
     score: Decimal
+    breakdown: ComplexityBreakdown
+    source_lines: List<SourceLine>
 }
 
 variant DuplicationCluster : Finding {
@@ -358,7 +381,9 @@ rule RenderReport {
     --
     -- For ComplexityHit and DuplicationCluster findings the report is
     -- a four-section structure (header, remaining, finding_context, doc):
-    --   - ComplexityHit:      hand-written generic prose for high complexity
+    --   - ComplexityHit:      finding_context carries the score breakdown
+    --                         and the method's code; doc is hand-written
+    --                         generic prose for high complexity
     --   - DuplicationCluster: hand-written generic prose for high duplication
     -- The exact prose is static implementation policy of the gem (one
     -- string per non-Smell variant), not an orchestration-contract
@@ -417,7 +442,17 @@ rule RenderReport {
         --   2. Remaining      -- as in SmellReportShape
         --   3. FindingContext -- file path(s), line range(s), the analyser's
         --                        message; for DuplicationCluster, all cluster
-        --                        locations are enumerated
+        --                        locations are enumerated. For ComplexityHit:
+        --                        the span, the method name, the score (two
+        --                        decimals) with its formula, one line per
+        --                        breakdown dimension (descending total; the
+        --                        top four operations by score, then '…'),
+        --                        then up to fifty 'N | <code>' lines of the
+        --                        method with common indentation removed,
+        --                        control characters replaced with U+FFFD and
+        --                        lines cut to 160 characters, and past fifty
+        --                        one '… K more lines (N–M)' line. Unreadable
+        --                        source has no code lines.
         --   4. Doc            -- one inlined hand-written prose constant
 
     @guarantee AnalyserProvenanceImplicit

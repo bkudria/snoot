@@ -8,6 +8,7 @@ module Snoot
     module SourceExcerpt
       MAX_LINES = 5
       MAX_WIDTH = 160
+      BLOCK_MAX_LINES = 50
       CONTROL_CHARACTERS = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/
 
       module_function
@@ -19,6 +20,28 @@ module Snoot
         width = shown.map { |line| line.number.to_s.size }.max
         code = shown.map { |line| code_line(line, width) }
         hidden.any? ? [*code, more_line(hidden)] : code
+      end
+
+      # A method's lines, as one block: common indentation is removed so
+      # the nesting stays visible without the class-level margin.
+      def block(source_lines, max_lines: BLOCK_MAX_LINES)
+        shown, hidden = source_lines.select(&:text).partition.with_index { |_, index| index < max_lines }
+        indent = common_indent(shown)
+        width = shown.map { |line| line.number.to_s.size }.max
+        code = shown.map { |line| block_line(line, width, indent) }
+        hidden.any? ? [*code, more_lines_line(hidden)] : code
+      end
+
+      def more_lines_line(hidden)
+        "    … #{hidden.size} more lines (#{hidden.first.number}–#{hidden.last.number})"
+      end
+
+      def block_line(line, width, indent)
+        "    #{line.number.to_s.rjust(width)} | #{clip(neutralize(line.text.rstrip.delete_prefix(indent)))}".rstrip
+      end
+
+      def common_indent(source_lines)
+        source_lines.map(&:text).reject { |text| text.strip.empty? }.map { |text| text[/\A\s*/] }.min_by(&:size) || ""
       end
 
       def code_line(line, width)

@@ -4,7 +4,8 @@ module Snoot
   # Given a finding_rendered Run, produces a Report. Smell findings get
   # header, remaining, instances, tuning and doc; ComplexityHit and
   # DuplicationCluster get header, remaining, finding_context and doc.
-  # SmellSections builds the Smell sections; the helpers below build the rest.
+  # SmellSections and ComplexitySections build their variants' sections;
+  # the helpers below build the rest.
   module RenderReport
     # Report is the value returned by RenderReport.invoke: the source
     # Run, the selected Finding it was built from, and the ordered
@@ -63,22 +64,9 @@ module Snoot
 
     def non_smell_sections(finding)
       case finding
-      when ComplexityHit then complexity_hit_sections(finding)
+      when ComplexityHit then ComplexitySections.build(finding)
       when DuplicationCluster then duplication_cluster_sections(finding)
       end
-    end
-
-    def complexity_hit_sections(hit)
-      loc = hit.location.description
-      score = hit.score.to_s("F")
-      name = hit.method_name
-      {
-        header: "High complexity in #{name} at #{loc} (score: #{score})",
-        finding_context: "#{loc}\n\nMethod: #{name}\nScore: #{score}",
-        doc: "High complexity hits indicate a method or class doing too much. " \
-             "Consider extracting helpers, simplifying conditionals, or " \
-             "splitting the responsibility across smaller units."
-      }
     end
 
     def duplication_cluster_sections(cluster)

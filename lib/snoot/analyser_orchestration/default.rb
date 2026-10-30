@@ -91,12 +91,16 @@ module Snoot
         files = expand_paths(paths, "**/*.{rb,rake}")
         flog = Flog.new
         flog.flog(*files)
-        flog.totals.filter_map do |class_method, score|
-          ResultMapping.complexity_hit_from_flog_entry(
-            class_method: class_method, score: score,
-            raw_location: flog.method_locations[class_method]
-          )
-        end.to_set
+        file_lines = Hash.new { |cache, file| cache[file] = read_source_lines(file) }
+        flog.totals.filter_map { |method, score| complexity_hit_for(flog, method, score, file_lines) }.to_set
+      end
+
+      def complexity_hit_for(flog, class_method, score, file_lines)
+        raw_location = flog.method_locations[class_method]
+        ResultMapping.complexity_hit_from_flog_entry(
+          class_method:, score:, raw_location:, calls: flog.calls[class_method],
+          file_lines: raw_location && file_lines[raw_location.split(":", 2).first]
+        )
       end
 
       def flay_analyse(paths)
@@ -165,7 +169,7 @@ module Snoot
         end
       end
 
-      private_class_method :reek_analyse, :reek_smells_for, :flog_analyse, :flay_analyse,
+      private_class_method :reek_analyse, :reek_smells_for, :flog_analyse, :complexity_hit_for, :flay_analyse,
                            :collect_outputs
     end
   end

@@ -143,8 +143,21 @@ RSpec.describe "AnalyserOrchestration::Default" do
       hits, path = analyse_flog(complex_src)
       hit = hits.find { |h| h.method_name == "Tangled#gnarly" }
       expect(hit.location.path.raw).to eq(path)
-      expect(hit.location.line_start).to eq(hit.location.line_end)
+      expect(hit.location).to have_attributes(line_start: 2, line_end: 10)
       expect(hit.score).to be_a(BigDecimal).and(be > 0)
+    end
+
+    def gnarly_hit
+      analyse_flog(complex_src).first.find { |h| h.method_name == "Tangled#gnarly" }
+    end
+
+    it "carries the method's lines with the file's text" do
+      expect(gnarly_hit.source_lines.map(&:text)).to eq(complex_src.lines(chomp: true)[1..9])
+    end
+
+    it "splits the score into dimensions that combine back into it" do
+      totals = gnarly_hit.breakdown.to_h.values.map { |contributions| contributions.sum(&:score) }
+      expect(Math.sqrt(totals.sum { |total| total**2 })).to be_within(0.001).of(gnarly_hit.score)
     end
 
     it "returns an empty Set for a file with no methods" do
