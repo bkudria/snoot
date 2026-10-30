@@ -10,6 +10,8 @@ module ReleasePrep
   class Run
     VERSION_FILE = "lib/snoot/version.rb"
     CHANGELOG = "CHANGELOG.md"
+    LOCKFILE = "Gemfile.lock"
+    GEM_NAME = "snoot"
     RELEASE_BRANCH = "main"
 
     def initialize(root:, input:, output:, today:)
@@ -61,7 +63,8 @@ module ReleasePrep
     def write_release(version)
       File.write(path(CHANGELOG), Changelog.promote(read(CHANGELOG), version: version, date: @today.iso8601))
       File.write(path(VERSION_FILE), VersionFile.bump(read(VERSION_FILE), version))
-      git("add", CHANGELOG, VERSION_FILE)
+      File.write(path(LOCKFILE), Lockfile.bump(read(LOCKFILE), gem: GEM_NAME, version: version))
+      git("add", CHANGELOG, VERSION_FILE, LOCKFILE)
       git("commit", "-q", "-m", "chore(release): v#{version}")
       git("tag", "-m", "Version #{version}", "v#{version}")
     end
@@ -91,6 +94,19 @@ module ReleasePrep
     def bump(source, version)
       current(source)
       source.sub(ASSIGNMENT) { %(#{Regexp.last_match[:prefix]}#{version}") }
+    end
+  end
+
+  # CI installs gems in frozen mode, which rejects a lockfile whose entry for
+  # the gem itself disagrees with VERSION.
+  module Lockfile
+    module_function
+
+    def bump(text, gem:, version:)
+      entry = /^(?<indent> +)#{Regexp.escape(gem)} \([^)]+\)$/
+      raise Error, "no lockfile entry for #{gem}" unless text.match?(entry)
+
+      text.gsub(entry) { "#{Regexp.last_match[:indent]}#{gem} (#{version})" }
     end
   end
 

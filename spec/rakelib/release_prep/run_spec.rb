@@ -44,6 +44,7 @@ RSpec.describe ReleasePrep::Run do
     git("config", "tag.gpgSign", "false")
     git("config", "core.hooksPath", File::NULL)
     write("lib/snoot/version.rb", %(module Snoot\n  VERSION = "0.1.0"\nend\n))
+    write("Gemfile.lock", "PATH\n  remote: .\n  specs:\n    snoot (0.1.0)\n")
     write("CHANGELOG.md", <<~MD)
       # Changelog
 
@@ -74,13 +75,17 @@ RSpec.describe ReleasePrep::Run do
       expect(read("lib/snoot/version.rb")).to include(%(VERSION = "0.2.0"))
     end
 
+    it "bumps the gem's version in Gemfile.lock" do
+      expect(read("Gemfile.lock")).to include("    snoot (0.2.0)\n")
+    end
+
     it "promotes the Unreleased entries" do
       expect(read("CHANGELOG.md")).to include("## [Unreleased]\n\n## [0.2.0] - 2026-10-29\n\n### Added")
     end
 
-    it "commits both files as a release commit" do
+    it "commits the changed files as a release commit" do
       expect(git("show", "--stat", "--format=%s", "HEAD"))
-        .to start_with("chore(release): v0.2.0").and include("CHANGELOG.md", "lib/snoot/version.rb")
+        .to start_with("chore(release): v0.2.0").and include("CHANGELOG.md", "lib/snoot/version.rb", "Gemfile.lock")
     end
 
     it "tags the release commit the way Bundler's release task would" do
