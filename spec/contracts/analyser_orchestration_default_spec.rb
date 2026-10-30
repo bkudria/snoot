@@ -229,6 +229,26 @@ RSpec.describe "AnalyserOrchestration::Default" do
         expect(adapter.analyse(Set[Snoot::Path.new(raw: dir)]).duplications).not_to be_empty
       end
     end
+
+    def seed_dup_pair(dir, sub)
+      Dir.mkdir(File.join(dir, sub))
+      dup_pair.each_with_index { |src, i| File.write(File.join(dir, sub, "f#{i}.rb"), src) }
+    end
+
+    def clusters_with_flayignore(ignore_line)
+      Dir.mktmpdir do |dir|
+        %w[keep skip].each { |sub| seed_dup_pair(dir, sub) }
+        File.write(File.join(dir, ".flayignore"), "#{ignore_line}\n")
+        return Dir.chdir(dir) { adapter.analyse(Set[Snoot::Path.new(raw: ".")]).duplications }
+      end
+    end
+
+    it "skips files matched by .flayignore in the current directory, as flay's CLI does", :aggregate_failures do
+      clusters = clusters_with_flayignore("skip/**/*.rb")
+      flagged = clusters.flat_map { |cluster| cluster.locations.map { |location| location.path.raw } }
+      expect(flagged).not_to be_empty
+      expect(flagged).to all(match(%r{(\A|/)keep/}))
+    end
   end
 
   describe "flog/flay path expansion" do

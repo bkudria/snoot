@@ -281,7 +281,7 @@ RSpec.describe Snoot::CLI do
       cutoffs = Snoot::RenderReport.describe_cutoffs(Snoot::AnalyserOrchestration::Default.significance_cutoffs)
       run_argv(["--help"])
       expect(stdout.string).to include("How snoot picks the finding:", "rerun snoot", "Smells outrank duplication",
-                                       "Ties break by name", cutoffs, ".reek.yml")
+                                       "Ties break by name", cutoffs, ".reek.yml", ".flayignore")
     end
 
     it "lists the internal-error exit code and the status line in --help output" do

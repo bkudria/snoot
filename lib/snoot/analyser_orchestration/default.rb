@@ -37,14 +37,15 @@ module Snoot
     # Path resolves exactly as that tool would resolve it on the command
     # line. Reek defers to `Reek::Source::SourceLocator` (which also
     # honours `.reek.yml exclude_paths`); Flog uses `**/*.{rb,rake}` to
-    # match `Flog::CLI`; Flay uses `**/*.rb` (Flay's CLI additionally
-    # appends extensions advertised by installed Flay plugins, which
-    # snoot does not load). The orchestration contract is path-abstract
-    # (snoot.allium:150), so this is implementation policy each adapter
-    # owns.
+    # match `Flog::CLI` and, like it, has no way to exclude files; Flay
+    # uses `**/*.rb` and drops files matched by the current directory's
+    # `.flayignore`, as `Flay.run` does (Flay's CLI additionally appends
+    # extensions advertised by installed Flay plugins, which snoot does
+    # not load).
     module Default
       DOCS_ROOT = File.expand_path("../../../data/reek_docs", __dir__).freeze
       DOC_FILENAME_PATTERN = /([a-z])([A-Z])/
+      FLAY_IGNORE = ".flayignore"
 
       SMELL_TYPE_INSTANCE_FLOOR = 2
       COMPLEXITY_SCORE_FLOOR = BigDecimal("25")
@@ -104,7 +105,7 @@ module Snoot
       end
 
       def flay_analyse(paths)
-        files = expand_paths(paths, "**/*.rb")
+        files = expand_paths(paths, "**/*.rb", ignore: FLAY_IGNORE)
         flay = Flay.new
         flay.process(*files)
         file_lines = Hash.new { |cache, file| cache[file] = read_source_lines(file) }
@@ -116,9 +117,11 @@ module Snoot
       # PathExpander#process is avoided: it drops arguments that don't
       # exist and then scans "." when none remain, so flog and flay would
       # analyse a directory nobody named.
-      def expand_paths(paths, glob)
+      def expand_paths(paths, glob, ignore: nil)
         raws = paths.map(&:raw)
-        PathExpander.new(raws, glob).expand_dirs_to_files(*raws).uniq
+        expander = PathExpander.new(raws, glob)
+        files = expander.expand_dirs_to_files(*raws).uniq
+        ignore ? expander.filter_files(files, ignore) : files
       end
 
       def vendored_doc(smell_type)
