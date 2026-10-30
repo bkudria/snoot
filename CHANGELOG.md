@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Smell instances list every line reek flagged (`Lines 12, 15: …`)
+  instead of only the first, each followed by its source code
+  (`12 | x.foo(bar)`), so the agent sees the code without opening the
+  file. Up to five code lines are shown per instance; the rest are
+  listed by number, and lines over 160 characters are cut. Control
+  characters in the code are replaced with `�`, so a scanned file can't
+  send escape sequences to the terminal.
 - Smell reports lead with a one-line header naming the smell type
   with its instance and file counts, followed by the instances and
   then reek's doc. Previously the doc came first and the instances

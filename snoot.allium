@@ -52,6 +52,13 @@ value Location {
     line_end: Integer
 }
 
+-- One line an analyser flagged, with that line's source text. text is
+-- null when the source file could not be read.
+value SourceLine {
+    number: Integer
+    text: String?
+}
+
 -- A reek smell type identifier (e.g. "FeatureEnvy", "TooManyMethods"). The
 -- set of valid values is owned by reek.
 value SmellType {
@@ -162,7 +169,9 @@ contract AnalyserOrchestration {
     -- returns a Sources bundling the three result sets. This signature
     -- respects @invariant Determinism: for the same path set, the same
     -- outcome (including which analyser fails first, if any, and its
-    -- message) is produced within a single CLI invocation.
+    -- message) is produced within a single CLI invocation. Each Smell's
+    -- source_lines holds every line reek flagged for it, unique and
+    -- ascending, with that line's text from the analysed file.
     analyse: (paths: Set<Path>) -> AnalyserResult
 
     @invariant Determinism
@@ -189,6 +198,7 @@ variant Smell : Finding {
     smell_type: SmellType
     location: Location
     message: String
+    source_lines: List<SourceLine>
 }
 
 variant ComplexityHit : Finding {
@@ -382,10 +392,17 @@ rule RenderReport {
         --   3. Instances -- '## Instances' heading followed by per-file
         --                  groupings of every Smell from the analysed sources
         --                  matching the selected smell_type. Each file group
-        --                  is the raw path on its own line, then 2-space-
-        --                  indented 'Line N: <message>' lines. File groups
-        --                  are ordered by descending instance count, with
-        --                  alphabetical path as the tie-break.
+        --                  is the raw path on its own line, then per Smell a
+        --                  2-space-indented 'Line N: <message>' line ('Lines
+        --                  N, M: <message>' when several lines are flagged),
+        --                  followed by up to five 4-space-indented
+        --                  'N | <code>' lines carrying the flagged lines'
+        --                  text (stripped, control characters replaced
+        --                  with U+FFFD, cut to 160 characters) and, past
+        --                  five, one '… K more: <line numbers>' line. A
+        --                  line with no readable text has no code line.
+        --                  File groups are ordered by descending instance
+        --                  count, with alphabetical path as the tie-break.
         --   4. Tuning    -- fix every instance and rerun; otherwise configure
         --                  the detector in .reek.yml as a detectors: block
         --                  keyed by the smell type's name

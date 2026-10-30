@@ -73,11 +73,18 @@ module Snoot
 
       def reek_smells_for(pathname, config)
         examiner = Reek::Examiner.new(pathname, configuration: config)
+        file_lines = read_source_lines(pathname)
         examiner.smells.filter_map do |warning|
           next unless warning.lines&.any?
 
-          ResultMapping.smell_from_reek_warning(warning)
+          ResultMapping.smell_from_reek_warning(warning, file_lines)
         end
+      end
+
+      def read_source_lines(pathname)
+        File.binread(pathname).force_encoding(Encoding::UTF_8).scrub.lines(chomp: true)
+      rescue SystemCallError
+        nil
       end
 
       def flog_analyse(paths)

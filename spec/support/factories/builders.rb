@@ -17,8 +17,9 @@ module Snoot
         Snoot::SmellType.new(name: name)
       end
 
-      def build_smell(smell_type: build_smell_type, location: build_location, message: "method envies another object")
-        Snoot::Smell.new(smell_type: smell_type, location: location, message: message)
+      def build_smell(smell_type: build_smell_type, location: build_location, message: "method envies another object",
+                      source_lines: [Snoot::SourceLine.new(number: location.line_start, text: nil)])
+        Snoot::Smell.new(smell_type:, location:, message:, source_lines:)
       end
 
       def build_complexity_hit(location: build_location, method_name: "Foo#bar", score: BigDecimal("12.5"))

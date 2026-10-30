@@ -14,6 +14,10 @@ module Snoot
     def description = "#{path.raw}:#{line_start}-#{line_end}"
   end
 
+  # One analyser-flagged line and its source text; text is nil when the
+  # source file could not be read.
+  SourceLine = Data.define(:number, :text)
+
   # A Reek smell category, named (e.g. "IrresponsibleModule"). Groups
   # Smells for ranking; keys vendored-doc lookup.
   SmellType = Data.define(:name)

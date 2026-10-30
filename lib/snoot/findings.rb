@@ -7,8 +7,8 @@ module Snoot
   # shapes; AnalyseRun's selection phase ranks within and across them.
 
   # A single Reek smell instance. Ranked by how often its smell_type
-  # recurs within a Run.
-  Smell = Data.define(:smell_type, :location, :message)
+  # recurs within a Run. source_lines holds every line reek flagged.
+  Smell = Data.define(:smell_type, :location, :message, :source_lines)
 
   # A single high-complexity method reported by Flog; score (BigDecimal)
   # is the ranking key.

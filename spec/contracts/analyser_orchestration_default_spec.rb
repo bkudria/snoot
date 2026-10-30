@@ -52,6 +52,23 @@ RSpec.describe "AnalyserOrchestration::Default" do
       expect(smells.first.smell_type.name).to be_a(String)
     end
 
+    it "carries each flagged line's text from the analysed file" do
+      smells, = analyse_reek(smelly_src)
+      source = smelly_src.lines(chomp: true)
+      expect(smells.flat_map(&:source_lines)).to all(satisfy { |line| line.text == source[line.number - 1] })
+    end
+
+    it "reads no source lines from a file it cannot open" do
+      expect(adapter.read_source_lines("does-not-exist.rb")).to be_nil
+    end
+
+    it "replaces invalid UTF-8 when reading source lines" do
+      Tempfile.create(["bad", ".rb"]) do |file|
+        File.binwrite(file.path, "ok\n\xFF bad\n")
+        expect(adapter.read_source_lines(file.path)).to eq(["ok", "\uFFFD bad"])
+      end
+    end
+
     it "returns an empty Set when no smells are detected" do
       expect(analyse_reek(smell_free_src).first).to eq(Set[])
     end
