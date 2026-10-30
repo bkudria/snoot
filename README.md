@@ -97,6 +97,11 @@ Reek reads `.reek.yml` from the current directory or its nearest
 ancestor, falling back to `~/.reek.yml`; it configures reek's detectors
 and `exclude_paths`. flog and flay do not read it.
 
+flay skips files matched by `.flayignore` in the current directory,
+using flay's own patterns: a whole directory needs `dir/**/*.rb`, since
+`dir` or `dir/` alone does not exclude its subdirectories.
+flog has no way to exclude files.
+
 The "Also significant" line and the "nothing to report" line both name
 the smell types below the cutoff, so a type shows up before it counts.
 After its instances, a smell report says how to configure that smell's

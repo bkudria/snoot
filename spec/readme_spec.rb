@@ -22,6 +22,10 @@ RSpec.describe "README.md" do # rubocop:disable RSpec/DescribeClass
     expect(readme).to include("below the cutoff", "under `detectors:`")
   end
 
+  it "says flay honours .flayignore, with flay's directory pattern, and flog excludes nothing" do
+    expect(readme).to include("`.flayignore`", "`dir/**/*.rb`", "flog has no way to exclude files")
+  end
+
   it "shows -- ending options before a dash-named path" do
     expect(readme).to include("snoot -- -odd-name.rb")
   end

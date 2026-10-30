@@ -193,7 +193,11 @@ contract AnalyserOrchestration {
     -- returns a Sources bundling the three result sets. This signature
     -- respects @invariant Determinism: for the same path set, the same
     -- outcome (including which analyser fails first, if any, and its
-    -- message) is produced within a single CLI invocation. Each Smell's
+    -- message) is produced within a single CLI invocation. Each analyser
+    -- scopes the path set as its own command does: reek skips what
+    -- .reek.yml's exclude_paths names, flay skips files the current
+    -- directory's .flayignore matches, and flog analyses every Ruby
+    -- file under the path set. Each Smell's
     -- source_lines holds every line reek flagged for it, unique and
     -- ascending, with that line's text from the analysed file. Each
     -- ComplexityHit's location spans the method from its first line to
