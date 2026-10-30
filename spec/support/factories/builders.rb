@@ -65,8 +65,8 @@ module Snoot
         build_smell(smell_type: build_smell_type(name: "Documented"))
       end
 
-      def build_remaining(smell_types: 0, duplication_clusters: 0, complexity_hits: 0)
-        Snoot::RemainingFindings.new(smell_types:, duplication_clusters:, complexity_hits:)
+      def build_remaining(smell_types: 0, duplication_clusters: 0, complexity_hits: 0, below_cutoff_smell_types: [])
+        Snoot::RemainingFindings.new(smell_types:, duplication_clusters:, complexity_hits:, below_cutoff_smell_types:)
       end
 
       def build_cutoffs(smell_type_instances: nil, complexity_score: nil, duplication_locations: nil)

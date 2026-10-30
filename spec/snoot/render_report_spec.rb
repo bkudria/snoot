@@ -20,10 +20,10 @@ RSpec.describe Snoot::RenderReport do
       )
     end
 
-    it "emits ReportEmitted for a Smell as { header, remaining, instances, doc }", :aggregate_failures do
+    it "emits ReportEmitted for a Smell as { header, remaining, instances, tuning, doc }", :aggregate_failures do
       expect(fe_report.run).to eq(fe_run)
       expect(fe_report.finding).to eq(fe_run.selected_finding)
-      expect(fe_report.sections.keys).to eq(%i[header remaining instances doc])
+      expect(fe_report.sections.keys).to eq(%i[header remaining instances tuning doc])
     end
 
     it "groups instances from the smells: kwarg" do
@@ -88,6 +88,27 @@ RSpec.describe Snoot::RenderReport do
       single = Set[smells.first]
       report = described_class.invoke(run, smells: single, remaining: build_remaining, orchestration: doc_orch)
       expect(report.sections[:header]).to eq("Irresponsible module: 1 instance across 1 file")
+    end
+
+    def tuning_text(options_pointer)
+      <<~TEXT.chomp
+        Fix every instance, then rerun snoot. If the detector's settings don't suit this codebase, \
+        configure it in .reek.yml#{options_pointer}:
+
+            detectors:
+              IrresponsibleModule:
+                <option>: <value>
+      TEXT
+    end
+
+    it "renders a fix-first tuning section with a detectors: block keyed by the smell type" do
+      expect(report.sections[:tuning]).to eq(tuning_text(""))
+    end
+
+    it "points the tuning section at the doc's options when the doc has a Configuration section" do
+      orch = fake_orchestration(vendored_docs: { "IrresponsibleModule" => "# IM\n\n## Configuration\n\nopts" })
+      report = described_class.invoke(run, smells: smells, remaining: build_remaining, orchestration: orch)
+      expect(report.sections[:tuning]).to eq(tuning_text(" (the reek doc below lists its options)"))
     end
 
     it "omits finding_context for Smell findings" do
@@ -193,15 +214,28 @@ RSpec.describe Snoot::RenderReport do
 
     it "counts each category and states the cutoffs on one line" do
       expect(remaining_line(build_remaining(smell_types: 2, duplication_clusters: 3, complexity_hits: 4))).to eq(
-        "Also significant: 2 smell types, 3 duplication clusters, 4 complexity hits " \
-        "(cutoffs: smell types need 2+ instances; complexity hits need score 25+; " \
+        "Also significant: 2 smell types, 3 duplication clusters, 4 complexity hits; " \
+        "0 smell types below cutoff (cutoffs: smell types need 2+ instances; complexity hits need score 25+; " \
         "duplication clusters have no cutoff)"
       )
     end
 
     it "uses singular nouns for counts of one and shows zero counts" do
       expect(remaining_line(build_remaining(smell_types: 1, duplication_clusters: 0, complexity_hits: 1)))
-        .to start_with("Also significant: 1 smell type, 0 duplication clusters, 1 complexity hit (")
+        .to start_with("Also significant: 1 smell type, 0 duplication clusters, 1 complexity hit; ")
+    end
+
+    it "names the smell types below the cutoff, comma-separated" do
+      types = %w[TooManyStatements UtilityFunction].map { |name| build_smell_type(name: name) }
+      expect(remaining_line(build_remaining(below_cutoff_smell_types: types))).to include(
+        "complexity hits; 2 smell types below cutoff: TooManyStatements, UtilityFunction (cutoffs: "
+      )
+    end
+
+    it "uses the singular for one below-cutoff smell type" do
+      types = [build_smell_type(name: "TooManyStatements")]
+      expect(remaining_line(build_remaining(below_cutoff_smell_types: types)))
+        .to include("; 1 smell type below cutoff: TooManyStatements (")
     end
 
     it "states a cutoff for every category the orchestration gates, and none otherwise" do

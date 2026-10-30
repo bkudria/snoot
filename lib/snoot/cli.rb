@@ -44,9 +44,10 @@ module Snoot
 
     module_function
 
-    def emit_nothing_to_report(pipeline)
+    def emit_nothing_to_report(remaining, pipeline)
+      below_cutoff = RenderReport.describe_below_cutoff(remaining.below_cutoff_smell_types)
       cutoffs = RenderReport.describe_cutoffs(pipeline.orchestration.significance_cutoffs)
-      pipeline.stdout.write("#{NOTHING_TO_REPORT} (#{cutoffs})\n")
+      pipeline.stdout.write("#{NOTHING_TO_REPORT}; #{below_cutoff} (#{cutoffs})\n")
       []
     end
 
@@ -133,7 +134,7 @@ module Snoot
     def events_for_outcome(run, smells, remaining, pipeline:)
       case run.outcome
       when :finding_rendered then [emit_report(run, smells, remaining, pipeline: pipeline)]
-      when :nothing_to_report then emit_nothing_to_report(pipeline)
+      when :nothing_to_report then emit_nothing_to_report(remaining, pipeline)
       when :analysis_failed then emit_failure(run, pipeline.stderr)
       else []
       end

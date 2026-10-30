@@ -32,7 +32,7 @@ RSpec.describe Snoot::CLI do
         report_event = events.find { |e| e.is_a?(Snoot::CLI::ReportEmitted) }
         expect(report_event).not_to be_nil
         expect(report_event.finding).to eq(smell)
-        expect(report_event.sections.keys).to eq(%i[header remaining instances doc])
+        expect(report_event.sections.keys).to eq(%i[header remaining instances tuning doc])
       end
     end
   end
@@ -40,6 +40,10 @@ RSpec.describe Snoot::CLI do
   describe "surface-guarantee.StdoutMutuallyExclusive" do
     def no_cutoffs
       "(cutoffs: smell types have no cutoff; complexity hits have no cutoff; duplication clusters have no cutoff)"
+    end
+
+    def nothing_to_report_line
+      "nothing to report -- no findings above snoot's significance floor; 0 smell types below cutoff #{no_cutoffs}\n"
     end
     let(:stdout) { StringIO.new }
     let(:stderr) { StringIO.new }
@@ -56,10 +60,15 @@ RSpec.describe Snoot::CLI do
         fake_orchestration(smells: Set[rendered_smell], vendored_docs: { "Documented" => "## doc" })
       end
 
+      def documented_tuning
+        Snoot::RenderReport::SmellSections.tuning(build_smell_type(name: "Documented"), "## doc")
+      end
+
       def expected_report
         "Documented: 1 instance across 1 file\n\n" \
-          "Also significant: 0 smell types, 0 duplication clusters, 0 complexity hits #{no_cutoffs}\n\n" \
-          "## Instances\n\nlib/x.rb\n  Line 10: envies\n\n## doc\n"
+          "Also significant: 0 smell types, 0 duplication clusters, 0 complexity hits; " \
+          "0 smell types below cutoff #{no_cutoffs}\n\n" \
+          "## Instances\n\nlib/x.rb\n  Line 10: envies\n\n#{documented_tuning}\n\n## doc\n"
       end
 
       it "writes the header, Instances and doc report to stdout on finding_rendered (Smell)", :aggregate_failures do
@@ -71,7 +80,7 @@ RSpec.describe Snoot::CLI do
 
     it "writes the enriched 'nothing to report' line to stdout on nothing_to_report", :aggregate_failures do
       run_cli
-      expect(stdout.string).to eq("nothing to report -- no findings above snoot's significance floor #{no_cutoffs}\n")
+      expect(stdout.string).to eq(nothing_to_report_line)
       expect(stderr.string).to eq("")
     end
 
@@ -82,7 +91,7 @@ RSpec.describe Snoot::CLI do
       it "writes a missing-vendored-doc warning to stderr (SkippedDocLessSmellWarned)", :aggregate_failures do
         run_cli
         expect(stderr.string).to eq("warning: skipping doc-less smell type 'Undocumented'\n")
-        expect(stdout.string).to eq("nothing to report -- no findings above snoot's significance floor #{no_cutoffs}\n")
+        expect(stdout.string).to eq(nothing_to_report_line)
       end
     end
 
@@ -178,6 +187,20 @@ RSpec.describe Snoot::CLI do
       RUBY
     end
 
+    def lonely_ruby
+      <<~RUBY
+        class Lonely
+          def smelly_a(x)
+            x.a + x.b + x.c + x.d
+          end
+        end
+      RUBY
+    end
+
+    def lonely_below_cutoff
+      "3 smell types below cutoff: IrresponsibleModule, UncommunicativeParameterName, UtilityFunction"
+    end
+
     def run_argv(argv, orchestration: Snoot::AnalyserOrchestration::Default)
       pipeline = Snoot::CLI::Pipeline.new(orchestration: orchestration, stdout: stdout, stderr: stderr)
       described_class.run(argv, pipeline: pipeline)
@@ -209,6 +232,11 @@ RSpec.describe Snoot::CLI do
       run_argv(["--help"])
       expect(stdout.string).to include("How snoot picks the finding:", "rerun snoot", "Smells outrank duplication",
                                        "Ties break by name", cutoffs, ".reek.yml")
+    end
+
+    it "says the output names below-cutoff smell types and where detector settings go in --help" do
+      run_argv(["--help"])
+      expect(stdout.string).to include("below the cutoff", "under detectors:")
     end
 
     it "says a smell finding covers every instance and raw analysers list a different set in --help" do
@@ -283,8 +311,8 @@ RSpec.describe Snoot::CLI do
       end
     end
 
-    def default_nothing_to_report
-      "nothing to report -- no findings above snoot's significance floor " \
+    def default_nothing_to_report(below_cutoff = "0 smell types below cutoff")
+      "nothing to report -- no findings above snoot's significance floor; #{below_cutoff} " \
         "(cutoffs: smell types need 2+ instances; complexity hits need score 25+; " \
         "duplication clusters have no cutoff)\n"
     end
@@ -294,6 +322,13 @@ RSpec.describe Snoot::CLI do
         code = run_argv([path])
         expect(code).to eq(0)
         expect([stdout.string, stderr.string]).to eq([default_nothing_to_report, ""])
+      end
+    end
+
+    it "names the smell types below the cutoff when nothing reaches it" do
+      with_ruby_tempfile(lonely_ruby) do |path|
+        run_argv([path])
+        expect(stdout.string).to eq(default_nothing_to_report(lonely_below_cutoff))
       end
     end
 
