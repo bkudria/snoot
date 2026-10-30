@@ -655,6 +655,12 @@ surface CLI {
         -- failed analyser's message (run.failure.message): one analyser's
         -- error, not aggregated across analysers and not multi-line per
         -- analyser. These stderr contents are independent of stdout.
+        -- At any outcome, stderr may also carry the analysers' own
+        -- diagnostics, passed through unchanged: files they skipped
+        -- (unreadable, unparseable or slow to parse) and their own
+        -- advice. snoot neither formats nor suppresses them; for files an
+        -- analyser skips without failing, they are the only record of
+        -- the skip.
 
     @guarantee StatusLine
         -- The last stdout line of every accepted invocation is a status

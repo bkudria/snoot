@@ -39,6 +39,13 @@ After install, the `snoot` executable is available on PATH:
 - `64` — usage error (unknown flag or missing path; details on stderr),
 - `70` — internal error (a bug in snoot; details and backtrace on stderr).
 
+At any outcome, reek, flog and flay can write their own diagnostics to stderr
+as they run, such as a file they skipped (unreadable, unparseable, or
+slow to parse) or flog's advice to rerun with `--continue`, which
+does not apply to snoot. snoot passes these through unchanged; for flay
+and some flog parse errors they are the only sign that a file went
+unanalysed.
+
 ## Output for scripts
 
 Every run that gets past argument checking ends stdout with one status

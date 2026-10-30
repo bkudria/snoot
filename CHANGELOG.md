@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The README says reek, flog and flay can write their own diagnostics
+  to stderr (skipped files, timeouts), which snoot passes through
+  unchanged.
 - flay skips files matched by `.flayignore` in the current directory,
   as the `flay` command does. The README and `--help` say a whole
   directory needs `dir/**/*.rb`, and that flog has no way to exclude
