@@ -11,6 +11,9 @@ module Snoot
     # Run, the selected Finding it was built from, and the ordered
     # sections hash that CLI joins into stdout output.
     Report = Data.define(:run, :finding, :sections)
+    # The doc is always the last section, so the first line equal to this
+    # heading marks where it starts, even though reek's docs use ## headings too.
+    REFERENCE_HEADING = "## Reference"
 
     module_function
 
@@ -21,10 +24,12 @@ module Snoot
                  else
                    non_smell_sections(finding)
                  end
-      header, *rest = sections.to_a
+      header, *rest = sections.merge(doc: reference(sections[:doc])).to_a
       remaining_line = render_remaining(remaining, orchestration.significance_cutoffs)
       Report.new(run: run, finding: finding, sections: [header, [:remaining, remaining_line], *rest].to_h)
     end
+
+    def reference(doc) = "#{REFERENCE_HEADING}\n\n#{doc}"
 
     def render_remaining(remaining, cutoffs)
       counts = [
