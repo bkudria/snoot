@@ -71,6 +71,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An analysis-failure message names the line and reason when a source
+  file can't be parsed or read (`… syntax error in the source file.
+  (lib/a.rb:2:9: error: unexpected token tINTEGER)`), and always fits on
+  one line. Previously reek's message named only the file.
 - An unexpected internal error exits 70 with `snoot: internal error:
   <class>: <message>` and the backtrace on stderr, and an
   `internal_error` status line on stdout. Previously it exited 1, the

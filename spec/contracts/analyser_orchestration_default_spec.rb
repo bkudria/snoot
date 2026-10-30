@@ -383,6 +383,26 @@ RSpec.describe "AnalyserOrchestration::Default" do
       end
     end
 
+    it "names the line and parser error when a source file has a syntax error" do
+      with_temp_path("class A\n  def b(1)\n  end\nend\n") do |path|
+        expect(adapter.analyse(Set[path]).message)
+          .to end_with("syntax error in the source file. (#{path.raw}:2:9: error: unexpected token tINTEGER)")
+      end
+    end
+
+    it "names the underlying error when a source file cannot be read" do
+      with_temp_path(smell_free_src) do |path|
+        File.chmod(0o000, path.raw)
+        expect(adapter.analyse(Set[path]).message).to include("(Permission denied")
+      end
+    end
+
+    it "folds a multi-line analyser error onto one line" do
+      error = StandardError.new("bad config\n  [/x] is not allowed.")
+      allow(Reek::Source::SourceLocator).to receive(:new).and_raise(error)
+      expect(adapter.analyse(paths).message).to eq("bad config [/x] is not allowed.")
+    end
+
     context "when flog raises" do
       let(:fake_flog) { instance_double(Flog, flog: nil) }
 

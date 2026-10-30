@@ -169,7 +169,7 @@ module Snoot
         ANALYSER_PROBES.each_with_object({}) do |(tag, method), outputs|
           outputs[tag] = send(method, paths)
         rescue StandardError => error
-          return AnalyserFailure.new(analyser: tag, message: error.message)
+          return AnalyserFailure.new(analyser: tag, message: FailureMessage.for(error))
         end
       end
 
