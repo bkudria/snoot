@@ -18,6 +18,14 @@ RSpec.describe "AnalyserOrchestration::Default" do
       expect(adapter.vendored_doc(build_smell_type(name: "DoesNotExist")))
         .to be_nil
     end
+
+    # A smell type without a vendored doc is never reported, so a reek
+    # upgrade that adds a detector needs `rake docs:sync` before release.
+    it "has a doc for every smell type the bundled reek can report" do
+      undocumented = Reek::DetectorRepository.smell_types.map(&:smell_type)
+                                             .reject { |name| adapter.vendored_doc(build_smell_type(name:)) }
+      expect(undocumented).to be_empty
+    end
   end
 
   describe "Reek path through analyse" do
