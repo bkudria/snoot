@@ -139,7 +139,10 @@ variant Sources : AnalyserResult {
 -- carried on stderr, on one line. When the analyser's error wraps an
 -- underlying one (a parse error, an unreadable file), message also
 -- carries that error's detail, so a failure on one source file names the
--- line and reason the analyser reported, not just the file. Only the
+-- line and reason the analyser reported, not just the file. Only an
+-- error raised while an analyser itself runs is an analyser failure; an
+-- error in snoot's translation of the analyser's output is an internal
+-- error (see InternalErrorExit). Only the
 -- first failed analyser in canonical order
 -- (Reek -> Flog -> Flay) is recorded; the orchestration aborts on first
 -- failure and does not invoke subsequent analysers.
@@ -604,7 +607,8 @@ surface CLI {
     @guarantee InternalErrorExit
         -- When an accepted invocation is cut short by an unexpected
         -- internal error (anything other than an analyser failure, which
-        -- is analysis_failed), the CLI exits 70 (EX_SOFTWARE). Stderr
+        -- is analysis_failed; an error in translating an analyser's
+        -- output is internal), the CLI exits 70 (EX_SOFTWARE). Stderr
         -- carries 'snoot: internal error: <error class>: <message>' and
         -- the backtrace; stdout ends with the internal_error status line
         -- (see StatusLine), after whatever had already been written.

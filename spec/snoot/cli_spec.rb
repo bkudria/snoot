@@ -441,6 +441,21 @@ RSpec.describe Snoot::CLI do
       it "lets an operator interrupt propagate" do
         expect { run_raising(Interrupt) }.to raise_error(Interrupt)
       end
+
+      def run_on_smelly_source
+        Tempfile.create(["smelly", ".rb"]) do |io|
+          io.write("class Dirty\n  def smelly(x)\n    x.a + x.b + x.c + x.d\n  end\nend\n")
+          io.flush
+          run_argv([io.path])
+        end
+      end
+
+      it "exits 70, not analysis_failed, when snoot fails mapping an analyser's output", :aggregate_failures do
+        allow(Snoot::AnalyserOrchestration::ResultMapping)
+          .to receive(:smell_from_reek_warning).and_raise(NoMethodError, "mapping bug")
+        expect(run_on_smelly_source).to eq(70)
+        expect(stdout.string).to end_with("snoot-status: internal_error error=NoMethodError\n")
+      end
     end
 
     it "maps :internal_error to exit code 70 in EXIT_CODES" do

@@ -431,5 +431,30 @@ RSpec.describe "AnalyserOrchestration::Default" do
         expect(adapter.analyse(paths)).to have_attributes(analyser: :flay, message: "flay-boom")
       end
     end
+
+    context "when snoot's own mapping of an analyser's output raises" do
+      let(:analysed_src) do
+        method_src = <<~RUBY
+          def NAME(x)
+            if x.a && x.b then x.c(x.d, x.e) elsif x.f then x.g.h(x.i) else x.j(x.k).l end
+            x.m.each { |y| y.n ? y.o(y.p) : y.q }
+          end
+        RUBY
+        "class Busy\n#{%w[one two].map { |name| method_src.sub('NAME', name) }.join}end\n"
+      end
+
+      {
+        smell_from_reek_warning: :reek,
+        complexity_hit_from_flog_entry: :flog,
+        duplication_cluster_from_flay_item: :flay
+      }.each do |mapper, analyser|
+        it "lets an error mapping #{analyser}'s output propagate instead of blaming #{analyser}" do
+          allow(Snoot::AnalyserOrchestration::ResultMapping).to receive(mapper).and_raise(NoMethodError, "mapping bug")
+          with_temp_path(analysed_src) do |path|
+            expect { adapter.analyse(Set[path]) }.to raise_error(NoMethodError, "mapping bug")
+          end
+        end
+      end
+    end
   end
 end
