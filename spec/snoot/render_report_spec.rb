@@ -9,6 +9,11 @@ RSpec.describe Snoot::RenderReport do
                                                         orchestration: fake_orchestration).sections[:finding_context]
   end
 
+  def duplication_report(cluster)
+    described_class.invoke(build_run_with_finding(cluster), smells: Set[], remaining: build_remaining,
+                                                            orchestration: fake_orchestration)
+  end
+
   let(:orch) { fake_orchestration(vendored_docs: { "FeatureEnvy" => "## doc" }) }
 
   describe "rule-success.RenderReport" do
@@ -271,24 +276,32 @@ RSpec.describe Snoot::RenderReport do
   describe "DuplicationCluster rendering" do
     let(:locs) do
       Set[
-        build_location(path: build_path(raw: "lib/a.rb"), line_start: 1, line_end: 8),
-        build_location(path: build_path(raw: "lib/b.rb"), line_start: 4, line_end: 11)
+        build_location(path: build_path(raw: "lib/b.rb"), line_start: 4, line_end: 11),
+        build_location(path: build_path(raw: "lib/a.rb"), line_start: 1, line_end: 8)
       ]
     end
-    let(:cluster) { build_duplication_cluster(signature: "abc123", locations: locs) }
+    let(:cluster) do
+      build_duplication_cluster(signature: "abc123", locations: locs, node_type: "defn", mass: 78, copy_mass: 39)
+    end
     let(:run) { build_run_with_finding(cluster) }
     let(:report) do
       described_class.invoke(run, smells: Set[], remaining: build_remaining, orchestration: fake_orchestration)
     end
 
-    it "renders header as location count + signature" do
-      expect(report.sections[:header]).to eq("Structural duplication: 2 locations (signature: abc123)")
+    it "renders header with flay's kind, node type, location count and both masses" do
+      expect(report.sections[:header]).to eq("Similar code (:defn) in 2 locations, mass 78 (39 per copy)")
     end
 
-    it "renders finding_context as enumerated locations", :aggregate_failures do
-      expect(report.sections[:finding_context]).to start_with("Locations:\n")
-      expect(report.sections[:finding_context]).to include("lib/a.rb:1-8")
-      expect(report.sections[:finding_context]).to include("lib/b.rb:4-11")
+    it "calls identical copies identical in the header" do
+      identical = build_duplication_cluster(node_type: "iter", identical: true, mass: 76, copy_mass: 19,
+                                            locations: locs)
+      expect(duplication_report(identical).sections[:header]).to eq(
+        "Identical code (:iter) in 2 locations, mass 76 (19 per copy)"
+      )
+    end
+
+    it "renders finding_context as every location, ordered by path then line" do
+      expect(report.sections[:finding_context]).to eq("Locations:\nlib/a.rb:1-8\nlib/b.rb:4-11")
     end
 
     it "renders doc as the high-duplication prose" do
@@ -301,6 +314,75 @@ RSpec.describe Snoot::RenderReport do
 
     it "emits exactly the four sections header, remaining, finding_context, doc" do
       expect(report.sections.keys).to eq(%i[header remaining finding_context doc])
+    end
+  end
+
+  describe "DuplicationCluster code" do
+    def duplicate_copy(raw, line_start, texts)
+      location = build_location(path: build_path(raw:), line_start:, line_end: line_start + texts.size - 1)
+      lines = texts.each_with_index.map { |text, index| Snoot::SourceLine.new(number: line_start + index, text:) }
+      Snoot::DuplicateCopy.new(location:, source_lines: lines)
+    end
+
+    def cluster_of(copies, identical: false)
+      build_duplication_cluster(locations: copies.to_set(&:location), copies:, identical:)
+    end
+
+    def code_of(copies, identical: false)
+      duplication_report(cluster_of(copies, identical:)).sections[:finding_context].split("\n\n", 2).last
+    end
+
+    def pair
+      [duplicate_copy("lib/a.rb", 1, ["  def a", "    1", "  end"]),
+       duplicate_copy("lib/b.rb", 4, ["def b", "  1", "end"])]
+    end
+
+    let(:pair_code) do
+      <<~TEXT.chomp
+        Code (2 of 2 copies):
+        lib/a.rb:1-3
+            1 | def a
+            2 |   1
+            3 | end
+        lib/b.rb:4-6
+            4 | def b
+            5 |   1
+            6 | end
+      TEXT
+    end
+
+    it "shows each similar copy's span and code, common indentation removed" do
+      expect(code_of(pair)).to eq(pair_code)
+    end
+
+    it "shows only the first copy when the copies are identical" do
+      expect(code_of(pair, identical: true)).to eq("Code (identical in all 2 copies):\nlib/a.rb:1-3\n    " \
+                                                   "1 | def a\n    2 |   1\n    3 | end")
+    end
+
+    it "shows at most three similar copies" do
+      copies = (1..5).map { |index| duplicate_copy("lib/#{index}.rb", 1, ["x"]) }
+      expect(code_of(copies).lines.grep(/\A(Code|lib)/).map(&:chomp))
+        .to eq(["Code (3 of 5 copies):", "lib/1.rb:1-1", "lib/2.rb:1-1", "lib/3.rb:1-1"])
+    end
+
+    it "shows at most twenty lines of a copy" do
+      copies = [duplicate_copy("lib/a.rb", 1, Array.new(25) { |index| "line #{index + 1}" })]
+      expect(code_of(copies).lines.last(2).map(&:chomp)).to eq(["    20 | line 20", "    … 5 more lines (21–25)"])
+    end
+
+    it "skips a copy whose source couldn't be read and doesn't count it" do
+      copies = [duplicate_copy("lib/a.rb", 1, [nil]), duplicate_copy("lib/b.rb", 4, ["x"])]
+      expect(code_of(copies)).to eq("Code (1 of 2 copies):\nlib/b.rb:4-4\n    4 | x")
+    end
+
+    it "leaves the code out when no copy could be read" do
+      cluster = cluster_of([duplicate_copy("lib/a.rb", 1, [nil]), duplicate_copy("lib/b.rb", 4, [nil])])
+      expect(duplication_report(cluster).sections[:finding_context]).to eq("Locations:\nlib/a.rb:1-1\nlib/b.rb:4-4")
+    end
+
+    it "replaces control characters in code so they can't drive a terminal" do
+      expect(code_of([duplicate_copy("lib/a.rb", 1, ["x = \"\e[31m\""])])).to include("x = \"\uFFFD[31m\"")
     end
   end
 

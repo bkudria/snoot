@@ -124,18 +124,23 @@ RSpec.describe Snoot::AnalyserOrchestration::ResultMapping do
   end
 
   describe ".duplication_cluster_from_flay_item" do
-    subject(:cluster) { described_class.duplication_cluster_from_flay_item(item) }
+    subject(:cluster) { described_class.duplication_cluster_from_flay_item(item, nodes:, file_lines:) }
 
-    let(:flay_location_a) { double(file: "lib/a.rb", line: 5) }
-    let(:flay_location_b) { double(file: "lib/b.rb", line: 17) }
+    let(:flay_location_a) { double(file: "lib/a.rb", line: 2) }
+    let(:flay_location_b) { double(file: "lib/b.rb", line: 3) }
     let(:item) do
-      double(structural_hash: 4242, locations: [flay_location_a, flay_location_b])
+      double(structural_hash: 4242, name: :defn, identical?: nil, mass: 44,
+             locations: [flay_location_a, flay_location_b])
     end
-    let(:expected_locations) do
-      Set[
-        Snoot::Location.new(path: Snoot::Path.new(raw: "lib/a.rb"), line_start: 5, line_end: 5),
-        Snoot::Location.new(path: Snoot::Path.new(raw: "lib/b.rb"), line_start: 17, line_end: 17)
-      ]
+    let(:nodes) { [double(file: "lib/b.rb", line: 3, line_max: 4), double(file: "lib/a.rb", line: 2, line_max: 3)] }
+    let(:file_lines) { { "lib/a.rb" => %w[a1 a2 a3 a4], "lib/b.rb" => %w[b1 b2 b3 b4] } }
+
+    def location(raw, line_start, line_end)
+      Snoot::Location.new(path: Snoot::Path.new(raw:), line_start:, line_end:)
+    end
+
+    def copy_texts(cluster)
+      cluster.copies.map { |copy| [copy.location.description, copy.source_lines.map(&:text)] }
     end
 
     it { is_expected.to be_a(Snoot::DuplicationCluster) }
@@ -144,8 +149,35 @@ RSpec.describe Snoot::AnalyserOrchestration::ResultMapping do
       expect(cluster.signature).to eq("4242")
     end
 
-    it "maps every flay location into a Snoot::Location with line_start = line_end" do
-      expect(cluster.locations).to eq(expected_locations)
+    it "spans each location to its node's last line" do
+      expect(cluster.locations).to eq(Set[location("lib/a.rb", 2, 3), location("lib/b.rb", 3, 4)])
+    end
+
+    it "falls back to a one-line span when no node matches a location" do
+      cluster = described_class.duplication_cluster_from_flay_item(item)
+      expect(cluster.locations).to eq(Set[location("lib/a.rb", 2, 2), location("lib/b.rb", 3, 3)])
+    end
+
+    it "keeps flay's node type and total mass" do
+      expect([cluster.node_type, cluster.mass]).to eq(["defn", 44])
+    end
+
+    it "divides the mass by the copy count for similar copies" do
+      expect([cluster.identical, cluster.copy_mass]).to eq([false, 22])
+    end
+
+    it "divides the mass by the copy count twice for identical copies, as flay multiplies it twice" do
+      allow(item).to receive_messages(identical?: "*2", mass: 76)
+      expect([cluster.identical, cluster.copy_mass]).to eq([true, 19])
+    end
+
+    it "holds each copy's span text, ordered by path then line" do
+      expect(copy_texts(cluster)).to eq([["lib/a.rb:2-3", %w[a2 a3]], ["lib/b.rb:3-4", %w[b3 b4]]])
+    end
+
+    it "leaves a copy's text nil when its file couldn't be read" do
+      cluster = described_class.duplication_cluster_from_flay_item(item, nodes:)
+      expect(cluster.copies.flat_map(&:source_lines).map(&:text)).to all(be_nil)
     end
   end
 end

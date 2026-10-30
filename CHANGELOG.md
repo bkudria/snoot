@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Duplication reports lead with flay's own description instead of an
+  opaque signature (`Similar code (:defn) in 3 locations, mass 78 (26
+  per copy)`), list each copy's full line span (`sample.rb:2-10`
+  instead of `2-2`), and show the code: the first copy when the copies
+  are identical, otherwise up to three copies, each up to 20 lines.
 - Complexity reports show the method's full line span (`sample.rb:4-24`
   instead of `4-4`), round the score to two decimals, split it into
   flog's three dimensions (assignments, branching, and calls and other)

@@ -27,6 +27,10 @@ module Snoot
   # highest first.
   ComplexityBreakdown = Data.define(:assignments, :branching, :calls)
 
+  # One copy of a duplicated node: its Location and the SourceLines of
+  # its span.
+  DuplicateCopy = Data.define(:location, :source_lines)
+
   # A Reek smell category, named (e.g. "IrresponsibleModule"). Groups
   # Smells for ranking; keys vendored-doc lookup.
   SmellType = Data.define(:name)

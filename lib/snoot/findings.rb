@@ -16,8 +16,10 @@ module Snoot
 
   # A structural-duplication cluster reported by Flay: a signature
   # shared across two or more Locations. Cluster size (locations.size)
-  # is the ranking key.
-  DuplicationCluster = Data.define(:signature, :locations) do
+  # is the ranking key. mass is flay's cluster total; copy_mass is one
+  # copy's share of it. copies holds each location's code, ordered by
+  # path then line.
+  DuplicationCluster = Data.define(:signature, :node_type, :identical, :mass, :copy_mass, :locations, :copies) do
     def size = locations.size
   end
 end

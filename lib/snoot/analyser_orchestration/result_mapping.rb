@@ -59,12 +59,37 @@ module Snoot
              .sort_by { |contribution| [-contribution.score, contribution.operation] }
       end
 
-      def duplication_cluster_from_flay_item(item)
-        locations = item.locations.each_with_object(Set[]) do |loc, set|
-          line = loc.line
-          set << Location.new(path: Path.new(raw: loc.file), line_start: line, line_end: line)
-        end
-        DuplicationCluster.new(signature: item.structural_hash.to_s, locations: locations)
+      def duplication_cluster_from_flay_item(item, nodes: [], file_lines: {})
+        copies = duplicate_copies(item.locations, nodes, file_lines)
+        identical = !item.identical?.nil?
+        DuplicationCluster.new(
+          signature: item.structural_hash.to_s, node_type: item.name.to_s, identical:,
+          mass: item.mass, copy_mass: copy_mass(item.mass, item.locations.size, identical),
+          locations: copies.to_set(&:location), copies:
+        )
+      end
+
+      def duplicate_copies(flay_locations, nodes, file_lines)
+        line_maxes = nodes.to_h { |node| [[node.file, node.line], node.line_max] }
+        copies = flay_locations.map { |flay_location| duplicate_copy(flay_location, line_maxes, file_lines) }
+        copies.uniq(&:location).sort_by { |copy| [copy.location.path.raw, copy.location.line_start] }
+      end
+
+      def duplicate_copy(flay_location, line_maxes, file_lines)
+        file = flay_location.file
+        line_start = flay_location.line
+        line_end = line_maxes.fetch([file, line_start], line_start)
+        DuplicateCopy.new(
+          location: Location.new(path: Path.new(raw: file), line_start:, line_end:),
+          source_lines: source_lines_for((line_start..line_end).to_a, file_lines[file])
+        )
+      end
+
+      # Flay totals a cluster's mass as one copy's mass times the copy
+      # count, and multiplies by the count again when the copies are
+      # identical.
+      def copy_mass(mass, count, identical)
+        identical ? mass / count / count : mass / count
       end
     end
   end
