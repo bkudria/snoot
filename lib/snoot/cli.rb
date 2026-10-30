@@ -3,6 +3,8 @@
 require "snoot/cli/argv"
 require "snoot/cli/event"
 require "snoot/cli/pipeline"
+require "snoot/cli/status_line"
+require "snoot/cli/internal_error_report"
 require "snoot/cli/usage"
 
 module Snoot
@@ -16,7 +18,9 @@ module Snoot
   # splits argv into options and paths. .run prints a BANNERS entry when
   # any option names one, rejects unknown options and missing paths with
   # exit 64, and otherwise threads the paths through .run_invoked,
-  # mapping the terminal outcome to an EXIT_CODES integer.
+  # mapping the terminal outcome to an EXIT_CODES integer. Every run ends
+  # stdout with its cli/status_line.rb line; an unexpected error escaping
+  # the run is written by cli/internal_error_report.rb and exits 70.
   #
   # The two entry points return deliberately different shapes. .run is
   # the POSIX boundary: argv -> Integer, consumed by `exit
@@ -30,12 +34,8 @@ module Snoot
     NOTHING_TO_REPORT = "nothing to report -- no findings above snoot's significance floor"
     DEFAULT_PATHS = Set[Snoot::Path.new(raw: ".")].freeze
 
-    EXIT_CODES = {
-      finding_rendered: 1,
-      nothing_to_report: 0,
-      analysis_failed: 2,
-      usage_error: 64
-    }.freeze
+    EXIT_CODES = { finding_rendered: 1, nothing_to_report: 0, analysis_failed: 2, usage_error: 64,
+                   internal_error: 70 }.freeze
 
     BANNERS = {
       %w[--version] => "snoot #{Snoot::VERSION}\n",
@@ -78,6 +78,9 @@ module Snoot
       return usage_error(pipeline, rejection) unless rejection.empty?
 
       run_pipeline(parsed.paths, pipeline: pipeline)
+    rescue StandardError => error
+      InternalErrorReport.write(pipeline, error)
+      EXIT_CODES.fetch(:internal_error)
     end
 
     def lookup_banner(options)
@@ -128,6 +131,7 @@ module Snoot
       emit_warnings(analyse_events, pipeline.stderr)
       events = [RunInvoked.new(paths: paths), *analyse_events,
                 *events_for_outcome(run, smells, remaining, pipeline: pipeline)]
+      pipeline.stdout.write(StatusLine.for_run(run, remaining))
       [run, events]
     end
 

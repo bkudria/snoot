@@ -31,6 +31,18 @@ module Snoot
         1   one finding rendered
         2   analyser failure
         64  usage error (unknown flag or missing path)
+        70  internal error (a bug in snoot; details on stderr)
+
+      Output:
+        The last stdout line of every run is a status line for scripts:
+        snoot-status: <outcome> [key=value...], values never containing spaces.
+          snoot-status: finding_rendered category=smell type=FeatureEnvy remaining=4
+          snoot-status: finding_rendered category=complexity remaining=0
+          snoot-status: nothing_to_report
+          snoot-status: analysis_failed analyser=reek
+          snoot-status: internal_error error=NoMethodError
+        remaining counts the significant findings behind this one.
+        Usage errors, --help and --version print no status line.
 
       Example:
         snoot lib/

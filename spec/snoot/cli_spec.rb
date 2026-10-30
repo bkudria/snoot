@@ -43,7 +43,8 @@ RSpec.describe Snoot::CLI do
     end
 
     def nothing_to_report_line
-      "nothing to report -- no findings above snoot's significance floor; 0 smell types below cutoff #{no_cutoffs}\n"
+      "nothing to report -- no findings above snoot's significance floor; 0 smell types below cutoff #{no_cutoffs}\n" \
+        "snoot-status: nothing_to_report\n"
     end
     let(:stdout) { StringIO.new }
     let(:stderr) { StringIO.new }
@@ -68,7 +69,8 @@ RSpec.describe Snoot::CLI do
         "Documented: 1 instance across 1 file\n\n" \
           "Also significant: 0 smell types, 0 duplication clusters, 0 complexity hits; " \
           "0 smell types below cutoff #{no_cutoffs}\n\n" \
-          "## Instances\n\nlib/x.rb\n  Line 10: envies\n\n#{documented_tuning}\n\n## doc\n"
+          "## Instances\n\nlib/x.rb\n  Line 10: envies\n\n#{documented_tuning}\n\n## doc\n" \
+          "snoot-status: finding_rendered category=smell type=Documented remaining=0\n"
       end
 
       it "writes the header, Instances and doc report to stdout on finding_rendered (Smell)", :aggregate_failures do
@@ -98,9 +100,10 @@ RSpec.describe Snoot::CLI do
     context "when reek raises" do
       let(:orchestration) { fake_orchestration(reek_raises: StandardError.new("boom")) }
 
-      it "writes 'analysis failed (reek): <msg>' to stderr and leaves stdout empty", :aggregate_failures do
+      it "writes 'analysis failed (reek): <msg>' to stderr and only the status line to stdout",
+         :aggregate_failures do
         run_cli
-        expect(stdout.string).to eq("")
+        expect(stdout.string).to eq("snoot-status: analysis_failed analyser=reek\n")
         expect(stderr.string).to eq("analysis failed (reek): boom\n")
       end
     end
@@ -108,18 +111,65 @@ RSpec.describe Snoot::CLI do
     context "when flog raises" do
       let(:orchestration) { fake_orchestration(flog_raises: StandardError.new("score-too-high")) }
 
-      it "tags the analyser as flog on stderr" do
+      it "tags the analyser as flog on stderr and in the status line" do
         run_cli
-        expect(stderr.string).to eq("analysis failed (flog): score-too-high\n")
+        expect([stderr.string, stdout.string])
+          .to eq(["analysis failed (flog): score-too-high\n", "snoot-status: analysis_failed analyser=flog\n"])
       end
     end
 
     context "when flay raises" do
       let(:orchestration) { fake_orchestration(flay_raises: StandardError.new("dup-error")) }
 
-      it "tags the analyser as flay on stderr" do
+      it "tags the analyser as flay on stderr and in the status line" do
         run_cli
-        expect(stderr.string).to eq("analysis failed (flay): dup-error\n")
+        expect([stderr.string, stdout.string])
+          .to eq(["analysis failed (flay): dup-error\n", "snoot-status: analysis_failed analyser=flay\n"])
+      end
+    end
+  end
+
+  describe "surface-guarantee.StatusLine" do
+    let(:stdout) { StringIO.new }
+
+    def status_line
+      run_cli
+      stdout.string.lines.last
+    end
+
+    def documented_smells(*names)
+      names.to_set { |name| build_smell(smell_type: build_smell_type(name:)) }
+    end
+
+    def docs_for(*names)
+      names.to_h { |name| [name, "## #{name}"] }
+    end
+
+    context "with a complexity finding" do
+      let(:orchestration) { fake_orchestration(complexities: Set[build_complexity_hit]) }
+
+      it "names the complexity category without a type" do
+        expect(status_line).to eq("snoot-status: finding_rendered category=complexity remaining=0\n")
+      end
+    end
+
+    context "with a duplication finding" do
+      let(:orchestration) { fake_orchestration(duplications: Set[build_duplication_cluster]) }
+
+      it "names the duplication category without a type" do
+        expect(status_line).to eq("snoot-status: finding_rendered category=duplication remaining=0\n")
+      end
+    end
+
+    context "with significant findings behind the selected one" do
+      let(:orchestration) do
+        smells = documented_smells("Alpha", "Bravo", "Charlie")
+        fake_orchestration(smells:, vendored_docs: docs_for("Alpha", "Bravo", "Charlie"),
+                           complexities: Set[build_complexity_hit], duplications: Set[build_duplication_cluster])
+      end
+
+      it "counts every remaining category in remaining" do
+        expect(status_line).to eq("snoot-status: finding_rendered category=smell type=Alpha remaining=4\n")
       end
     end
   end
@@ -234,6 +284,12 @@ RSpec.describe Snoot::CLI do
                                        "Ties break by name", cutoffs, ".reek.yml")
     end
 
+    it "lists the internal-error exit code and the status line in --help output" do
+      run_argv(["--help"])
+      expect(stdout.string).to include("70  internal error", "Output:", "snoot-status: <outcome>",
+                                       "snoot-status: nothing_to_report")
+    end
+
     it "says the output names below-cutoff smell types and where detector settings go in --help" do
       run_argv(["--help"])
       expect(stdout.string).to include("below the cutoff", "under detectors:")
@@ -314,7 +370,7 @@ RSpec.describe Snoot::CLI do
     def default_nothing_to_report(below_cutoff = "0 smell types below cutoff")
       "nothing to report -- no findings above snoot's significance floor; #{below_cutoff} " \
         "(cutoffs: smell types need 2+ instances; complexity hits need score 25+; " \
-        "duplication clusters have no cutoff)\n"
+        "duplication clusters have no cutoff)\nsnoot-status: nothing_to_report\n"
     end
 
     it "passes a single Ruby file path through the pipeline (nothing_to_report)", :aggregate_failures do
@@ -357,11 +413,38 @@ RSpec.describe Snoot::CLI do
       code = run_argv(["lib"], orchestration: orchestration)
       expect(code).to eq(2)
       expect(stderr.string).to include("analysis failed (reek):", "boom")
-      expect(stdout.string).to be_empty
+      expect(stdout.string).to eq("snoot-status: analysis_failed analyser=reek\n")
     end
 
     it "maps :analysis_failed to exit code 2 in EXIT_CODES" do
       expect(described_class::EXIT_CODES.fetch(:analysis_failed)).to eq(2)
+    end
+
+    context "when the run raises an unexpected error (InternalErrorExit)" do
+      def run_raising(error_class)
+        smell = build_smell(smell_type: build_smell_type(name: "Documented"))
+        docs = Hash.new { |_, name| raise error_class, "no doc lookup for #{name}" }
+        run_argv(["lib"], orchestration: fake_orchestration(smells: Set[smell], vendored_docs: docs))
+      end
+
+      it "exits 70 naming the error on stderr and in the status line", :aggregate_failures do
+        expect(run_raising(NoMethodError)).to eq(70)
+        expect(stderr.string).to start_with("snoot: internal error: NoMethodError: no doc lookup for Documented\n")
+        expect(stdout.string).to end_with("snoot-status: internal_error error=NoMethodError\n")
+      end
+
+      it "writes the backtrace to stderr" do
+        run_raising(NoMethodError)
+        expect(stderr.string.lines.drop(1)).to include(a_string_matching(/cli_spec\.rb:\d+/))
+      end
+
+      it "lets an operator interrupt propagate" do
+        expect { run_raising(Interrupt) }.to raise_error(Interrupt)
+      end
+    end
+
+    it "maps :internal_error to exit code 70 in EXIT_CODES" do
+      expect(described_class::EXIT_CODES.fetch(:internal_error)).to eq(70)
     end
   end
 end
