@@ -205,6 +205,18 @@ RSpec.describe "AnalyserOrchestration::Default" do
       expect(cluster.locations.map { |l| l.path.raw }).to all(satisfy { |p| [p1, p2].include?(p) })
     end
 
+    it "spans each copy over the duplicated method and keeps flay's node type and identity", :aggregate_failures do
+      cluster = analyse_flay(*dup_pair).first.first
+      expect(cluster.locations.map { |location| [location.line_start, location.line_end] }).to eq([[2, 8], [2, 8]])
+      expect([cluster.node_type, cluster.identical]).to eq(["defn", true])
+    end
+
+    it "holds each copy's lines with the analysed file's text" do
+      method_lines = format(duplicated_method, klass: "Alpha").lines(chomp: true)[1..7]
+      copy_texts = analyse_flay(*dup_pair).first.first.copies.map { |copy| copy.source_lines.map(&:text) }
+      expect(copy_texts).to eq([method_lines, method_lines])
+    end
+
     it "returns an empty Set when no duplication exceeds Flay's mass threshold" do
       src_a = "class Solo; def only; 1; end; end\n"
       src_b = "class Lone; def alone; 2; end; end\n"

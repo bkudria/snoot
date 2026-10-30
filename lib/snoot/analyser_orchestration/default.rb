@@ -107,8 +107,9 @@ module Snoot
         files = expand_paths(paths, "**/*.rb")
         flay = Flay.new
         flay.process(*files)
-        flay.analyze.each_with_object(Set[]) do |item, clusters|
-          clusters << ResultMapping.duplication_cluster_from_flay_item(item)
+        file_lines = Hash.new { |cache, file| cache[file] = read_source_lines(file) }
+        flay.analyze.to_set do |item|
+          ResultMapping.duplication_cluster_from_flay_item(item, nodes: flay.hashes[item.structural_hash], file_lines:)
         end
       end
 

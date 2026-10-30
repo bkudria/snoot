@@ -76,6 +76,13 @@ value ComplexityBreakdown {
     calls: List<ScoreContribution>
 }
 
+-- One copy of a duplicated node: where it is and the text of each line
+-- in that span.
+value DuplicateCopy {
+    location: Location
+    source_lines: List<SourceLine>
+}
+
 -- A reek smell type identifier (e.g. "FeatureEnvy", "TooManyMethods"). The
 -- set of valid values is owned by reek.
 value SmellType {
@@ -192,7 +199,12 @@ contract AnalyserOrchestration {
     -- ComplexityHit's location spans the method from its first line to
     -- its last, its source_lines hold every line of that span with the
     -- file's text, and its breakdown groups flog's per-operation scores
-    -- the way flog's score formula does.
+    -- the way flog's score formula does. Each DuplicationCluster location
+    -- spans the duplicated node from its first line to its last; copies
+    -- holds one DuplicateCopy per location, ordered by path then first
+    -- line, with each line's text. node_type, identical and mass are
+    -- flay's (mass is the cluster total flay reports); copy_mass is the
+    -- mass of one copy.
     analyse: (paths: Set<Path>) -> AnalyserResult
 
     @invariant Determinism
@@ -232,7 +244,12 @@ variant ComplexityHit : Finding {
 
 variant DuplicationCluster : Finding {
     signature: String
+    node_type: String
+    identical: Boolean
+    mass: Integer
+    copy_mass: Integer
     locations: Set<Location>
+    copies: List<DuplicateCopy>
 }
 
 -- A Run represents one CLI invocation. Its lifecycle terminates in exactly
@@ -384,7 +401,9 @@ rule RenderReport {
     --   - ComplexityHit:      finding_context carries the score breakdown
     --                         and the method's code; doc is hand-written
     --                         generic prose for high complexity
-    --   - DuplicationCluster: hand-written generic prose for high duplication
+    --   - DuplicationCluster: finding_context carries every location and
+    --                         the code of up to three copies; doc is
+    --                         hand-written generic prose for high duplication
     -- The exact prose is static implementation policy of the gem (one
     -- string per non-Smell variant), not an orchestration-contract
     -- responsibility. This mirrors the threshold-policy delegation in
@@ -438,11 +457,21 @@ rule RenderReport {
         -- For ComplexityHit and DuplicationCluster findings, a rendered
         -- report contains, in order:
         --   1. Header         -- one-line summary (analyser-implicit, finding
-        --                        name, location)
+        --                        name, location). For DuplicationCluster:
+        --                        'Identical' or 'Similar', the node type,
+        --                        the location count, flay's mass and the
+        --                        mass of one copy
         --   2. Remaining      -- as in SmellReportShape
         --   3. FindingContext -- file path(s), line range(s), the analyser's
-        --                        message; for DuplicationCluster, all cluster
-        --                        locations are enumerated. For ComplexityHit:
+        --                        message. For DuplicationCluster: every
+        --                        location's span, ordered by path then first
+        --                        line, then the code of the first copy when
+        --                        the copies are identical, or of the first
+        --                        three when they are similar: each copy's
+        --                        span followed by up to twenty 'N | <code>'
+        --                        lines, formatted as for ComplexityHit. A
+        --                        copy with unreadable source is left out.
+        --                        For ComplexityHit:
         --                        the span, the method name, the score (two
         --                        decimals) with its formula, one line per
         --                        breakdown dimension (descending total; the

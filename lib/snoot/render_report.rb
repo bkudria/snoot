@@ -4,8 +4,8 @@ module Snoot
   # Given a finding_rendered Run, produces a Report. Smell findings get
   # header, remaining, instances, tuning and doc; ComplexityHit and
   # DuplicationCluster get header, remaining, finding_context and doc.
-  # SmellSections and ComplexitySections build their variants' sections;
-  # the helpers below build the rest.
+  # SmellSections, ComplexitySections and DuplicationSections build their
+  # variants' sections; the helpers below build the rest.
   module RenderReport
     # Report is the value returned by RenderReport.invoke: the source
     # Run, the selected Finding it was built from, and the ordered
@@ -65,20 +65,8 @@ module Snoot
     def non_smell_sections(finding)
       case finding
       when ComplexityHit then ComplexitySections.build(finding)
-      when DuplicationCluster then duplication_cluster_sections(finding)
+      when DuplicationCluster then DuplicationSections.build(finding)
       end
-    end
-
-    def duplication_cluster_sections(cluster)
-      locations = cluster.locations
-      rendered_locations = locations.map(&:description)
-      {
-        header: "Structural duplication: #{locations.size} locations (signature: #{cluster.signature})",
-        finding_context: "Locations:\n#{rendered_locations.join("\n")}",
-        doc: "Structural duplication suggests an extracted abstraction is missing. " \
-             "Consider whether the duplicated shape belongs to a single helper, " \
-             "module, or value type."
-      }
     end
   end
 end

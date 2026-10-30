@@ -31,8 +31,12 @@ module Snoot
         Snoot::ComplexityBreakdown.new(assignments:, branching:, calls:)
       end
 
-      def build_duplication_cluster(signature: "abc123", locations: Set[build_location])
-        Snoot::DuplicationCluster.new(signature: signature, locations: locations)
+      DUPLICATION_CLUSTER_DEFAULTS = { signature: "abc123", node_type: "defn", identical: false, mass: 32,
+                                       copy_mass: 16 }.freeze
+
+      def build_duplication_cluster(locations: Set[build_location], copies: nil, **attributes)
+        copies ||= locations.map { |location| Snoot::DuplicateCopy.new(location:, source_lines: []) }
+        Snoot::DuplicationCluster.new(**DUPLICATION_CLUSTER_DEFAULTS, **attributes, locations:, copies:)
       end
 
       def build_run(paths: Set[], outcome: :pending, selected_finding: nil, failure: nil)
