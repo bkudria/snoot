@@ -392,8 +392,9 @@ rule RenderReport {
     --                and alphabetical tie-break
     --   - tuning:    fix-first guidance naming where the smell type's
     --                detector is configured (.reek.yml, under detectors:)
-    --   - doc:       vendored_doc(smell_type), unmodified (always non-null
-    --                here, per the SelectedFindingsAreRenderable invariant)
+    --   - doc:       a '## Reference' heading, then vendored_doc(smell_type),
+    --                unmodified (always non-null here, per the
+    --                SelectedFindingsAreRenderable invariant)
     -- The header and instances lead so a reader that truncates the report
     -- from the top still sees what was found and where; the vendored doc,
     -- often long, follows as reference. Its sample configuration omits
@@ -408,6 +409,7 @@ rule RenderReport {
     --   - DuplicationCluster: finding_context carries every location and
     --                         the code of up to three copies; doc is
     --                         hand-written generic prose for high duplication
+    -- In every variant the doc opens with a '## Reference' heading.
     -- The exact prose is static implementation policy of the gem (one
     -- string per non-Smell variant), not an orchestration-contract
     -- responsibility. This mirrors the threshold-policy delegation in
@@ -454,8 +456,8 @@ rule RenderReport {
         --   4. Tuning    -- fix every instance and rerun; otherwise configure
         --                  the detector in .reek.yml as a detectors: block
         --                  keyed by the smell type's name
-        --   5. Doc       -- the vendored markdown for the selected smell
-        --                  type, unmodified
+        --   5. Doc       -- '## Reference' heading followed by the vendored
+        --                  markdown for the selected smell type, unmodified
 
     @guarantee NonSmellReportShape
         -- For ComplexityHit and DuplicationCluster findings, a rendered
@@ -486,7 +488,8 @@ rule RenderReport {
         --                        lines cut to 160 characters, and past fifty
         --                        one '… K more lines (N–M)' line. Unreadable
         --                        source has no code lines.
-        --   4. Doc            -- one inlined hand-written prose constant
+        --   4. Doc            -- '## Reference' heading followed by one inlined
+        --                        hand-written prose constant
 
     @guarantee AnalyserProvenanceImplicit
         -- The report does not label the originating analyser. The shape of
@@ -498,7 +501,11 @@ rule RenderReport {
     @guidance
         -- Section ordering within each variant shape is structural.
         -- Implementations should emit sections in the declared order so an
-        -- agent / parser can rely on predictable landmarks. The agent
+        -- agent / parser can rely on predictable landmarks: the header on
+        -- the first line, 'Also significant: ' opening the second section,
+        -- and the '## Instances' and '## Reference' headings. The doc is the
+        -- last section, so the first '## Reference' line opens it even when
+        -- the doc itself carries ## headings. The agent
         -- reading the report should treat the inlined doc as primary
         -- context for acting on the finding. For Smell findings, the
         -- Instances list enumerates every site the agent must consider.
