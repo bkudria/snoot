@@ -29,4 +29,13 @@ RSpec.describe "README.md" do # rubocop:disable RSpec/DescribeClass
   it "lists the usage-error exit code" do
     expect(readme).to include("- `64` — usage error (unknown flag or missing path")
   end
+
+  it "lists the internal-error exit code" do
+    expect(readme).to include("- `70` — internal error")
+  end
+
+  it "documents the status line for scripts" do
+    expect(readme).to include("## Output for scripts", "snoot-status: finding_rendered category=smell",
+                              "snoot-status: internal_error error=")
+  end
 end

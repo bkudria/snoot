@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Every run that gets past argument checking ends stdout with a status
+  line for scripts: `snoot-status: <outcome>` followed by `key=value`
+  fields (`snoot-status: finding_rendered category=smell
+  type=FeatureEnvy remaining=4`, `snoot-status: nothing_to_report`,
+  `snoot-status: analysis_failed analyser=reek`). On an analysis
+  failure it is the only stdout output. `--help` and the README
+  describe the format.
 - `snoot --help` and the README explain how snoot picks its one
   finding: category priority, ranking and tie-breaks, significance
   cutoffs, `.reek.yml` scope, and the fix-and-rerun loop.
@@ -59,6 +66,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An unexpected internal error exits 70 with `snoot: internal error:
+  <class>: <message>` and the backtrace on stderr, and an
+  `internal_error` status line on stdout. Previously it exited 1, the
+  same code as a rendered finding.
 - A path argument that doesn't exist is rejected with exit 64 and a
   `snoot: no such file or directory: <path>` line on stderr. Previously
   flog and flay silently scanned the current directory instead.

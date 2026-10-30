@@ -582,6 +582,20 @@ surface CLI {
         --   nothing_to_report -> 0
         --   finding_rendered  -> 1
         --   analysis_failed   -> 2
+        -- The exception is an invocation cut short by an unexpected
+        -- internal error, which reaches no terminal outcome; see
+        -- InternalErrorExit.
+
+    @guarantee InternalErrorExit
+        -- When an accepted invocation is cut short by an unexpected
+        -- internal error (anything other than an analyser failure, which
+        -- is analysis_failed), the CLI exits 70 (EX_SOFTWARE). Stderr
+        -- carries 'snoot: internal error: <error class>: <message>' and
+        -- the backtrace; stdout ends with the internal_error status line
+        -- (see StatusLine), after whatever had already been written.
+        -- Exit 70 is distinct so a gate can tell a crash from
+        -- finding_rendered. An operator interrupt is not an internal
+        -- error and keeps the runtime's own exit status.
 
     @guarantee UsageErrorExit
         -- An invocation whose argv the CLI rejects is not an accepted
@@ -618,20 +632,39 @@ surface CLI {
         -- empty paths argument.
 
     @guarantee StdoutMutuallyExclusive
-        -- A run produces stdout content corresponding to its outcome:
+        -- A run produces stdout content corresponding to its outcome,
+        -- always ending with the run's status line (see StatusLine):
         --   finding_rendered  -> stdout = formatted report (variant-
         --                        specific shape, see the RenderReport
-        --                        rule's @guarantee blocks)
+        --                        rule's @guarantee blocks), then the
+        --                        status line
         --   nothing_to_report -> stdout = single-line acknowledgement:
         --                        'nothing to report -- no findings above
         --                        snoot's significance floor', then the
         --                        below-cutoff smell types as in the
         --                        Remaining section, then
-        --                        significance_cutoffs() in parentheses
-        --   analysis_failed   -> stdout = empty
+        --                        significance_cutoffs() in parentheses;
+        --                        then the status line
+        --   analysis_failed   -> stdout = the status line only
         -- Stderr carries warnings (missing vendored docs) at all outcomes.
         -- On outcome = analysis_failed, stderr additionally carries the
         -- failed analyser's message (run.failure.message): one analyser's
         -- error, not aggregated across analysers and not multi-line per
         -- analyser. These stderr contents are independent of stdout.
+
+    @guarantee StatusLine
+        -- The last stdout line of every accepted invocation is a status
+        -- line for scripts: 'snoot-status: ', the outcome name, then
+        -- space-separated key=value fields whose values contain no
+        -- spaces:
+        --   finding_rendered  -> category=smell|duplication|complexity;
+        --                        type=<smell type name> for a smell; then
+        --                        remaining=<smell_types +
+        --                        duplication_clusters + complexity_hits
+        --                        from RemainingFindings>
+        --   nothing_to_report -> no fields
+        --   analysis_failed   -> analyser=reek|flog|flay
+        --   internal_error    -> error=<error class name>
+        -- A rejected argv (UsageErrorExit) and a help or version banner
+        -- start no run and print no status line.
 }

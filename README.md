@@ -6,7 +6,7 @@ The report is centred on an LLM coding agent as the reader: each run produces on
 
 ## Status
 
-Pre-1.0. Three analysers (Reek / Flog / Flay) are used, and `snoot <paths>` drives the full pipeline end-to-end: it reports a single finding to stdout, an acknowledgement when nothing is worth reporting, or a failure line on stderr. With no positional arguments, `snoot` scans the current directory. The exit code is `1` when a finding is rendered, `0` when there is nothing to report, and `2` when analysis fails.
+Pre-1.0. Three analysers (Reek / Flog / Flay) are used, and `snoot <paths>` drives the full pipeline end-to-end: it reports a single finding to stdout, an acknowledgement when nothing is worth reporting, or a failure line on stderr. With no positional arguments, `snoot` scans the current directory. The exit code is `1` when a finding is rendered, `0` when there is nothing to report, `2` when analysis fails, `64` for a usage error, and `70` for an internal error. The last stdout line is a status line for scripts (see [Output for scripts](#output-for-scripts)).
 
 ## Specification
 
@@ -36,7 +36,30 @@ After install, the `snoot` executable is available on PATH:
 - `0` — nothing worth reporting,
 - `1` — a finding was rendered,
 - `2` — analysis failed (failure line on stderr),
-- `64` — usage error (unknown flag or missing path; details on stderr).
+- `64` — usage error (unknown flag or missing path; details on stderr),
+- `70` — internal error (a bug in snoot; details and backtrace on stderr).
+
+## Output for scripts
+
+Every run that gets past argument checking ends stdout with one status
+line: `snoot-status: `, the outcome, then `key=value` fields whose values
+never contain spaces.
+
+    snoot-status: finding_rendered category=smell type=FeatureEnvy remaining=4
+    snoot-status: finding_rendered category=duplication remaining=2
+    snoot-status: finding_rendered category=complexity remaining=0
+    snoot-status: nothing_to_report
+    snoot-status: analysis_failed analyser=reek
+    snoot-status: internal_error error=NoMethodError
+
+`category` is `smell`, `duplication` or `complexity`; `type` names the
+smell type and appears only for smells; `remaining` counts the
+significant findings behind this one (the "Also significant" totals).
+On `analysis_failed` the status line is all of stdout. Usage errors,
+`--help` and `--version` print no status line. A gate can read the exit
+code or `tail -n 1` of stdout:
+
+    snoot lib | tail -n 1
 
 ## How snoot picks a finding
 
