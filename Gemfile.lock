@@ -43,10 +43,10 @@ GEM
       dry-logic (~> 1.4)
       zeitwerk (~> 2.6)
     erubi (1.13.1)
-    flay (2.14.4)
+    flay (2.14.5)
       erubi (~> 1.10)
       path_expander (~> 2.0)
-      prism (~> 1.7)
+      prism (>= 1.9, < 3)
       sexp_processor (~> 4.0)
     flog (4.9.4)
       path_expander (~> 2.0)
@@ -141,7 +141,7 @@ CHECKSUMS
   dry-schema (1.16.0) sha256=cd3aaeabc0f1af66ec82a29096d4c4fb92a0a58b9dae29a22b1bbceb78985727
   dry-types (1.9.1) sha256=baebeecdb9f8395d6c9d227b62011279440943e3ef2468fe8ccc1ba11467f178
   erubi (1.13.1) sha256=a082103b0885dbc5ecf1172fede897f9ebdb745a4b97a5e8dc63953db1ee4ad9
-  flay (2.14.4) sha256=a62d96a51d1da185aa41ba95b696966df9f7d1d91a457709277f24515895de77
+  flay (2.14.5) sha256=2f6c97ade18eacc87dabdc8a1a2fa5cbd80b84eb0e290cea7af257ac0801a206
   flog (4.9.4) sha256=12cc054fab7a2cbd2a906514397c4d7788954d530564782d6f14939dc2dfbcbb
   json (3.1.0) sha256=3ce7ccf8fde58960177a3a756c31f292a4c1e1dedee884547096a5b0604e3bd8
   language_server-protocol (3.17.0.6) sha256=5ef2c0c138f8267e1bc631d3328347d354f96724b0af22f2c79516120443b7f0
